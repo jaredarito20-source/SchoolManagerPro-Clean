@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Teacher</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <p>
+        <label>First Name</label><br>
+        <input type="text" name="first_name" required>
+    </p>
+
+    <p>
+        <label>Last Name</label><br>
+        <input type="text" name="last_name" required>
+    </p>
+
+    <p>
+        <label>Gender</label><br>
+        <select name="gender">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+        </select>
+    </p>
+
+    <p>
+        <label>Phone</label><br>
+        <input type="text" name="phone" required>
+    </p>
+
+    <p>
+        <label>Email</label><br>
+        <input type="email" name="email" required>
+    </p>
+
+    <p>
+        <label>Subject</label><br>
+        <input type="text" name="subject" required>
+    </p>
+
+    <button type="submit">Save Teacher</button>
+
+</form>
+
+{% endblock %}

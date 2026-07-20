@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>School Management System</title>
+
+    
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    
+
+</head>
+<body>
+
+<div class="sidebar">
+
+    <h2>🏫 School</h2>
+
+    <a href="/">🏠 Dashboard</a>
+    <a href="/students/">👨‍🎓 Students</a>
+    <a href="{% url 'teacher_list' %}">👩‍🏫 Teachers</a>
+    <a href="{% url 'subject_list' %}">📚 Subjects</a>
+    <a href="#">📝 Exams</a>
+    <a href="#">💰 Fees</a>
+    <a href="#">📅 Attendance</a>
+    <a href="#">⚙ Settings</a>
+
+</div>
+
+<div class="content">
+
+    <div class="topbar">
+        <h2>School Management System</h2>
+    </div>
+
+    {% block content %}
+    {% endblock %}
+
+</div>
+
+</body>
+</html>

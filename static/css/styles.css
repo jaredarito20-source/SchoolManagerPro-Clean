@@ -1,0 +1,104 @@
+*{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, sans-serif;
+            
+        }
+
+        .form-card{
+            background:white;
+            padding:25px;
+            border-radius:8px;
+            box-shadow:0 2px 5px rgba(0,0,0,.1);
+            max-width:700px;
+        }
+        .form-group{
+            margin-bottom:15px;
+        }
+        .form-group label{
+            display:block;
+            margin-bottom:5px;
+            font-weight:bold;
+        }
+        .form-group input,
+        .form-group select{
+            width:100%;
+            padding:10px;
+            border:1px solid #ccc;
+            border-radius:5px;
+            font-size:16px;
+        }
+        .btn-primary{
+            background:#1565c0;
+            color:white;
+            border:none;
+            padding:10px 20px;
+            border-radius:5px;
+            cursor:pointer;
+            text-decoration:none;
+        }
+        .btn-primary:hover{
+            background:#0d47a1;
+        }
+        .btn-secondary{
+            background:#777;
+            color:white;
+            padding:10px 20px;
+            border-radius:5px;
+            text-decoration:none;
+            display:inline-block;
+            margin-left:10px;
+        }
+        
+
+        body{
+            display:flex;
+            background:#f4f6f9;
+        }
+
+        .sidebar{
+            width:240px;
+            min-height:100vh;
+            background:#1565c0;
+            color:white;
+            padding:20px;
+        }
+
+        .sidebar h2{
+            margin-bottom:30px;
+        }
+
+        .sidebar a{
+            display:block;
+            color:white;
+            text-decoration:none;
+            padding:12px;
+            margin-bottom:8px;
+            border-radius:5px;
+        }
+
+        .sidebar a:hover{
+            background:#0d47a1;
+        }
+
+        .content{
+            flex:1;
+            padding:30px;
+        }
+
+        .topbar{
+            background:white;
+            padding:15px;
+            margin-bottom:20px;
+            border-radius:8px;
+            box-shadow:0 2px 5px rgba(0,0,0,.1);
+        }
+
+        .card{
+            background:white;
+            padding:20px;
+            border-radius:8px;
+            box-shadow:0 2px 5px rgba(0,0,0,.1);
+            margin-bottom:20px;
+        }

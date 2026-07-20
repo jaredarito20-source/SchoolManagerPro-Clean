@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Subjects</h2>
+
+<p>
+    <a href="{% url 'add_subject' %}">
+        <button>Add Subject</button>
+    </a>
+</p>
+
+<table border="1">
+    <tr>
+        <th>Code</th>
+        <th>Subject</th>
+        <th>Teacher</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for subject in subjects %}
+    <tr>
+        <td>{{ subject.code }}</td>
+        <td>{{ subject.name }}</td>
+        <td>
+            {% if subject.teacher %}
+                {{ subject.teacher.first_name }} {{ subject.teacher.last_name }}
+            {% else %}
+                Not Assigned
+            {% endif %}
+        </td>
+        <td>
+            <a href="{% url 'edit_subject' subject.id %}">✏ Edit</a> |
+            <a href="{% url 'delete_subject' subject.id %}">🗑 Delete</a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="4">No subjects found.</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}
