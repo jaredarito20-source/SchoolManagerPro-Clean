@@ -2,14 +2,14 @@
 
 {% block content %}
 
-<h2>Add Teacher</h2>
+<h2>Add Student</h2>
 
 <form method="POST">
     {% csrf_token %}
 
     <p>
-        <label>Staff Number</label><br>
-        <input type="text" name="staff_number" required>
+        <label>Admission Number</label><br>
+        <input type="text" name="admission_number" required>
     </p>
 
     <p>
@@ -24,23 +24,40 @@
 
     <p>
         <label>Gender</label><br>
-        <select name="gender">
-            <option>Male</option>
-            <option>Female</option>
+        <select name="gender" required>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
         </select>
     </p>
 
     <p>
-        <label>Subject</label><br>
-        <input type="text" name="subject" required>
+        <label>Date of Birth</label><br>
+        <input type="date" name="date_of_birth" required>
+    </p>
+
+    <p>
+        <label>Class</label><br>
+        <select name="school_class">
+            <option value="">-- Select Class --</option>
+            {% for school_class in classes %}
+                <option value="{{ school_class.id }}">
+                    {{ school_class.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        <label>Parent Name</label><br>
+        <input type="text" name="parent_name" required>
     </p>
 
     <p>
         <label>Phone</label><br>
-        <input type="text" name="phone">
+        <input type="text" name="phone" required>
     </p>
 
-    <button type="submit">Save Teacher</button>
+    <button type="submit">Save Student</button>
 
 </form>
 

@@ -29,7 +29,19 @@
     <input type="date" name="date_of_birth" value="{{ student.date_of_birth|date:'Y-m-d' }}">
 
     <p>Class</p>
-    <input type="text" name="class_name" value="{{ student.class_name }}">
+
+<select name="school_class">
+    <option value="">-- Select Class --</option>
+
+    {% for school_class in classes %}
+    <option value="{{ school_class.id }}"
+        {% if student.school_class and school_class.id == student.school_class.id %}
+            selected
+        {% endif %}>
+        {{ school_class.name }}
+    </option>
+    {% endfor %}
+</select>
 
     <p>Parent Name</p>
     <input type="text" name="parent_name" value="{{ student.parent_name }}">
@@ -38,3 +50,13 @@
     <input type="text" name="phone" value="{{ student.phone }}">
 
     <br><br>
+    <button type="submit">Update Student</button>
+
+<a href="{% url 'student_list' %}">
+    <button type="button">Cancel</button>
+</a>
+
+</form>
+
+</body>
+</html>

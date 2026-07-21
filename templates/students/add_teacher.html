@@ -7,41 +7,31 @@
 <form method="POST">
     {% csrf_token %}
 
-    <p>
-        <label>First Name</label><br>
-        <input type="text" name="first_name" required>
-    </p>
+    <label>Employee Number</label><br>
+    <input type="text" name="employee_number" required><br><br>
 
-    <p>
-        <label>Last Name</label><br>
-        <input type="text" name="last_name" required>
-    </p>
+    <label>First Name</label><br>
+    <input type="text" name="first_name" required><br><br>
 
-    <p>
-        <label>Gender</label><br>
-        <select name="gender">
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-        </select>
-    </p>
+    <label>Last Name</label><br>
+    <input type="text" name="last_name" required><br><br>
 
-    <p>
-        <label>Phone</label><br>
-        <input type="text" name="phone" required>
-    </p>
+    <label>Gender</label><br>
+    <select name="gender" required>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+    </select><br><br>
 
-    <p>
-        <label>Email</label><br>
-        <input type="email" name="email" required>
-    </p>
+    <label>Phone</label><br>
+    <input type="text" name="phone"><br><br>
 
-    <p>
-        <label>Subject</label><br>
-        <input type="text" name="subject" required>
-    </p>
+    <label>Email</label><br>
+    <input type="email" name="email"><br><br>
+
+    <label>Subject</label><br>
+    <input type="text" name="subject"><br><br>
 
     <button type="submit">Save Teacher</button>
-
 </form>
 
 {% endblock %}

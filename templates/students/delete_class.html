@@ -2,16 +2,19 @@
 
 {% block content %}
 
-<h2>Delete Teacher</h2>
+<h2>Delete Class</h2>
 
 <p>
     Are you sure you want to delete
-    <strong>{{ teacher.employee_number }} - {{ teacher.first_name }} {{ teacher.last_name }}</strong>?
+    <strong>{{ school_class.name }}</strong>?
 </p>
+
 <form method="POST">
     {% csrf_token %}
+
     <button type="submit">Yes, Delete</button>
-    <a href="{% url 'teacher_list' %}">
+
+    <a href="{% url 'class_list' %}">
         <button type="button">Cancel</button>
     </a>
 </form>

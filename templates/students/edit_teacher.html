@@ -6,6 +6,14 @@
 
 <form method="POST">
     {% csrf_token %}
+    <p>
+        <label>Employee Number</label><br>
+        <input
+            type="text"
+            name="employee_number"
+            value="{{ teacher.employee_number }}"
+            required>
+    </p>
 
     <p>
         <label>First Name</label><br>

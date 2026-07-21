@@ -24,6 +24,14 @@ urlpatterns = [
     path("subjects/add/", views.add_subject, name="add_subject"),
     path("subjects/edit/<int:id>/", views.edit_subject, name="edit_subject"),
     path("subjects/delete/<int:id>/", views.delete_subject, name="delete_subject"),
+
+    # Classes
+    path("classes/", views.class_list, name="class_list"),
+    path("classes/add/", views.add_class, name="add_class"),
+    path("classes/edit/<int:id>/", views.edit_class, name="edit_class"),
+    path("classes/delete/<int:id>/", views.delete_class, name="delete_class"),
             
     ]
+
+
     

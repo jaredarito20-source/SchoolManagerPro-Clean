@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Classes</h2>
+
+<p>
+    <a href="{% url 'add_class' %}">
+        <button>Add Class</button>
+    </a>
+</p>
+
+<table border="1">
+    <tr>
+        <th>Class Name</th>
+        <th>Class Teacher</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for school_class in classes %}
+    <tr>
+        <td>{{ school_class.name }}</td>
+        <td>
+            {% if school_class.class_teacher %}
+                {{ school_class.class_teacher.first_name }} {{ school_class.class_teacher.last_name }}
+            {% else %}
+                Not Assigned
+            {% endif %}
+        </td>
+        <td>
+            <a href="{% url 'edit_class' school_class.id %}">✏ Edit</a> |
+            <a href="{% url 'delete_class' school_class.id %}">🗑 Delete</a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="3">No classes found.</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Class</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <label>Class Name</label><br>
+    <input type="text" name="name" value="{{ school_class.name }}" required><br><br>
+
+    <label>Class Teacher</label><br>
+    <select name="class_teacher">
+        <option value="">-- Select Teacher --</option>
+
+        {% for teacher in teachers %}
+        <option value="{{ teacher.id }}"
+            {% if school_class.class_teacher and teacher.id == school_class.class_teacher.id %}selected{% endif %}>
+            {{ teacher.employee_number }} - {{ teacher.first_name }} {{ teacher.last_name }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <button type="submit">Update Class</button>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Subject</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <label>Subject Name</label><br>
+    <input
+        type="text"
+        name="name"
+        value="{{ subject.name }}"
+        required
+    ><br><br>
+
+    <label>Subject Code</label><br>
+    <input
+        type="text"
+        name="code"
+        value="{{ subject.code }}"
+        required
+    ><br><br>
+
+    <label>Teacher</label><br>
+    <select name="teacher">
+        <option value="">-- Select Teacher --</option>
+
+        {% for teacher in teachers %}
+        <option
+            value="{{ teacher.id }}"
+            {% if subject.teacher and teacher.id == subject.teacher.id %}selected{% endif %}
+        >
+            {{ teacher.employee_number }} - {{ teacher.first_name }} {{ teacher.last_name }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <button type="submit">Update Subject</button>
+
+</form>
+
+{% endblock %}

@@ -59,7 +59,13 @@
     <td>{{ student.first_name }}</td>
     <td>{{ student.last_name }}</td>
     <td>{{ student.gender }}</td>
-    <td>{{ student.class_name }}</td>
+    <td>
+    {% if student.school_class %}
+        {{ student.school_class.name }}
+    {% else %}
+        Not Assigned
+    {% endif %}
+</td>
     <td>{{ student.parent_name }}</td>
     <td>{{ student.phone }}</td>
     <td>
