@@ -435,6 +435,7 @@ def student_report(request, id):
 
     total = marks.aggregate(Sum("marks"))["marks__sum"] or 0
     average = marks.aggregate(Avg("marks"))["marks__avg"] or 0
+    overall_grade = calculate_overall_grade(average)
 
     # Get all students in the same class
     classmates = Student.objects.filter(
@@ -469,8 +470,32 @@ def student_report(request, id):
         "marks": marks,
         "total": total,
         "average": round(average, 2),
+        "overall_grade": overall_grade,
         "position": position,
         "class_size": classmates.count(),
     }
-
     return render(request, "students/student_report.html", context)
+
+def calculate_overall_grade(average):
+    if average >= 80:
+        return "A"
+    elif average >= 75:
+        return "A-"
+    elif average >= 70:
+        return "B+"
+    elif average >= 65:
+        return "B"
+    elif average >= 60:
+        return "B-"
+    elif average >= 55:
+        return "C+"
+    elif average >= 50:
+        return "C"
+    elif average >= 45:
+        return "C-"
+    elif average >= 40:
+        return "D+"
+    elif average >= 35:
+        return "D"
+    else:
+        return "E"
