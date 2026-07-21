@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.report-card{
+    background:white;
+    padding:30px;
+    border-radius:8px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+}
+
+th, td{
+    border:1px solid #ddd;
+    padding:10px;
+    text-align:left;
+}
+
+th{
+    background:#1565c0;
+    color:white;
+}
+
+.summary{
+    margin-top:25px;
+    font-size:18px;
+}
+
+.print-btn{
+    margin-top:20px;
+    padding:10px 20px;
+    background:#1565c0;
+    color:white;
+    border:none;
+    cursor:pointer;
+    border-radius:5px;
+}
+</style>
+
+<div class="report-card">
+
+<h1>School Management System</h1>
+<h2>Student Report Card</h2>
+
+<hr>
+
+<h3>Student Details</h3>
+
+<p><strong>Admission No:</strong> {{ student.admission_number }}</p>
+<p><strong>Name:</strong> {{ student.first_name }} {{ student.last_name }}</p>
+<p><strong>Class:</strong> {{ student.school_class }}</p>
+
+<table>
+
+<tr>
+    <th>Subject</th>
+    <th>Exam</th>
+    <th>Marks</th>
+    <th>Grade</th>
+</tr>
+
+{% for mark in marks %}
+
+<tr>
+    <td>{{ mark.subject.name }}</td>
+    <td>{{ mark.exam.name }}</td>
+    <td>{{ mark.marks }}</td>
+    <td>{{ mark.grade }}</td>
+</tr>
+
+{% empty %}
+
+<tr>
+    <td colspan="4">No marks available.</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+<div class="summary">
+
+<p><strong>Total Marks:</strong> {{ total }}</p>
+
+<p><strong>Average:</strong> {{ average }}</p>
+<p><strong>Position:</strong> {{ position }} of {{ class_size }}</p>
+
+</div>
+
+<button class="print-btn" onclick="window.print()">
+🖨 Print Report
+</button>
+
+</div>
+
+{% endblock %}

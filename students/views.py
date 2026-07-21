@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
-
-from .models import Student, Teacher, Subject, SchoolClass
+from .models import Student, Teacher, Subject, SchoolClass, Exam, Mark
+from django.db.models import Sum, Avg
 
 
 def home(request):
@@ -258,3 +258,219 @@ def delete_class(request, id):
     return render(request, "students/delete_class.html", {
         "school_class": school_class
     })
+
+# ==========================
+# Exams
+# ==========================
+
+def exam_list(request):
+    exams = Exam.objects.all()
+
+    return render(request, "students/exam_list.html", {
+        "exams": exams
+    })
+
+
+def add_exam(request):
+    if request.method == "POST":
+        Exam.objects.create(
+            name=request.POST["name"],
+            term=request.POST["term"],
+            year=request.POST["year"],
+        )
+
+        return redirect("exam_list")
+
+    return render(request, "students/add_exam.html")
+
+
+def edit_exam(request, id):
+    exam = get_object_or_404(Exam, id=id)
+
+    if request.method == "POST":
+        exam.name = request.POST["name"]
+        exam.term = request.POST["term"]
+        exam.year = request.POST["year"]
+        exam.save()
+
+        return redirect("exam_list")
+
+    return render(request, "students/edit_exam.html", {
+        "exam": exam
+    })
+
+
+def delete_exam(request, id):
+    exam = get_object_or_404(Exam, id=id)
+
+    if request.method == "POST":
+        exam.delete()
+        return redirect("exam_list")
+
+    return render(request, "students/delete_exam.html", {
+        "exam": exam
+    })
+# ==========================
+# Marks
+# ==========================
+
+def mark_list(request):
+    marks = Mark.objects.all()
+
+    return render(request, "students/mark_list.html", {
+        "marks": marks
+    })
+
+
+def add_mark(request):
+    if request.method == "POST":
+        student = Student.objects.get(id=request.POST["student"])
+        subject = Subject.objects.get(id=request.POST["subject"])
+        exam = Exam.objects.get(id=request.POST["exam"])
+
+        marks = float(request.POST["marks"])
+
+        # Check for duplicate
+        if Mark.objects.filter(
+            student=student,
+            subject=subject,
+            exam=exam
+        ).exists():
+
+            students = Student.objects.all()
+            subjects = Subject.objects.all()
+            exams = Exam.objects.all()
+
+            return render(request, "students/add_mark.html", {
+                "students": students,
+                "subjects": subjects,
+                "exams": exams,
+                "error": "Marks for this student, subject and exam already exist."
+            })
+
+        Mark.objects.create(
+            student=student,
+            subject=subject,
+            exam=exam,
+            marks=marks,
+            grade=calculate_grade(marks),
+        )
+
+        return redirect("mark_list")
+
+    students = Student.objects.all()
+    subjects = Subject.objects.all()
+    exams = Exam.objects.all()
+
+    return render(request, "students/add_mark.html", {
+        "students": students,
+        "subjects": subjects,
+        "exams": exams,
+    })
+
+
+def edit_mark(request, id):
+    mark = get_object_or_404(Mark, id=id)
+
+    if request.method == "POST":
+        mark.student = Student.objects.get(id=request.POST["student"])
+        mark.subject = Subject.objects.get(id=request.POST["subject"])
+        mark.exam = Exam.objects.get(id=request.POST["exam"])
+        mark.marks = request.POST["marks"]
+        mark.save()
+
+        return redirect("mark_list")
+
+    return render(request, "students/edit_mark.html", {
+        "mark": mark,
+        "students": Student.objects.all(),
+        "subjects": Subject.objects.all(),
+        "exams": Exam.objects.all(),
+    })
+
+
+def delete_mark(request, id):
+    mark = get_object_or_404(Mark, id=id)
+
+    if request.method == "POST":
+        mark.delete()
+        return redirect("mark_list")
+
+    return render(request, "students/delete_mark.html", {
+        "mark": mark
+    })
+def calculate_grade(mark):
+    if mark >= 80:
+        return "A"
+    elif mark >= 75:
+        return "A-"
+    elif mark >= 70:
+        return "B+"
+    elif mark >= 65:
+        return "B"
+    elif mark >= 60:
+        return "B-"
+    elif mark >= 55:
+        return "C+"
+    elif mark >= 50:
+        return "C"
+    elif mark >= 45:
+        return "C-"
+    elif mark >= 40:
+        return "D+"
+    elif mark >= 35:
+        return "D"
+    else:
+        return "E"
+
+
+
+
+
+
+def student_report(request, id):
+    student = get_object_or_404(Student, id=id)
+
+    marks = Mark.objects.filter(student=student)
+
+    total = marks.aggregate(Sum("marks"))["marks__sum"] or 0
+    average = marks.aggregate(Avg("marks"))["marks__avg"] or 0
+
+    # Get all students in the same class
+    classmates = Student.objects.filter(
+        school_class=student.school_class
+    )
+
+    ranking = []
+
+    for s in classmates:
+        student_total = (
+            Mark.objects.filter(student=s)
+            .aggregate(Sum("marks"))["marks__sum"] or 0
+        )
+
+        ranking.append({
+            "student": s,
+            "total": student_total
+        })
+
+    # Sort by total marks (highest first)
+    ranking.sort(key=lambda x: x["total"], reverse=True)
+
+    position = 1
+
+    for item in ranking:
+        if item["student"].id == student.id:
+            break
+        position += 1
+
+    context = {
+        "student": student,
+        "marks": marks,
+        "total": total,
+        "average": round(average, 2),
+        "position": position,
+        "class_size": classmates.count(),
+    }
+
+    return render(request, "students/student_report.html", context)

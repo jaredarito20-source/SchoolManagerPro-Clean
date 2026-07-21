@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete Examination</h2>
+
+<p>
+    Are you sure you want to delete
+    <strong>{{ exam.name }}</strong>?
+</p>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <button type="submit">Yes, Delete</button>
+
+    <a href="{% url 'exam_list' %}">
+        <button type="button">Cancel</button>
+    </a>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Examination</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <p>
+        <label>Exam Name</label><br>
+        <input type="text" name="name" required>
+    </p>
+
+    <p>
+        <label>Term</label><br>
+        <select name="term">
+            <option value="1">Term 1</option>
+            <option value="2">Term 2</option>
+            <option value="3">Term 3</option>
+        </select>
+    </p>
+
+    <p>
+        <label>Year</label><br>
+        <input type="number" name="year" value="2026" required>
+    </p>
+
+    <button type="submit">Save Exam</button>
+
+</form>
+
+{% endblock %}

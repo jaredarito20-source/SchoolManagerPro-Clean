@@ -70,3 +70,30 @@ class Subject(models.Model):
 
     def __str__(self):
         return self.name
+    
+class Exam(models.Model):
+    name = models.CharField(max_length=50)
+    term = models.CharField(max_length=20)
+    year = models.IntegerField()
+
+    def __str__(self):
+        return f"{self.name} - Term {self.term} ({self.year})"
+    
+class Mark(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
+
+    marks = models.DecimalField(max_digits=5, decimal_places=2)
+    grade = models.CharField(max_length=2, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "subject", "exam"],
+                name="unique_student_subject_exam",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.student} - {self.subject} - {self.exam}"

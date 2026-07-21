@@ -30,6 +30,22 @@ urlpatterns = [
     path("classes/add/", views.add_class, name="add_class"),
     path("classes/edit/<int:id>/", views.edit_class, name="edit_class"),
     path("classes/delete/<int:id>/", views.delete_class, name="delete_class"),
+
+
+    # Exams
+    path("exams/", views.exam_list, name="exam_list"),
+    path("exams/add/", views.add_exam, name="add_exam"),
+    path("exams/edit/<int:id>/", views.edit_exam, name="edit_exam"),
+    path("exams/delete/<int:id>/", views.delete_exam, name="delete_exam"),
+
+    # Marks
+    path("marks/", views.mark_list, name="mark_list"),
+    path("marks/add/", views.add_mark, name="add_mark"),
+    path("marks/edit/<int:id>/", views.edit_mark, name="edit_mark"),
+    path("marks/delete/<int:id>/", views.delete_mark, name="delete_mark"),
+
+
+    path("reports/student/<int:id>/", views.student_report, name="student_report"),
             
     ]
 

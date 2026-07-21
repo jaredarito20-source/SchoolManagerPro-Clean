@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Marks</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <p>
+        <label>Student</label><br>
+        <select name="student">
+            {% for student in students %}
+            <option value="{{ student.id }}"
+                {% if student.id == mark.student.id %}selected{% endif %}>
+                {{ student.first_name }} {{ student.last_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        <label>Subject</label><br>
+        <select name="subject">
+            {% for subject in subjects %}
+            <option value="{{ subject.id }}"
+                {% if subject.id == mark.subject.id %}selected{% endif %}>
+                {{ subject.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        <label>Exam</label><br>
+        <select name="exam">
+            {% for exam in exams %}
+            <option value="{{ exam.id }}"
+                {% if exam.id == mark.exam.id %}selected{% endif %}>
+                {{ exam.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        <label>Marks</label><br>
+        <input type="number"
+               name="marks"
+               value="{{ mark.marks }}"
+               min="0"
+               max="100"
+               step="0.01"
+               required>
+    </p>
+
+    <button type="submit">Update Marks</button>
+
+</form>
+
+{% endblock %}

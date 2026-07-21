@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Examinations</h2>
+
+<p>
+    <a href="{% url 'add_exam' %}">
+        <button>Add Exam</button>
+    </a>
+</p>
+
+<table border="1" width="100%" cellpadding="8">
+    <tr>
+        <th>Name</th>
+        <th>Term</th>
+        <th>Year</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for exam in exams %}
+    <tr>
+        <td>{{ exam.name }}</td>
+        <td>{{ exam.term }}</td>
+        <td>{{ exam.year }}</td>
+        <td>
+            <a href="{% url 'edit_exam' exam.id %}">✏ Edit</a> |
+            <a href="{% url 'delete_exam' exam.id %}">🗑 Delete</a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="4">No exams added.</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}
