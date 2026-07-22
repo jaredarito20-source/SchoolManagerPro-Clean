@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Student, Teacher, Subject, SchoolClass, Exam, Mark
+
 from django.db.models import Sum, Avg
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib import colors
@@ -7,8 +7,19 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from django.http import HttpResponse
 
+from .models import (
+    Student,
+    Teacher,
+    Subject,
+    SchoolClass,
+    Exam,
+    Mark,
+    SchoolProfile,
+    FeeStructure,
+    FeePayment,
+)
 
-from .models import Student, Teacher, Subject, SchoolClass, SchoolProfile
+
 
 def home(request):
     school = SchoolProfile.objects.first()
@@ -568,3 +579,82 @@ def print_report(request, id):
     doc.build(elements)
 
     return response
+# ==========================
+# FEE STRUCTURE
+# ==========================
+
+def fee_structure_list(request):
+    fees = FeeStructure.objects.all()
+
+    return render(
+        request,
+        "students/fee_structure_list.html",
+        {"fees": fees},
+    )
+
+
+def add_fee_structure(request):
+
+    if request.method == "POST":
+
+        school_class = SchoolClass.objects.get(
+            id=request.POST["school_class"]
+        )
+
+        FeeStructure.objects.create(
+            school_class=school_class,
+            tuition_fee=request.POST["tuition_fee"],
+            activity_fee=request.POST["activity_fee"],
+            exam_fee=request.POST["exam_fee"],
+            other_fee=request.POST["other_fee"],
+        )
+
+        return redirect("fee_structure_list")
+
+    classes = SchoolClass.objects.all()
+
+    return render(
+        request,
+        "students/add_fee_structure.html",
+        {"classes": classes},
+    )
+
+
+# ==========================
+# FEE PAYMENTS
+# ==========================
+
+def payment_list(request):
+
+    payments = FeePayment.objects.all()
+
+    return render(
+        request,
+        "students/payment_list.html",
+        {"payments": payments},
+    )
+
+
+def add_payment(request):
+
+    if request.method == "POST":
+
+        student = Student.objects.get(
+            id=request.POST["student"]
+        )
+
+        FeePayment.objects.create(
+            student=student,
+            amount_paid=request.POST["amount_paid"],
+            receipt_number=request.POST["receipt_number"],
+        )
+
+        return redirect("payment_list")
+
+    students = Student.objects.all()
+
+    return render(
+        request,
+        "students/add_payment.html",
+        {"students": students},
+    )

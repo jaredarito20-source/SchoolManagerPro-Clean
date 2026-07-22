@@ -47,6 +47,14 @@ urlpatterns = [
 
     path("reports/student/<int:id>/", views.student_report, name="student_report"),
     path("students/<int:id>/print/", views.print_report, name="print_report"),
+
+        # Fee Structures
+    path("fees/", views.fee_structure_list, name="fee_structure_list"),
+    path("fees/add/", views.add_fee_structure, name="add_fee_structure"),
+
+    # Fee Payments
+    path("payments/", views.payment_list, name="payment_list"),
+    path("payments/add/", views.add_payment, name="add_payment"),
             
     ]
 
