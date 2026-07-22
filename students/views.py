@@ -17,6 +17,7 @@ from .models import (
     SchoolProfile,
     FeeStructure,
     FeePayment,
+    Attendance,
 )
 
 
@@ -657,4 +658,24 @@ def add_payment(request):
         request,
         "students/add_payment.html",
         {"students": students},
+    )
+
+def fee_balance_list(request):
+    students = Student.objects.select_related("school_class").all()
+
+    return render(
+        request,
+        "fees/fee_balance_list.html",
+        {"students": students},
+    )
+
+def attendance_list(request):
+    attendance = Attendance.objects.all().order_by("-date")
+
+    return render(
+        request,
+        "students/attendance_list.html",
+        {
+            "attendance": attendance,
+        },
     )

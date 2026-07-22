@@ -9,14 +9,15 @@ from .models import (
     SchoolProfile,
     FeeStructure,
     FeePayment,
+    Attendance,
 )
-
 admin.site.register(Student)
 admin.site.register(Teacher)
-admin.site.register(Subject)
 admin.site.register(SchoolClass)
+admin.site.register(Subject)
 admin.site.register(Exam)
 admin.site.register(Mark)
 admin.site.register(SchoolProfile)
 admin.site.register(FeeStructure)
 admin.site.register(FeePayment)
+admin.site.register(Attendance)

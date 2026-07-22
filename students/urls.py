@@ -55,6 +55,14 @@ urlpatterns = [
     # Fee Payments
     path("payments/", views.payment_list, name="payment_list"),
     path("payments/add/", views.add_payment, name="add_payment"),
+
+    path("teachers/", views.teacher_list, name="teacher_list"),
+    path("teachers/add/", views.add_teacher, name="add_teacher"),
+    path("teachers/edit/<int:id>/", views.edit_teacher, name="edit_teacher"),
+    path("teachers/delete/<int:id>/", views.delete_teacher, name="delete_teacher"),
+    path("fees/balances/", views.fee_balance_list, name="fee_balance_list"),
+    path("fees/balances/", views.fee_balance_list, name="fee_balance_list"),
+    path("attendance/", views.attendance_list, name="attendance_list"),
             
     ]
 

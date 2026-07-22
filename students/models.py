@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Sum
 
 
 class Teacher(models.Model):
@@ -16,6 +17,7 @@ class Teacher(models.Model):
 
 class SchoolClass(models.Model):
     name = models.CharField(max_length=50, unique=True)
+
     class_teacher = models.ForeignKey(
         Teacher,
         on_delete=models.SET_NULL,
@@ -32,6 +34,7 @@ class Student(models.Model):
     admission_number = models.CharField(max_length=20, unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+
     gender = models.CharField(
         max_length=10,
         choices=[
@@ -39,9 +42,9 @@ class Student(models.Model):
             ("Female", "Female"),
         ],
     )
+
     date_of_birth = models.DateField()
 
-    # Replace class_name with this:
     school_class = models.ForeignKey(
         SchoolClass,
         on_delete=models.SET_NULL,
@@ -53,6 +56,35 @@ class Student(models.Model):
     parent_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
 
+    def total_fee(self):
+        fee = FeeStructure.objects.filter(
+            school_class=self.school_class
+        ).first()
+
+        if fee:
+            return fee.total_fee()
+
+        return 0
+
+    def total_paid(self):
+        total = self.feepayment_set.aggregate(
+            total=Sum("amount_paid")
+        )["total"]
+
+        return total or 0
+
+    def balance(self):
+        return self.total_fee() - self.total_paid()
+
+    def payment_status(self):
+        if self.total_paid() == 0:
+            return "Not Paid"
+
+        if self.balance() <= 0:
+            return "Cleared"
+
+        return "Partial"
+
     def __str__(self):
         return f"{self.admission_number} - {self.first_name} {self.last_name}"
 
@@ -60,6 +92,7 @@ class Student(models.Model):
 class Subject(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20, unique=True)
+
     teacher = models.ForeignKey(
         Teacher,
         on_delete=models.SET_NULL,
@@ -70,7 +103,8 @@ class Subject(models.Model):
 
     def __str__(self):
         return self.name
-    
+
+
 class Exam(models.Model):
     name = models.CharField(max_length=50)
     term = models.CharField(max_length=20)
@@ -78,7 +112,8 @@ class Exam(models.Model):
 
     def __str__(self):
         return f"{self.name} - Term {self.term} ({self.year})"
-    
+
+
 class Mark(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -95,10 +130,10 @@ class Mark(models.Model):
             )
         ]
 
-
     def __str__(self):
         return f"{self.student} - {self.subject} - {self.exam}"
-    
+
+
 class SchoolProfile(models.Model):
     name = models.CharField(max_length=200)
     motto = models.CharField(max_length=300, blank=True)
@@ -113,16 +148,17 @@ class SchoolProfile(models.Model):
     logo = models.ImageField(
         upload_to="school_logos/",
         blank=True,
-        null=True
+        null=True,
     )
 
     def __str__(self):
         return self.name
 
+
 class FeeStructure(models.Model):
     school_class = models.ForeignKey(
         SchoolClass,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     tuition_fee = models.DecimalField(max_digits=10, decimal_places=2)
@@ -132,32 +168,62 @@ class FeeStructure(models.Model):
 
     def total_fee(self):
         return (
-            self.tuition_fee +
-            self.activity_fee +
-            self.exam_fee +
-            self.other_fee
+            self.tuition_fee
+            + self.activity_fee
+            + self.exam_fee
+            + self.other_fee
         )
 
     def __str__(self):
         return f"{self.school_class.name} Fee Structure"
 
+
 class FeePayment(models.Model):
     student = models.ForeignKey(
         Student,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     payment_date = models.DateField(auto_now_add=True)
 
     amount_paid = models.DecimalField(
         max_digits=10,
-        decimal_places=2
+        decimal_places=2,
     )
 
     receipt_number = models.CharField(
         max_length=50,
-        unique=True
+        unique=True,
     )
 
     def __str__(self):
         return f"{self.student} - {self.amount_paid}"
+
+class Attendance(models.Model):
+    STATUS_CHOICES = [
+        ("Present", "Present"),
+        ("Absent", "Absent"),
+        ("Late", "Late"),
+        ("Excused", "Excused"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE
+    )
+
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE
+    )
+
+    date = models.DateField()
+
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="Present",
+    )
+
+    def __str__(self):
+        return f"{self.student} - {self.date} - {self.status}"      

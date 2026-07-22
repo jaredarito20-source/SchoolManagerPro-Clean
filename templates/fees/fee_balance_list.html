@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Fee Balance Report</h2>
+
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Admission No</th>
+        <th>Student</th>
+        <th>Class</th>
+        <th>Total Fee</th>
+        <th>Paid</th>
+        <th>Balance</th>
+        <th>Status</th>
+    </tr>
+
+    {% for student in students %}
+    <tr>
+        <td>{{ student.admission_number }}</td>
+        <td>{{ student.first_name }} {{ student.last_name }}</td>
+        <td>{{ student.school_class }}</td>
+        <td>{{ student.total_fee }}</td>
+        <td>{{ student.total_paid }}</td>
+        <td>{{ student.balance }}</td>
+        <td>{{ student.payment_status }}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+{% endblock %}
