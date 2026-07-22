@@ -3,15 +3,20 @@ from .models import Student, Teacher, Subject, SchoolClass, Exam, Mark
 from django.db.models import Sum, Avg
 
 
-def home(request):
-    context = {
-    "total_students": Student.objects.count(),
-    "total_teachers": Teacher.objects.count(),
-    "total_classes": SchoolClass.objects.count(),
-    "total_subjects": Subject.objects.count(),
-    }
-    return render(request, "students/home.html", context)
+from .models import Student, Teacher, Subject, SchoolClass, SchoolProfile
 
+def home(request):
+    school = SchoolProfile.objects.first()
+
+    context = {
+        "school": school,
+        "total_students": Student.objects.count(),
+        "total_teachers": Teacher.objects.count(),
+        "total_classes": SchoolClass.objects.count(),
+        "total_subjects": Subject.objects.count(),
+    }
+
+    return render(request, "students/home.html", context)
 def add_student(request):
     if request.method == "POST":
         school_class = None
@@ -376,7 +381,8 @@ def edit_mark(request, id):
         mark.student = Student.objects.get(id=request.POST["student"])
         mark.subject = Subject.objects.get(id=request.POST["subject"])
         mark.exam = Exam.objects.get(id=request.POST["exam"])
-        mark.marks = request.POST["marks"]
+        mark.marks = float(request.POST["marks"])
+        mark.grade = calculate_grade(mark.marks)
         mark.save()
 
         return redirect("mark_list")

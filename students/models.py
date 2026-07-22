@@ -95,5 +95,26 @@ class Mark(models.Model):
             )
         ]
 
+
     def __str__(self):
         return f"{self.student} - {self.subject} - {self.exam}"
+    
+class SchoolProfile(models.Model):
+    name = models.CharField(max_length=200)
+    motto = models.CharField(max_length=300, blank=True)
+    address = models.CharField(max_length=300)
+    phone = models.CharField(max_length=20)
+    email = models.EmailField(blank=True)
+    website = models.CharField(max_length=100, blank=True)
+
+    current_term = models.CharField(max_length=20)
+    academic_year = models.CharField(max_length=20)
+
+    logo = models.ImageField(
+        upload_to="school_logos/",
+        blank=True,
+        null=True
+    )
+
+    def __str__(self):
+        return self.name
