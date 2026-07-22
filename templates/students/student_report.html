@@ -34,12 +34,15 @@ th{
 
 .print-btn{
     margin-top:20px;
+    margin-right:10px;
     padding:10px 20px;
     background:#1565c0;
     color:white;
     border:none;
-    cursor:pointer;
     border-radius:5px;
+    cursor:pointer;
+    display:inline-block;
+    text-decoration:none;
 }
 </style>
 
@@ -89,13 +92,19 @@ th{
 <p><strong>Total Marks:</strong> {{ total }}</p>
 
 <p><strong>Average:</strong> {{ average }}</p>
+
 <p><strong>Overall Grade:</strong> {{ overall_grade }}</p>
+
 <p><strong>Position:</strong> {{ position }} of {{ class_size }}</p>
 
 </div>
 
+<a href="{% url 'print_report' student.id %}" class="print-btn" style="text-decoration:none;display:inline-block;">
+    🖨 Download PDF
+</a>
+
 <button class="print-btn" onclick="window.print()">
-🖨 Print Report
+    🖨 Print Report
 </button>
 
 </div>

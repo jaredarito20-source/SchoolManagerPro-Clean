@@ -1,6 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Student, Teacher, Subject, SchoolClass, Exam, Mark
 from django.db.models import Sum, Avg
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
+from django.http import HttpResponse
 
 
 from .models import Student, Teacher, Subject, SchoolClass, SchoolProfile
@@ -505,3 +510,61 @@ def calculate_overall_grade(average):
         return "D"
     else:
         return "E"
+
+def print_report(request, id):
+    student = get_object_or_404(Student, id=id)
+    marks = Mark.objects.filter(student=student)
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'attachment; filename="{student.admission_number}_report.pdf"'
+    )
+
+    doc = SimpleDocTemplate(response)
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    elements.append(Paragraph("<b>STUDENT REPORT CARD</b>", styles["Title"]))
+    elements.append(Paragraph(f"Student: {student.first_name} {student.last_name}", styles["Normal"]))
+    elements.append(Paragraph(f"Admission No: {student.admission_number}", styles["Normal"]))
+
+    if student.school_class:
+        elements.append(Paragraph(f"Class: {student.school_class.name}", styles["Normal"]))
+
+    elements.append(Paragraph("<br/>", styles["Normal"]))
+
+    data = [["Subject", "Marks", "Grade"]]
+
+    total = 0
+
+    for mark in marks:
+        data.append([
+            mark.subject.name,
+            str(mark.marks),
+            mark.grade,
+        ])
+        total += mark.marks
+
+    table = Table(data)
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+    ]))
+
+    elements.append(table)
+
+    average = total / marks.count() if marks.count() else 0
+
+    elements.append(Paragraph("<br/>", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Total Marks:</b> {total}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Average:</b> {average:.2f}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Overall Grade:</b> {calculate_overall_grade(average)}", styles["Normal"]))
+
+    doc.build(elements)
+
+    return response

@@ -46,6 +46,7 @@ urlpatterns = [
 
 
     path("reports/student/<int:id>/", views.student_report, name="student_report"),
+    path("students/<int:id>/print/", views.print_report, name="print_report"),
             
     ]
 
