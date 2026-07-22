@@ -7,6 +7,8 @@ from .models import (
     Exam,
     Mark,
     SchoolProfile,
+    FeeStructure,
+    FeePayment,
 )
 
 admin.site.register(Student)
@@ -16,3 +18,5 @@ admin.site.register(SchoolClass)
 admin.site.register(Exam)
 admin.site.register(Mark)
 admin.site.register(SchoolProfile)
+admin.site.register(FeeStructure)
+admin.site.register(FeePayment)

@@ -118,3 +118,46 @@ class SchoolProfile(models.Model):
 
     def __str__(self):
         return self.name
+
+class FeeStructure(models.Model):
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE
+    )
+
+    tuition_fee = models.DecimalField(max_digits=10, decimal_places=2)
+    activity_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    exam_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    other_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def total_fee(self):
+        return (
+            self.tuition_fee +
+            self.activity_fee +
+            self.exam_fee +
+            self.other_fee
+        )
+
+    def __str__(self):
+        return f"{self.school_class.name} Fee Structure"
+
+class FeePayment(models.Model):
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE
+    )
+
+    payment_date = models.DateField(auto_now_add=True)
+
+    amount_paid = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    receipt_number = models.CharField(
+        max_length=50,
+        unique=True
+    )
+
+    def __str__(self):
+        return f"{self.student} - {self.amount_paid}"
