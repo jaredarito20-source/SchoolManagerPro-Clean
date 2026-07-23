@@ -13,18 +13,50 @@
 
 <div class="sidebar">
 
+    
+
     <h2>🏫 School</h2>
 
-    <a href="/">🏠 Dashboard</a>
-    <a href="/students/">👨‍🎓 Students</a>
-    <a href="{% url 'teacher_list' %}">👩‍🏫 Teachers</a>
-    <a href="{% url 'subject_list' %}">📚 Subjects</a>
-    <a href="{% url 'class_list' %}">🏫 Classes</a>
-    <a href="{% url 'exam_list' %}">📝 Exams</a>
-    <a href="{% url 'mark_list' %}">📊 Marks</a>
-    <a href="#">💰 Fees</a>
-    <a href="#">📅 Attendance</a>
-    <a href="#">⚙ Settings</a>
+    <a href="{% url 'home' %}">🏠 Dashboard</a>
+
+    {% if user.is_superuser or user.groups.all.0.name == "Administrators" %}
+
+        <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
+        <a href="{% url 'teacher_list' %}">👩‍🏫 Teachers</a>
+        <a href="{% url 'subject_list' %}">📚 Subjects</a>
+        <a href="{% url 'class_list' %}">🏫 Classes</a>
+        <a href="{% url 'exam_list' %}">📝 Exams</a>
+        <a href="{% url 'mark_list' %}">📊 Marks</a>
+        <a href="{% url 'fee_structure_list' %}">💰 Fee Structure</a>
+        <a href="{% url 'payment_list' %}">💵 Fee Payments</a>
+        <a href="{% url 'fee_balance_list' %}">📋 Fee Balances</a>
+        <a href="{% url 'attendance_list' %}">📅 Attendance</a>
+        <a href="{% url 'timetable_list' %}">🕒 Timetable</a>
+
+    {% elif user.groups.all.0.name == "Teachers" %}
+
+        <a href="{% url 'mark_list' %}">📊 Marks</a>
+        <a href="{% url 'attendance_list' %}">📅 Attendance</a>
+        <a href="{% url 'timetable_list' %}">🕒 Timetable</a>
+
+    {% elif user.groups.all.0.name == "Bursars" %}
+
+        <a href="{% url 'fee_structure_list' %}">💰 Fee Structure</a>
+        <a href="{% url 'payment_list' %}">💵 Fee Payments</a>
+        <a href="{% url 'fee_balance_list' %}">📋 Fee Balances</a>
+
+    {% elif user.groups.all.0.name == "Secretaries" %}
+
+        <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
+        <a href="{% url 'attendance_list' %}">📅 Attendance</a>
+
+    {% endif %}
+
+    <hr>
+
+    <a href="{% url 'logout' %}">🚪 Logout</a>
+
+</div>
 
 </div>
 

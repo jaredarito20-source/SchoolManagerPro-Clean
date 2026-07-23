@@ -94,6 +94,12 @@ urlpatterns = [
     views.add_timetable,
     name="add_timetable",
 ),
+
+path(
+    "users/",
+    views.user_list,
+    name="user_list",
+),
     ]
 
 

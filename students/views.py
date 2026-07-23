@@ -8,6 +8,8 @@ from reportlab.lib.units import inch
 from django.http import HttpResponse
 from datetime import date
 from django.contrib.auth.decorators import login_required,user_passes_test
+from django.contrib.auth.models import User, Group
+from django.contrib import messages
 
 
 
@@ -24,16 +26,52 @@ from .models import (
     Attendance,
     Timetable,
 )
+from .decorators import (
+    admin_required,
+    teacher_required,
+    bursar_required,
+    secretary_required,
+    admin_or_teacher,
+    admin_or_bursar,
+    admin_teacher_secretary,
+)
+# ======================================
+# User Role Checks
+# ======================================
+
+def is_admin(user):
+    return (
+        user.is_superuser or
+        user.groups.filter(name="Administrators").exists()
+    )
+
+
+def is_teacher(user):
+    return user.groups.filter(name="Teachers").exists()
+
+
+def is_bursar(user):
+    return user.groups.filter(name="Bursars").exists()
+
+
+def is_secretary(user):
+    return user.groups.filter(name="Secretaries").exists()
+
+
+
+
 def in_group(group_name):
     def check(user):
         return (
-            user.is_authenticated and
-            user.groups.filter(name=group_name).exists()
+            user.is_superuser or
+            (
+                user.is_authenticated and
+                user.groups.filter(name=group_name).exists()
+            )
         )
     return user_passes_test(check)
-
-
 @login_required
+@admin_required
 def home(request):
     school = SchoolProfile.objects.first()
 
@@ -48,6 +86,7 @@ def home(request):
     return render(request, "students/home.html", context)
 
 @login_required
+@admin_teacher_secretary
 def add_student(request):
     if request.method == "POST":
         school_class = None
@@ -76,6 +115,7 @@ def add_student(request):
     })
 
 @login_required
+@admin_teacher_secretary
 def student_list(request):
     students = Student.objects.all()
     return render(request, "students/student_list.html", {
@@ -83,6 +123,7 @@ def student_list(request):
     })
 
 @login_required
+@admin_teacher_secretary
 def edit_student(request, id):
     student = get_object_or_404(Student, id=id)
 
@@ -115,6 +156,7 @@ def edit_student(request, id):
 
 
 @login_required
+@admin_teacher_secretary
 def delete_student(request, id):
     student = get_object_or_404(Student, id=id)
 
@@ -128,6 +170,7 @@ def delete_student(request, id):
 
 
 @login_required
+@admin_required
 def teacher_list(request):
     teachers = Teacher.objects.all()
     return render(request, "students/teacher_list.html", {
@@ -136,6 +179,7 @@ def teacher_list(request):
 
 
 @login_required
+@admin_required
 def add_teacher(request):
     if request.method == "POST":
         Teacher.objects.create(
@@ -154,6 +198,7 @@ def add_teacher(request):
 
 
 @login_required
+@admin_required
 def edit_teacher(request, id):
     teacher = get_object_or_404(Teacher, id=id)
 
@@ -175,6 +220,7 @@ def edit_teacher(request, id):
 
 
 @login_required
+@admin_required
 def delete_teacher(request, id):
     teacher = get_object_or_404(Teacher, id=id)
 
@@ -188,6 +234,7 @@ def delete_teacher(request, id):
 
 
 @login_required
+@admin_required
 def subject_list(request):
     subjects = Subject.objects.all()
     return render(request, "students/subject_list.html", {
@@ -197,6 +244,7 @@ def subject_list(request):
 
 
 @login_required
+@admin_required
 def add_subject(request):
     if request.method == "POST":
         teacher = None
@@ -219,6 +267,7 @@ def add_subject(request):
 
 
 @login_required
+@admin_required
 def edit_subject(request, id):
     subject = get_object_or_404(Subject, id=id)
 
@@ -244,6 +293,7 @@ def edit_subject(request, id):
 
 
 @login_required
+@admin_required
 def delete_subject(request, id):
     subject = get_object_or_404(Subject, id=id)
 
@@ -257,6 +307,7 @@ def delete_subject(request, id):
 
 
 @login_required
+@admin_required
 def class_list(request):
     classes = SchoolClass.objects.all()
     return render(request, "students/class_list.html", {
@@ -264,6 +315,7 @@ def class_list(request):
     })
 
 @login_required
+@admin_required
 def add_class(request):
     if request.method == "POST":
         teacher = None
@@ -286,6 +338,7 @@ def add_class(request):
 
 
 @login_required
+@admin_required
 def edit_class(request, id):
     school_class = get_object_or_404(SchoolClass, id=id)
 
@@ -310,6 +363,7 @@ def edit_class(request, id):
 
 
 @login_required
+@admin_required
 def delete_class(request, id):
     school_class = get_object_or_404(SchoolClass, id=id)
 
@@ -334,6 +388,7 @@ def exam_list(request):
 
 
 @login_required
+@user_passes_test(is_admin)
 def add_exam(request):
     if request.method == "POST":
         Exam.objects.create(
@@ -348,6 +403,7 @@ def add_exam(request):
 
 
 @login_required
+@user_passes_test(is_admin)
 def edit_exam(request, id):
     exam = get_object_or_404(Exam, id=id)
 
@@ -365,6 +421,7 @@ def edit_exam(request, id):
 
 
 @login_required
+@user_passes_test(is_admin)
 def delete_exam(request, id):
     exam = get_object_or_404(Exam, id=id)
 
@@ -379,6 +436,7 @@ def delete_exam(request, id):
 # Marks
 # ==========================
 @login_required
+@admin_or_teacher
 def mark_list(request):
     marks = Mark.objects.all()
 
@@ -388,6 +446,7 @@ def mark_list(request):
 
 
 @login_required
+@admin_or_teacher
 def add_mark(request):
     if request.method == "POST":
         student = Student.objects.get(id=request.POST["student"])
@@ -436,6 +495,7 @@ def add_mark(request):
 
 
 @login_required
+@admin_or_teacher
 def edit_mark(request, id):
     mark = get_object_or_404(Mark, id=id)
 
@@ -458,6 +518,7 @@ def edit_mark(request, id):
 
 
 @login_required
+@admin_or_teacher
 def delete_mark(request, id):
     mark = get_object_or_404(Mark, id=id)
 
@@ -500,6 +561,7 @@ def calculate_grade(mark):
 
 
 @login_required
+@admin_or_teacher
 def student_report(request, id):
     student = get_object_or_404(Student, id=id)
 
@@ -576,6 +638,7 @@ def calculate_overall_grade(average):
 
 
 @login_required
+@admin_or_teacher
 def print_report(request, id):
     student = get_object_or_404(Student, id=id)
     marks = Mark.objects.filter(student=student)
@@ -637,6 +700,8 @@ def print_report(request, id):
 # FEE STRUCTURE
 # ==========================
 @login_required
+@admin_or_bursar
+@in_group("Bursar")
 def fee_structure_list(request):
     fees = FeeStructure.objects.all()
 
@@ -649,6 +714,8 @@ def fee_structure_list(request):
 
 
 @login_required
+@admin_or_bursar
+@in_group("Bursar")
 def add_fee_structure(request):
 
     if request.method == "POST":
@@ -680,6 +747,8 @@ def add_fee_structure(request):
 # FEE PAYMENTS
 # ==========================
 @login_required
+@admin_or_bursar
+@in_group("Bursar")
 def payment_list(request):
 
     payments = FeePayment.objects.all()
@@ -691,6 +760,8 @@ def payment_list(request):
     )
 
 @login_required
+@admin_or_bursar
+@in_group("Bursar")
 def add_payment(request):
 
     if request.method == "POST":
@@ -717,6 +788,8 @@ def add_payment(request):
 
 
 @login_required
+@admin_or_bursar
+@in_group("Bursar")
 def fee_balance_list(request):
     students = Student.objects.select_related("school_class").all()
 
@@ -729,6 +802,7 @@ def fee_balance_list(request):
 
 
 @login_required
+@admin_teacher_secretary
 def attendance_list(request):
     attendance = Attendance.objects.all().order_by("-date")
 
@@ -743,6 +817,7 @@ def attendance_list(request):
 
 
 @login_required
+@admin_teacher_secretary
 def add_attendance(request):
 
     if request.method == "POST":
@@ -774,6 +849,7 @@ def add_attendance(request):
 
 
 @login_required
+@admin_teacher_secretary
 def take_attendance(request):
 
     classes = SchoolClass.objects.all()
@@ -833,6 +909,7 @@ def take_attendance(request):
 
 
 @login_required
+@admin_teacher_secretary
 def edit_attendance(request, id):
     attendance = get_object_or_404(
         Attendance,
@@ -854,6 +931,7 @@ def edit_attendance(request, id):
 
 
 @login_required
+@admin_teacher_secretary
 def delete_attendance(request, id):
     attendance = get_object_or_404(
         Attendance,
@@ -875,6 +953,7 @@ def delete_attendance(request, id):
 # TIMETABLE
 # ==========================
 @login_required
+@admin_or_teacher
 def add_timetable(request):
 
     if request.method == "POST":
@@ -914,6 +993,7 @@ def add_timetable(request):
 
 
 @login_required
+@admin_or_teacher
 def timetable_list(request):
 
     timetables = Timetable.objects.all()
@@ -923,5 +1003,18 @@ def timetable_list(request):
         "students/timetable_list.html",
         {
             "timetables": timetables
+        },
+    )
+
+@login_required
+@user_passes_test(is_admin)
+def user_list(request):
+    users = User.objects.all()
+
+    return render(
+        request,
+        "students/user_list.html",
+        {
+            "users": users,
         },
     )
