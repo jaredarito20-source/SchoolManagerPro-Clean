@@ -6,6 +6,10 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from django.http import HttpResponse
+from datetime import date
+from django.contrib.auth.decorators import login_required,user_passes_test
+
+
 
 from .models import (
     Student,
@@ -18,10 +22,18 @@ from .models import (
     FeeStructure,
     FeePayment,
     Attendance,
+    Timetable,
 )
+def in_group(group_name):
+    def check(user):
+        return (
+            user.is_authenticated and
+            user.groups.filter(name=group_name).exists()
+        )
+    return user_passes_test(check)
 
 
-
+@login_required
 def home(request):
     school = SchoolProfile.objects.first()
 
@@ -34,6 +46,8 @@ def home(request):
     }
 
     return render(request, "students/home.html", context)
+
+@login_required
 def add_student(request):
     if request.method == "POST":
         school_class = None
@@ -61,13 +75,14 @@ def add_student(request):
         "classes": classes
     })
 
+@login_required
 def student_list(request):
     students = Student.objects.all()
     return render(request, "students/student_list.html", {
         "students": students
     })
 
-
+@login_required
 def edit_student(request, id):
     student = get_object_or_404(Student, id=id)
 
@@ -98,6 +113,8 @@ def edit_student(request, id):
         "classes": classes,
     })
 
+
+@login_required
 def delete_student(request, id):
     student = get_object_or_404(Student, id=id)
 
@@ -108,11 +125,17 @@ def delete_student(request, id):
     return render(request, "students/delete_student.html", {
         "student": student
     })
+
+
+@login_required
 def teacher_list(request):
     teachers = Teacher.objects.all()
     return render(request, "students/teacher_list.html", {
         "teachers": teachers
     })
+
+
+@login_required
 def add_teacher(request):
     if request.method == "POST":
         Teacher.objects.create(
@@ -128,6 +151,9 @@ def add_teacher(request):
         return redirect("teacher_list")
 
     return render(request, "students/add_teacher.html")
+
+
+@login_required
 def edit_teacher(request, id):
     teacher = get_object_or_404(Teacher, id=id)
 
@@ -147,6 +173,8 @@ def edit_teacher(request, id):
         "teacher": teacher
     })
 
+
+@login_required
 def delete_teacher(request, id):
     teacher = get_object_or_404(Teacher, id=id)
 
@@ -158,6 +186,8 @@ def delete_teacher(request, id):
         "teacher": teacher
     })
 
+
+@login_required
 def subject_list(request):
     subjects = Subject.objects.all()
     return render(request, "students/subject_list.html", {
@@ -165,6 +195,8 @@ def subject_list(request):
     })
 
 
+
+@login_required
 def add_subject(request):
     if request.method == "POST":
         teacher = None
@@ -185,6 +217,8 @@ def add_subject(request):
         "teachers": teachers
     })
 
+
+@login_required
 def edit_subject(request, id):
     subject = get_object_or_404(Subject, id=id)
 
@@ -208,6 +242,8 @@ def edit_subject(request, id):
     })
 
 
+
+@login_required
 def delete_subject(request, id):
     subject = get_object_or_404(Subject, id=id)
 
@@ -219,13 +255,15 @@ def delete_subject(request, id):
         "subject": subject
     })
 
+
+@login_required
 def class_list(request):
     classes = SchoolClass.objects.all()
     return render(request, "students/class_list.html", {
         "classes": classes
     })
 
-
+@login_required
 def add_class(request):
     if request.method == "POST":
         teacher = None
@@ -247,6 +285,7 @@ def add_class(request):
     })
 
 
+@login_required
 def edit_class(request, id):
     school_class = get_object_or_404(SchoolClass, id=id)
 
@@ -270,6 +309,7 @@ def edit_class(request, id):
     })
 
 
+@login_required
 def delete_class(request, id):
     school_class = get_object_or_404(SchoolClass, id=id)
 
@@ -284,7 +324,7 @@ def delete_class(request, id):
 # ==========================
 # Exams
 # ==========================
-
+@login_required
 def exam_list(request):
     exams = Exam.objects.all()
 
@@ -293,6 +333,7 @@ def exam_list(request):
     })
 
 
+@login_required
 def add_exam(request):
     if request.method == "POST":
         Exam.objects.create(
@@ -306,6 +347,7 @@ def add_exam(request):
     return render(request, "students/add_exam.html")
 
 
+@login_required
 def edit_exam(request, id):
     exam = get_object_or_404(Exam, id=id)
 
@@ -322,6 +364,7 @@ def edit_exam(request, id):
     })
 
 
+@login_required
 def delete_exam(request, id):
     exam = get_object_or_404(Exam, id=id)
 
@@ -335,7 +378,7 @@ def delete_exam(request, id):
 # ==========================
 # Marks
 # ==========================
-
+@login_required
 def mark_list(request):
     marks = Mark.objects.all()
 
@@ -344,6 +387,7 @@ def mark_list(request):
     })
 
 
+@login_required
 def add_mark(request):
     if request.method == "POST":
         student = Student.objects.get(id=request.POST["student"])
@@ -391,6 +435,7 @@ def add_mark(request):
     })
 
 
+@login_required
 def edit_mark(request, id):
     mark = get_object_or_404(Mark, id=id)
 
@@ -412,6 +457,7 @@ def edit_mark(request, id):
     })
 
 
+@login_required
 def delete_mark(request, id):
     mark = get_object_or_404(Mark, id=id)
 
@@ -421,7 +467,10 @@ def delete_mark(request, id):
 
     return render(request, "students/delete_mark.html", {
         "mark": mark
+
     })
+
+
 def calculate_grade(mark):
     if mark >= 80:
         return "A"
@@ -450,7 +499,7 @@ def calculate_grade(mark):
 
 
 
-
+@login_required
 def student_report(request, id):
     student = get_object_or_404(Student, id=id)
 
@@ -499,6 +548,8 @@ def student_report(request, id):
     }
     return render(request, "students/student_report.html", context)
 
+
+
 def calculate_overall_grade(average):
     if average >= 80:
         return "A"
@@ -523,6 +574,8 @@ def calculate_overall_grade(average):
     else:
         return "E"
 
+
+@login_required
 def print_report(request, id):
     student = get_object_or_404(Student, id=id)
     marks = Mark.objects.filter(student=student)
@@ -583,7 +636,7 @@ def print_report(request, id):
 # ==========================
 # FEE STRUCTURE
 # ==========================
-
+@login_required
 def fee_structure_list(request):
     fees = FeeStructure.objects.all()
 
@@ -594,6 +647,8 @@ def fee_structure_list(request):
     )
 
 
+
+@login_required
 def add_fee_structure(request):
 
     if request.method == "POST":
@@ -624,7 +679,7 @@ def add_fee_structure(request):
 # ==========================
 # FEE PAYMENTS
 # ==========================
-
+@login_required
 def payment_list(request):
 
     payments = FeePayment.objects.all()
@@ -635,7 +690,7 @@ def payment_list(request):
         {"payments": payments},
     )
 
-
+@login_required
 def add_payment(request):
 
     if request.method == "POST":
@@ -660,6 +715,8 @@ def add_payment(request):
         {"students": students},
     )
 
+
+@login_required
 def fee_balance_list(request):
     students = Student.objects.select_related("school_class").all()
 
@@ -669,6 +726,9 @@ def fee_balance_list(request):
         {"students": students},
     )
 
+
+
+@login_required
 def attendance_list(request):
     attendance = Attendance.objects.all().order_by("-date")
 
@@ -677,5 +737,191 @@ def attendance_list(request):
         "students/attendance_list.html",
         {
             "attendance": attendance,
+        },
+    )
+
+
+
+@login_required
+def add_attendance(request):
+
+    if request.method == "POST":
+
+        student = Student.objects.get(id=request.POST["student"])
+        school_class = SchoolClass.objects.get(id=request.POST["school_class"])
+
+        Attendance.objects.create(
+            student=student,
+            school_class=school_class,
+            date=request.POST["date"],
+            status=request.POST["status"],
+        )
+
+        return redirect("attendance_list")
+
+    students = Student.objects.all()
+    classes = SchoolClass.objects.all()
+
+    return render(
+        request,
+        "students/add_attendance.html",
+        {
+            "students": students,
+            "classes": classes,
+            "today": date.today(),
+        },
+    )
+
+
+@login_required
+def take_attendance(request):
+
+    classes = SchoolClass.objects.all()
+
+    selected_class = None
+    students = []
+
+    if request.method == "POST":
+
+        school_class = SchoolClass.objects.get(
+            id=request.POST["school_class"]
+        )
+
+        attendance_date = request.POST["date"]
+
+        students = Student.objects.filter(
+            school_class=school_class
+        )
+
+        for student in students:
+
+            status = request.POST.get(
+                f"status_{student.id}",
+                "Present"
+            )
+
+            Attendance.objects.update_or_create(
+                student=student,
+                date=attendance_date,
+                defaults={
+                    "school_class": school_class,
+                    "status": status,
+                }
+            )
+
+        return redirect("attendance_list")
+
+    class_id = request.GET.get("class")
+
+    if class_id:
+        selected_class = SchoolClass.objects.get(id=class_id)
+
+        students = Student.objects.filter(
+            school_class=selected_class
+        )
+
+    return render(
+        request,
+        "students/take_attendance.html",
+        {
+            "classes": classes,
+            "selected_class": selected_class,
+            "students": students,
+            "today": date.today(),
+        },
+    )
+
+
+@login_required
+def edit_attendance(request, id):
+    attendance = get_object_or_404(
+        Attendance,
+        id=id
+    )
+
+    if request.method == "POST":
+        attendance.status = request.POST["status"]
+        attendance.save()
+        return redirect("attendance_list")
+
+    return render(
+        request,
+        "students/edit_attendance.html",
+        {
+            "attendance": attendance
+        },
+    )
+
+
+@login_required
+def delete_attendance(request, id):
+    attendance = get_object_or_404(
+        Attendance,
+        id=id
+    )
+
+    if request.method == "POST":
+        attendance.delete()
+        return redirect("attendance_list")
+
+    return render(
+        request,
+        "students/delete_attendance.html",
+        {
+            "attendance": attendance
+        },
+    )
+# ==========================
+# TIMETABLE
+# ==========================
+@login_required
+def add_timetable(request):
+
+    if request.method == "POST":
+
+        school_class = SchoolClass.objects.get(
+            id=request.POST["school_class"]
+        )
+
+        subject = Subject.objects.get(
+            id=request.POST["subject"]
+        )
+
+        teacher = Teacher.objects.get(
+            id=request.POST["teacher"]
+        )
+
+        Timetable.objects.create(
+            school_class=school_class,
+            subject=subject,
+            teacher=teacher,
+            day=request.POST["day"],
+            start_time=request.POST["start_time"],
+            end_time=request.POST["end_time"],
+        )
+
+        return redirect("timetable_list")
+
+    return render(
+        request,
+        "students/add_timetable.html",
+        {
+            "classes": SchoolClass.objects.all(),
+            "subjects": Subject.objects.all(),
+            "teachers": Teacher.objects.all(),
+        },
+    )
+
+
+@login_required
+def timetable_list(request):
+
+    timetables = Timetable.objects.all()
+
+    return render(
+        request,
+        "students/timetable_list.html",
+        {
+            "timetables": timetables
         },
     )

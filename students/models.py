@@ -218,7 +218,6 @@ class Attendance(models.Model):
     )
 
     date = models.DateField()
-
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
@@ -226,4 +225,47 @@ class Attendance(models.Model):
     )
 
     def __str__(self):
-        return f"{self.student} - {self.date} - {self.status}"      
+        return f"{self.student} - {self.date} - {self.status}" 
+
+class Timetable(models.Model):
+    DAYS = [
+        ("Monday", "Monday"),
+        ("Tuesday", "Tuesday"),
+        ("Wednesday", "Wednesday"),
+        ("Thursday", "Thursday"),
+        ("Friday", "Friday"),
+    ]
+
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE
+    )
+
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE
+    )
+
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE
+    )
+
+    day = models.CharField(
+        max_length=10,
+        choices=DAYS,
+    )
+
+    start_time = models.TimeField()
+
+    end_time = models.TimeField()
+
+    class Meta:
+        ordering = ["day", "start_time"]
+
+    def __str__(self):
+        return (
+            f"{self.school_class} - "
+            f"{self.subject} - "
+            f"{self.day}"
+        )     
