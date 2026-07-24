@@ -132,6 +132,24 @@ path(
     views.print_receipt,
     name="print_receipt",
 ),
+
+path(
+    "payments/<int:id>/receipt/",
+    views.print_receipt,
+    name="print_receipt",
+),
+
+path(
+    "statement/<int:id>/",
+    views.fee_statement,
+    name="fee_statement",
+),
+
+path(
+    "statement/<int:id>/print/",
+    views.print_fee_statement,
+    name="print_fee_statement",
+),
     ]
 
 

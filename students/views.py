@@ -894,31 +894,214 @@ def payment_list(request):
 
 @login_required
 @admin_or_bursar
-@in_group("Bursar")
 def add_payment(request):
 
     if request.method == "POST":
 
-        student = Student.objects.get(
+        student = get_object_or_404(
+            Student,
             id=request.POST["student"]
         )
+
+        last_payment = FeePayment.objects.order_by("-id").first()
+
+        if last_payment:
+            last_number = int(last_payment.receipt_number.replace("RCP", ""))
+            receipt_number = f"RCP{last_number + 1:06d}"
+        else:
+            receipt_number = "RCP000001"
 
         FeePayment.objects.create(
             student=student,
             amount_paid=request.POST["amount_paid"],
-            receipt_number=request.POST["receipt_number"],
+            receipt_number=receipt_number,
+        )
+
+        messages.success(
+            request,
+            f"Payment recorded successfully. Receipt No. {receipt_number}"
         )
 
         return redirect("payment_list")
 
-    students = Student.objects.all()
+    students = Student.objects.all().order_by(
+        "admission_number"
+    )
 
     return render(
         request,
         "students/add_payment.html",
-        {"students": students},
+        {
+            "students": students,
+        },
     )
 
+@login_required
+@admin_or_bursar
+def print_fee_statement(request, id):
+
+    student = get_object_or_404(Student, id=id)
+
+    school = SchoolProfile.objects.first()
+
+    payments = FeePayment.objects.filter(
+        student=student
+    ).order_by("payment_date")
+
+    response = HttpResponse(content_type="application/pdf")
+
+    response["Content-Disposition"] = (
+        f'inline; filename="Fee_Statement_{student.admission_number}.pdf"'
+    )
+
+    doc = SimpleDocTemplate(response)
+
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    if school:
+        elements.append(
+            Paragraph(
+                f"<b><font size='18'>{school.name}</font></b>",
+                styles["Title"],
+            )
+        )
+
+        elements.append(
+            Paragraph(
+                school.address,
+                styles["Normal"],
+            )
+        )
+
+        elements.append(
+            Paragraph(
+                f"Phone: {school.phone}",
+                styles["Normal"],
+            )
+        )
+
+        elements.append(
+            Paragraph(
+                f"Email: {school.email}",
+                styles["Normal"],
+            )
+        )
+
+    elements.append(
+        Paragraph("<br/>", styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(
+            "<b>STUDENT FEE STATEMENT</b>",
+            styles["Heading1"],
+        )
+    )
+
+    elements.append(
+        Paragraph("<br/>", styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Student:</b> {student.first_name} {student.last_name}",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Admission No:</b> {student.admission_number}",
+            styles["Normal"],
+        )
+    )
+
+    if student.school_class:
+        elements.append(
+            Paragraph(
+                f"<b>Class:</b> {student.school_class.name}",
+                styles["Normal"],
+            )
+        )
+
+    elements.append(
+        Paragraph("<br/>", styles["Normal"])
+    )
+
+    data = [["Receipt", "Date", "Amount"]]
+
+    for payment in payments:
+        data.append([
+            payment.receipt_number,
+            str(payment.payment_date),
+            f"KSh {payment.amount_paid}",
+        ])
+
+    table = Table(data)
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.darkblue),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("GRID", (0,0), (-1,-1), 1, colors.black),
+        ("BACKGROUND", (0,1), (-1,-1), colors.beige),
+    ]))
+
+    elements.append(table)
+
+    elements.append(
+        Paragraph("<br/>", styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Total Fee:</b> KSh {student.total_fee()}",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Total Paid:</b> KSh {student.total_paid()}",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Balance:</b> KSh {student.balance()}",
+            styles["Heading2"],
+        )
+    )
+
+    doc.build(elements)
+
+    return response
+
+@login_required
+@admin_or_bursar
+def fee_statement(request, id):
+
+    student = get_object_or_404(Student, id=id)
+
+    payments = FeePayment.objects.filter(
+        student=student
+    ).order_by("-payment_date")
+
+    context = {
+        "student": student,
+        "payments": payments,
+        "total_fee": student.total_fee(),
+        "total_paid": student.total_paid(),
+        "balance": student.balance(),
+    }
+
+    return render(
+        request,
+        "students/fee_statement.html",
+        context,
+    )
 
 @login_required
 @admin_or_bursar
@@ -1402,3 +1585,117 @@ def delete_user(request, id):
             "user_obj": user,
         },
     )
+
+@login_required
+@admin_or_bursar
+def print_receipt(request, id):
+
+    payment = get_object_or_404(FeePayment, id=id)
+    school = SchoolProfile.objects.first()
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'inline; filename="Receipt_{payment.receipt_number}.pdf"'
+    )
+
+    doc = SimpleDocTemplate(response)
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    # School Name
+    elements.append(
+        Paragraph(
+            f"<font size='18'><b>{school.name}</b></font>",
+            styles["Title"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            school.address,
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"Phone: {school.phone}",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"Email: {school.email}",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph("<br/>", styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(
+            "<font size='15'><b>OFFICIAL SCHOOL FEE RECEIPT</b></font>",
+            styles["Heading2"],
+        )
+    )
+
+    elements.append(
+        Paragraph("<br/>", styles["Normal"])
+    )
+
+    data = [
+        ["Receipt Number", payment.receipt_number],
+        ["Date", str(payment.payment_date)],
+        ["Student", f"{payment.student.first_name} {payment.student.last_name}"],
+        ["Admission No", payment.student.admission_number],
+        ["Class", payment.student.school_class.name if payment.student.school_class else ""],
+        ["Amount Paid", f"KSh {payment.amount_paid}"],
+    ]
+
+    table = Table(data, colWidths=[2.5*inch, 3.5*inch])
+
+    table.setStyle(TableStyle([
+        ("GRID", (0,0), (-1,-1), 1, colors.black),
+        ("BACKGROUND", (0,0), (0,-1), colors.lightgrey),
+        ("FONTNAME", (0,0), (-1,-1), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 8),
+    ]))
+
+    elements.append(table)
+
+    elements.append(
+        Paragraph("<br/><br/>", styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(
+            "Received with thanks.",
+            styles["Heading2"],
+        )
+    )
+
+    elements.append(
+        Paragraph("<br/><br/>", styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(
+            "____________________________",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            "Authorized Signature",
+            styles["Normal"],
+        )
+    )
+
+    doc.build(elements)
+
+    return response

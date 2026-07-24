@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Record Fee Payment</h2>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+        <label>Student</label><br>
+
+        <select name="student" required>
+
+            <option value="">
+                Select Student
+            </option>
+
+            {% for student in students %}
+
+            <option value="{{ student.id }}">
+                {{ student.admission_number }} -
+                {{ student.first_name }}
+                {{ student.last_name }}
+                (Balance: KSh {{ student.balance }})
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label>Amount Paid</label><br>
+
+        <input
+            type="number"
+            name="amount_paid"
+            step="0.01"
+            required
+        >
+
+    </p>
+
+    <button type="submit">
+        Save Payment
+    </button>
+
+    <a href="{% url 'payment_list' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

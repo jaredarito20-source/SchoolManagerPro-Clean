@@ -10,49 +10,60 @@
     </a>
 </p>
 
-<table border="1" cellpadding="8">
+<table border="1" cellpadding="8" cellspacing="0">
 
-<tr>
-    <th>Student</th>
-    <th>Receipt No</th>
-    <th>Amount Paid</th>
-    <th>Date</th>
-    <th>Action</th>
-</tr>
+    <tr>
+        <th>Student</th>
+        <th>Receipt Number</th>
+        <th>Amount Paid</th>
+        <th>Payment Date</th>
+        <th>Actions</th>
+    </tr>
 
-{% for payment in payments %}
+    {% for payment in payments %}
 
-<tr>
+    <tr>
 
-    <td>{{ payment.student }}</td>
+        <td>
+            {{ payment.student }}
+        </td>
 
-    <td>{{ payment.receipt_number }}</td>
+        <td>
+            {{ payment.receipt_number }}
+        </td>
 
-    <td>KSh {{ payment.amount_paid }}</td>
+        <td>
+            KSh {{ payment.amount_paid }}
+        </td>
 
-    <td>{{ payment.date_paid }}</td>
+        <td>
+            {{ payment.payment_date }}
+        </td>
 
-    <td>
+        <td>
 
-        <a href="{% url 'print_receipt' payment.id %}">
-            🖨 Print Receipt
-        </a>
+            <a href="{% url 'print_receipt' payment.id %}" target="_blank">
+                🖨 Print Receipt
+            </a>
 
-    </td>
+            <a href="{% url 'fee_statement' payment.student.id %}">
+                📄 Fee Statement
+</a>
+            
 
-</tr>
+        </td>
 
-{% empty %}
+    </tr>
 
-<tr>
+    {% empty %}
 
-<td colspan="5">
-No fee payments found.
-</td>
+    <tr>
+        <td colspan="5">
+            No fee payments have been recorded.
+        </td>
+    </tr>
 
-</tr>
-
-{% endfor %}
+    {% endfor %}
 
 </table>
 

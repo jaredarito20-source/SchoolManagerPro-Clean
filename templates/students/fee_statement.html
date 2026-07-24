@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Student Fee Statement</h2>
+
+<hr>
+
+<p><strong>Admission No:</strong> {{ student.admission_number }}</p>
+
+<p>
+    <strong>Student:</strong>
+    {{ student.first_name }} {{ student.last_name }}
+</p>
+
+<p>
+    <strong>Class:</strong>
+    {% if student.school_class %}
+        {{ student.school_class.name }}
+    {% else %}
+        Not Assigned
+    {% endif %}
+</p>
+
+<hr>
+
+<h3>Fee Summary</h3>
+
+<table border="1" cellpadding="8" cellspacing="0">
+
+<tr>
+    <th>Total Fee</th>
+    <td>KSh {{ total_fee }}</td>
+</tr>
+
+<tr>
+    <th>Total Paid</th>
+    <td>KSh {{ total_paid }}</td>
+</tr>
+
+<tr>
+    <th>Balance</th>
+    <td><strong>KSh {{ balance }}</strong></td>
+</tr>
+
+</table>
+
+<br>
+
+<h3>Payment History</h3>
+
+<table border="1" cellpadding="8" cellspacing="0">
+
+<tr>
+    <th>Receipt No.</th>
+    <th>Date</th>
+    <th>Amount Paid</th>
+</tr>
+
+{% for payment in payments %}
+
+<tr>
+    <td>{{ payment.receipt_number }}</td>
+    <td>{{ payment.payment_date }}</td>
+    <td>KSh {{ payment.amount_paid }}</td>
+</tr>
+
+{% empty %}
+
+<tr>
+    <td colspan="3" align="center">
+        No payments recorded.
+    </td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+<br><br>
+
+<a href="{% url 'print_fee_statement' student.id %}" target="_blank">
+    🖨 Print PDF Statement
+</a>
+
+&nbsp;&nbsp;
+
+<a href="{% url 'payment_list' %}">
+    ⬅ Back to Payments
+</a>
+
+{% endblock %}

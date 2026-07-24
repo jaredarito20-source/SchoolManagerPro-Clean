@@ -195,11 +195,27 @@ class FeePayment(models.Model):
         max_length=50,
         unique=True,
     )
-    date_paid = models.DateField(auto_now_add=True)
+
+    # M-Pesa fields
+    mpesa_receipt = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+    )
+
+    phone_number = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+    )
+
+    payment_method = models.CharField(
+        max_length=20,
+        default="Cash",
+    )
 
     def __str__(self):
         return f"{self.student} - {self.amount_paid}"
-
 class Attendance(models.Model):
     STATUS_CHOICES = [
         ("Present", "Present"),
