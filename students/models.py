@@ -55,6 +55,11 @@ class Student(models.Model):
 
     parent_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
+    photo = models.ImageField(
+        upload_to="students/",
+        blank=True,
+        null=True,
+    )
 
     def total_fee(self):
         fee = FeeStructure.objects.filter(
@@ -144,6 +149,12 @@ class SchoolProfile(models.Model):
 
     current_term = models.CharField(max_length=20)
     academic_year = models.CharField(max_length=20)
+    principal_name = models.CharField(max_length=100, blank=True)
+    principal_signature = models.ImageField(
+        upload_to="signatures/",
+        blank=True,
+        null=True,
+    )
 
     logo = models.ImageField(
         upload_to="school_logos/",

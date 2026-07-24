@@ -4,60 +4,153 @@
 
 <h2>Add Student</h2>
 
-<form method="POST">
+<form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
 
-    <p>
-        <label>Admission Number</label><br>
-        <input type="text" name="admission_number" required>
-    </p>
+    <table>
 
-    <p>
-        <label>First Name</label><br>
-        <input type="text" name="first_name" required>
-    </p>
+        <tr>
+            <td>Admission Number</td>
+            <td>
+                <input
+                    type="text"
+                    name="admission_number"
+                    required
+                >
+            </td>
+        </tr>
 
-    <p>
-        <label>Last Name</label><br>
-        <input type="text" name="last_name" required>
-    </p>
+        <tr>
+            <td>First Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="first_name"
+                    required
+                >
+            </td>
+        </tr>
 
-    <p>
-        <label>Gender</label><br>
-        <select name="gender" required>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-        </select>
-    </p>
+        <tr>
+            <td>Last Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="last_name"
+                    required
+                >
+            </td>
+        </tr>
 
-    <p>
-        <label>Date of Birth</label><br>
-        <input type="date" name="date_of_birth" required>
-    </p>
+        <tr>
+            <td>Gender</td>
+            <td>
 
-    <p>
-        <label>Class</label><br>
-        <select name="school_class">
-            <option value="">-- Select Class --</option>
-            {% for school_class in classes %}
-                <option value="{{ school_class.id }}">
-                    {{ school_class.name }}
-                </option>
-            {% endfor %}
-        </select>
-    </p>
+                <select name="gender" required>
 
-    <p>
-        <label>Parent Name</label><br>
-        <input type="text" name="parent_name" required>
-    </p>
+                    <option value="">
+                        Select Gender
+                    </option>
 
-    <p>
-        <label>Phone</label><br>
-        <input type="text" name="phone" required>
-    </p>
+                    <option value="Male">
+                        Male
+                    </option>
 
-    <button type="submit">Save Student</button>
+                    <option value="Female">
+                        Female
+                    </option>
+
+                </select>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td>Date of Birth</td>
+            <td>
+                <input
+                    type="date"
+                    name="date_of_birth"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Class</td>
+            <td>
+
+                <select
+                    name="school_class"
+                    required
+                >
+
+                    <option value="">
+                        Select Class
+                    </option>
+
+                    {% for class in classes %}
+
+                    <option value="{{ class.id }}">
+                        {{ class.name }}
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td>Parent Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="parent_name"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Phone Number</td>
+            <td>
+                <input
+                    type="text"
+                    name="phone"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Student Photo</td>
+            <td>
+                <input
+                    type="file"
+                    name="photo"
+                    accept="image/*"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td></td>
+            <td>
+
+                <button type="submit">
+                    💾 Save Student
+                </button>
+
+                <a href="{% url 'student_list' %}">
+                    Cancel
+                </a>
+
+            </td>
+        </tr>
+
+    </table>
 
 </form>
 

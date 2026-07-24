@@ -4,65 +4,77 @@
 
 <h2>Dashboard</h2>
 
-<h3>Welcome{% if user.first_name %}, {{ user.first_name }}{% endif %}</h3>
+{% if school %}
+<h3>{{ school.name }}</h3>
+<p>{{ school.current_term }} | {{ school.academic_year }}</p>
+{% endif %}
 
 <hr>
 
-<table width="100%">
+<table width="100%" cellpadding="10">
+
 <tr>
 
-<td align="center">
-<h2>{{ total_students }}</h2>
-Students
+<td bgcolor="#d9edf7">
+<h3>👨‍🎓 Students</h3>
+<h1>{{ total_students }}</h1>
 </td>
 
-<td align="center">
-<h2>{{ total_teachers }}</h2>
-Teachers
+<td bgcolor="#dff0d8">
+<h3>👩‍🏫 Teachers</h3>
+<h1>{{ total_teachers }}</h1>
 </td>
 
-<td align="center">
-<h2>{{ total_classes }}</h2>
-Classes
+<td bgcolor="#fcf8e3">
+<h3>🏫 Classes</h3>
+<h1>{{ total_classes }}</h1>
 </td>
 
-<td align="center">
-<h2>{{ total_subjects }}</h2>
-Subjects
-</td>
-
-<td align="center">
-<h2>KSh {{ total_fee_paid }}</h2>
-Fees Collected
+<td bgcolor="#f2dede">
+<h3>📚 Subjects</h3>
+<h1>{{ total_subjects }}</h1>
 </td>
 
 </tr>
+
 </table>
 
-<hr>
+<br>
 
-<h3>Today's Attendance</h3>
-
-<p>
-
-<b>{{ attendance_today }}</b>
-
-attendance records captured today.
-
-</p>
-
-<hr>
-
-<h3>Recent Students</h3>
-
-<table border="1" cellpadding="6">
+<table width="100%" cellpadding="10">
 
 <tr>
 
+<td bgcolor="#d9edf7">
+
+<h3>💰 Fee Collected</h3>
+
+<h2>KSh {{ total_payments }}</h2>
+
+</td>
+
+<td bgcolor="#f2dede">
+
+<h3>Outstanding Balance</h3>
+
+<h2>KSh {{ total_balance }}</h2>
+
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<h3>Recent Students</h3>
+
+<table border="1" cellpadding="8">
+
+<tr>
 <th>Admission No</th>
 <th>Name</th>
 <th>Class</th>
-
 </tr>
 
 {% for student in recent_students %}
@@ -77,31 +89,21 @@ attendance records captured today.
 
 </tr>
 
-{% empty %}
-
-<tr>
-
-<td colspan="3">
-No students found.
-</td>
-
-</tr>
-
 {% endfor %}
 
 </table>
 
-<hr>
+<br>
 
 <h3>Recent Fee Payments</h3>
 
-<table border="1" cellpadding="6">
+<table border="1" cellpadding="8">
 
 <tr>
-
 <th>Student</th>
+<th>Receipt</th>
 <th>Amount</th>
-
+<th>Date</th>
 </tr>
 
 {% for payment in recent_payments %}
@@ -110,60 +112,11 @@ No students found.
 
 <td>{{ payment.student }}</td>
 
+<td>{{ payment.receipt_number }}</td>
+
 <td>KSh {{ payment.amount_paid }}</td>
 
-</tr>
-
-{% empty %}
-
-<tr>
-
-<td colspan="2">
-No payments.
-</td>
-
-</tr>
-
-{% endfor %}
-
-</table>
-
-<hr>
-
-<h3>Today's Timetable</h3>
-
-<table border="1" cellpadding="6">
-
-<tr>
-
-<th>Class</th>
-<th>Subject</th>
-<th>Teacher</th>
-<th>Time</th>
-
-</tr>
-
-{% for lesson in today_timetable %}
-
-<tr>
-
-<td>{{ lesson.school_class }}</td>
-
-<td>{{ lesson.subject }}</td>
-
-<td>{{ lesson.teacher }}</td>
-
-<td>{{ lesson.start_time }} - {{ lesson.end_time }}</td>
-
-</tr>
-
-{% empty %}
-
-<tr>
-
-<td colspan="4">
-No lessons today.
-</td>
+<td>{{ payment.payment_date }}</td>
 
 </tr>
 

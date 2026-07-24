@@ -1,62 +1,169 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Edit Student</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-<h1>Edit Student</h1>
+{% block content %}
 
-<form method="post">
+<h2>Edit Student</h2>
+
+<form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
 
-    <p>Admission Number</p>
-    <input type="text" name="admission_number" value="{{ student.admission_number }}" required>
+    <table>
 
-    <p>First Name</p>
-    <input type="text" name="first_name" value="{{ student.first_name }}" required>
+        <tr>
+            <td>Admission Number</td>
+            <td>
+                <input
+                    type="text"
+                    name="admission_number"
+                    value="{{ student.admission_number }}"
+                    required
+                >
+            </td>
+        </tr>
 
-    <p>Last Name</p>
-    <input type="text" name="last_name" value="{{ student.last_name }}" required>
+        <tr>
+            <td>First Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="first_name"
+                    value="{{ student.first_name }}"
+                    required
+                >
+            </td>
+        </tr>
 
-    <p>Gender</p>
-    <select name="gender">
-        <option value="Male" {% if student.gender == "Male" %}selected{% endif %}>Male</option>
-        <option value="Female" {% if student.gender == "Female" %}selected{% endif %}>Female</option>
-    </select>
+        <tr>
+            <td>Last Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="last_name"
+                    value="{{ student.last_name }}"
+                    required
+                >
+            </td>
+        </tr>
 
-    <p>Date of Birth</p>
-    <input type="date" name="date_of_birth" value="{{ student.date_of_birth|date:'Y-m-d' }}">
+        <tr>
+            <td>Gender</td>
+            <td>
+                <select name="gender" required>
 
-    <p>Class</p>
+                    <option value="Male"
+                        {% if student.gender == "Male" %}selected{% endif %}>
+                        Male
+                    </option>
 
-<select name="school_class">
-    <option value="">-- Select Class --</option>
+                    <option value="Female"
+                        {% if student.gender == "Female" %}selected{% endif %}>
+                        Female
+                    </option>
 
-    {% for school_class in classes %}
-    <option value="{{ school_class.id }}"
-        {% if student.school_class and school_class.id == student.school_class.id %}
-            selected
-        {% endif %}>
-        {{ school_class.name }}
-    </option>
-    {% endfor %}
-</select>
+                </select>
+            </td>
+        </tr>
 
-    <p>Parent Name</p>
-    <input type="text" name="parent_name" value="{{ student.parent_name }}">
+        <tr>
+            <td>Date of Birth</td>
+            <td>
+                <input
+                    type="date"
+                    name="date_of_birth"
+                    value="{{ student.date_of_birth|date:'Y-m-d' }}"
+                    required
+                >
+            </td>
+        </tr>
 
-    <p>Phone</p>
-    <input type="text" name="phone" value="{{ student.phone }}">
+        <tr>
+            <td>Class</td>
+            <td>
 
-    <br><br>
-    <button type="submit">Update Student</button>
+                <select name="school_class" required>
 
-<a href="{% url 'student_list' %}">
-    <button type="button">Cancel</button>
-</a>
+                    {% for class in classes %}
+
+                    <option value="{{ class.id }}"
+                        {% if student.school_class.id == class.id %}selected{% endif %}>
+                        {{ class.name }}
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td>Parent Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="parent_name"
+                    value="{{ student.parent_name }}"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Phone Number</td>
+            <td>
+                <input
+                    type="text"
+                    name="phone"
+                    value="{{ student.phone }}"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Current Photo</td>
+            <td>
+
+                {% if student.photo %}
+                    <img src="{{ student.photo.url }}"
+                         width="120"
+                         height="140"
+                         style="border:1px solid #999;">
+                {% else %}
+                    No photo uploaded.
+                {% endif %}
+
+            </td>
+        </tr>
+
+        <tr>
+            <td>Change Photo</td>
+            <td>
+                <input
+                    type="file"
+                    name="photo"
+                    accept="image/*"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td></td>
+            <td>
+
+                <button type="submit">
+                    💾 Update Student
+                </button>
+
+                <a href="{% url 'student_list' %}">
+                    Cancel
+                </a>
+
+            </td>
+        </tr>
+
+    </table>
 
 </form>
 
-</body>
-</html>
+{% endblock %}

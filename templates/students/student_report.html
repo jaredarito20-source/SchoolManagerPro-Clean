@@ -2,110 +2,324 @@
 
 {% block content %}
 
-<style>
-.report-card{
-    background:white;
-    padding:30px;
-    border-radius:8px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
+<div style="width:95%; margin:auto;">
 
-table{
-    width:100%;
-    border-collapse:collapse;
-    margin-top:20px;
-}
+<table width="100%">
 
-th, td{
-    border:1px solid #ddd;
-    padding:10px;
-    text-align:left;
-}
+<tr>
 
-th{
-    background:#1565c0;
-    color:white;
-}
+<td width="120">
 
-.summary{
-    margin-top:25px;
-    font-size:18px;
-}
+{% if school.logo %}
+<img src="{{ school.logo.url }}" width="100">
+{% endif %}
 
-.print-btn{
-    margin-top:20px;
-    margin-right:10px;
-    padding:10px 20px;
-    background:#1565c0;
-    color:white;
-    border:none;
-    border-radius:5px;
-    cursor:pointer;
-    display:inline-block;
-    text-decoration:none;
-}
-</style>
+</td>
 
-<div class="report-card">
+<td align="center">
 
-<h1>School Management System</h1>
-<h2>Student Report Card</h2>
+<h2>{{ school.name }}</h2>
+
+<p>{{ school.address }}</p>
+
+<p>
+Tel: {{ school.phone }}
+|
+{{ school.email }}
+</p>
+
+<p>
+<b>{{ school.current_term }}</b>
+|
+<b>{{ school.academic_year }}</b>
+</p>
+
+<h3>STUDENT REPORT CARD</h3>
+
+</td>
+
+<td width="120" align="right">
+
+{% if student.photo %}
+<img src="{{ student.photo.url }}"
+     width="100"
+     height="120"
+     style="border:1px solid black;">
+{% endif %}
+
+</td>
+
+</tr>
+
+</table>
 
 <hr>
 
-<h3>Student Details</h3>
-
-<p><strong>Admission No:</strong> {{ student.admission_number }}</p>
-<p><strong>Name:</strong> {{ student.first_name }} {{ student.last_name }}</p>
-<p><strong>Class:</strong> {{ student.school_class }}</p>
-
-<table>
+<table width="100%" cellpadding="5">
 
 <tr>
-    <th>Subject</th>
-    <th>Exam</th>
-    <th>Marks</th>
-    <th>Grade</th>
+
+<td>
+<b>Admission No:</b>
+{{ student.admission_number }}
+</td>
+
+<td>
+<b>Class:</b>
+{{ student.school_class }}
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+<b>Student:</b>
+{{ student.first_name }}
+{{ student.last_name }}
+</td>
+
+<td>
+<b>Exam:</b>
+{{ exam }}
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+<b>Gender:</b>
+{{ student.gender }}
+</td>
+
+<td>
+<b>Date of Birth:</b>
+{{ student.date_of_birth }}
+</td>
+
+</tr>
+
+</table>
+
+<hr>
+
+<h3>Academic Performance</h3>
+
+<table border="1"
+       width="100%"
+       cellpadding="6">
+
+<tr bgcolor="#dddddd">
+
+<th>No.</th>
+<th>Subject</th>
+<th>Marks</th>
+<th>Grade</th>
+
 </tr>
 
 {% for mark in marks %}
 
 <tr>
-    <td>{{ mark.subject.name }}</td>
-    <td>{{ mark.exam.name }}</td>
-    <td>{{ mark.marks }}</td>
-    <td>{{ mark.grade }}</td>
+
+<td>{{ forloop.counter }}</td>
+
+<td>{{ mark.subject.name }}</td>
+
+<td align="center">
+{{ mark.marks }}
+</td>
+
+<td align="center">
+{{ mark.grade }}
+</td>
+
 </tr>
 
 {% empty %}
 
 <tr>
-    <td colspan="4">No marks available.</td>
+
+<td colspan="4" align="center">
+
+No marks entered.
+
+</td>
+
 </tr>
 
 {% endfor %}
 
 </table>
 
-<div class="summary">
+<br>
 
-<p><strong>Total Marks:</strong> {{ total }}</p>
+<table border="1"
+       width="50%"
+       cellpadding="6">
 
-<p><strong>Average:</strong> {{ average }}</p>
+<tr>
 
-<p><strong>Overall Grade:</strong> {{ overall_grade }}</p>
+<th>Total Marks</th>
 
-<p><strong>Position:</strong> {{ position }} of {{ class_size }}</p>
+<td>{{ total }}</td>
 
-</div>
+</tr>
 
-<a href="{% url 'print_report' student.id %}" class="print-btn" style="text-decoration:none;display:inline-block;">
-    🖨 Download PDF
+<tr>
+
+<th>Average</th>
+
+<td>{{ average }}</td>
+
+</tr>
+
+<tr>
+
+<th>Overall Grade</th>
+
+<td>{{ overall_grade }}</td>
+
+</tr>
+
+<tr>
+
+<th>Position</th>
+
+<td>
+
+{{ position }}
+of
+{{ class_size }}
+
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<h3>Fee Status</h3>
+
+<table border="1"
+       width="60%"
+       cellpadding="6">
+
+<tr>
+
+<th>Total Fee</th>
+
+<td>KSh {{ total_fee }}</td>
+
+</tr>
+
+<tr>
+
+<th>Total Paid</th>
+
+<td>KSh {{ total_paid }}</td>
+
+</tr>
+
+<tr>
+
+<th>Balance</th>
+
+<td>
+
+<b>
+
+KSh {{ balance }}
+
+</b>
+
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<h3>Teacher's Remarks</h3>
+
+<p>
+
+{{ remark }}
+
+</p>
+
+<br><br>
+
+<table width="100%">
+
+<tr>
+
+<td>
+
+_________________________
+
+<br>
+
+Class Teacher
+
+</td>
+
+<td align="right">
+
+{% if school.principal_signature %}
+
+<img src="{{ school.principal_signature.url }}"
+     width="140">
+
+<br>
+
+{% endif %}
+
+<b>
+
+{{ school.principal_name }}
+
+</b>
+
+<br>
+
+Principal
+
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<p>
+
+Printed on:
+
+{% now "d/m/Y H:i" %}
+
+</p>
+
+<br>
+
+<a href="{% url 'print_report' student.id %}"
+   target="_blank">
+
+🖨 Print PDF Report
+
 </a>
 
-<button class="print-btn" onclick="window.print()">
-    🖨 Print Report
-</button>
+|
+
+<a href="{% url 'student_list' %}">
+
+⬅ Back
+
+</a>
 
 </div>
 

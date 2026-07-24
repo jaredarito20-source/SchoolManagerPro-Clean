@@ -11,6 +11,30 @@ from django.contrib.auth.decorators import login_required,user_passes_test
 from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
+from django.shortcuts import render, get_object_or_404
+
+from io import BytesIO
+from django.http import FileResponse
+
+
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.colors import HexColor
+
+
+
+from reportlab.lib.pagesizes import A4
+
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle,
+    Paragraph,
+    Spacer,
+    Image,
+)
+from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+
 
 
         
@@ -73,9 +97,11 @@ def in_group(group_name):
             )
         )
     return user_passes_test(check)
-@login_required
-def home(request):
 
+
+@login_required
+@admin_required
+def home(request):
     school = SchoolProfile.objects.first()
 
     total_students = Student.objects.count()
@@ -83,25 +109,16 @@ def home(request):
     total_classes = SchoolClass.objects.count()
     total_subjects = Subject.objects.count()
 
-    total_fee_paid = (
-        FeePayment.objects.aggregate(
-            total=Sum("amount_paid")
-        )["total"] or 0
+    total_payments = FeePayment.objects.aggregate(
+        total=Sum("amount_paid")
+    )["total"] or 0
+
+    total_balance = sum(
+        student.balance() for student in Student.objects.all()
     )
-
-    attendance_today = Attendance.objects.filter(
-        date=date.today()
-    ).count()
-
-    upcoming_exams = Exam.objects.order_by("-year", "term")[:5]
 
     recent_students = Student.objects.order_by("-id")[:5]
-
-    recent_payments = FeePayment.objects.order_by("-id")[:5]
-
-    today_timetable = Timetable.objects.filter(
-        day=date.today().strftime("%A")
-    )
+    recent_payments = FeePayment.objects.order_by("-payment_date")[:5]
 
     context = {
         "school": school,
@@ -109,16 +126,13 @@ def home(request):
         "total_teachers": total_teachers,
         "total_classes": total_classes,
         "total_subjects": total_subjects,
-        "total_fee_paid": total_fee_paid,
-        "attendance_today": attendance_today,
-        "upcoming_exams": upcoming_exams,
+        "total_payments": total_payments,
+        "total_balance": total_balance,
         "recent_students": recent_students,
         "recent_payments": recent_payments,
-        "today_timetable": today_timetable,
     }
 
     return render(request, "students/home.html", context)
-
 @login_required
 @admin_teacher_secretary
 def add_student(request):
@@ -138,6 +152,7 @@ def add_student(request):
             school_class=school_class,
             parent_name=request.POST["parent_name"],
             phone=request.POST["phone"],
+            photo=request.FILES.get("photo"),
         )
 
         return redirect("student_list")
@@ -187,6 +202,55 @@ def edit_student(request, id):
         "student": student,
         "classes": classes,
     })
+
+
+
+@login_required
+@admin_required
+def promotion_list(request):
+    classes = SchoolClass.objects.all().order_by("name")
+
+    return render(
+        request,
+        "students/promotion_list.html",
+        {
+            "classes": classes,
+        },
+    )
+
+
+@login_required
+@admin_required
+def promote_students(request):
+
+    if request.method == "POST":
+
+        from_class = get_object_or_404(
+            SchoolClass,
+            id=request.POST["from_class"]
+        )
+
+        to_class = get_object_or_404(
+            SchoolClass,
+            id=request.POST["to_class"]
+        )
+
+        students = Student.objects.filter(
+            school_class=from_class
+        )
+
+        count = students.update(
+            school_class=to_class
+        )
+
+        messages.success(
+            request,
+            f"{count} students promoted from {from_class} to {to_class}."
+        )
+
+        return redirect("promotion_list")
+
+    return redirect("promotion_list")
 
 
 @login_required
@@ -594,57 +658,173 @@ def calculate_grade(mark):
 
 
 
+
+
 @login_required
 @admin_or_teacher
 def student_report(request, id):
+
+    school = SchoolProfile.objects.first()
+
     student = get_object_or_404(Student, id=id)
 
-    marks = Mark.objects.filter(student=student)
-
-    total = marks.aggregate(Sum("marks"))["marks__sum"] or 0
-    average = marks.aggregate(Avg("marks"))["marks__avg"] or 0
-    overall_grade = calculate_overall_grade(average)
-
-    # Get all students in the same class
-    classmates = Student.objects.filter(
-        school_class=student.school_class
+    marks = Mark.objects.filter(student=student).select_related(
+        "subject",
+        "exam",
     )
 
-    ranking = []
+    # Current exam
+    exam = None
+    if marks.exists():
+        exam = marks.first().exam
 
-    for s in classmates:
-        student_total = (
-            Mark.objects.filter(student=s)
-            .aggregate(Sum("marks"))["marks__sum"] or 0
+    # Total Marks
+    total = sum(mark.marks for mark in marks)
+
+    # Average
+    if marks.exists():
+        average = round(total / marks.count(), 2)
+    else:
+        average = 0
+
+    # Overall Grade
+    if average >= 80:
+        overall_grade = "A"
+
+    elif average >= 75:
+        overall_grade = "A-"
+
+    elif average >= 70:
+        overall_grade = "B+"
+
+    elif average >= 65:
+        overall_grade = "B"
+
+    elif average >= 60:
+        overall_grade = "B-"
+
+    elif average >= 55:
+        overall_grade = "C+"
+
+    elif average >= 50:
+        overall_grade = "C"
+
+    elif average >= 45:
+        overall_grade = "C-"
+
+    elif average >= 40:
+        overall_grade = "D+"
+
+    elif average >= 35:
+        overall_grade = "D"
+
+    else:
+        overall_grade = "E"
+
+    # Position in class
+    position = 1
+    class_size = 1
+
+    if exam:
+
+        classmates = Student.objects.filter(
+            school_class=student.school_class
         )
 
-        ranking.append({
-            "student": s,
-            "total": student_total
-        })
+        averages = []
 
-    # Sort by total marks (highest first)
-    ranking.sort(key=lambda x: x["total"], reverse=True)
+        for s in classmates:
 
-    position = 1
+            class_marks = Mark.objects.filter(
+                student=s,
+                exam=exam
+            )
 
-    for item in ranking:
-        if item["student"].id == student.id:
-            break
-        position += 1
+            if class_marks.exists():
+
+                avg = (
+                    class_marks.aggregate(
+                        Avg("marks")
+                    )["marks__avg"]
+                )
+
+            else:
+                avg = 0
+
+            averages.append(
+                (s.id, avg)
+            )
+
+        averages.sort(
+            key=lambda x: x[1],
+            reverse=True,
+        )
+
+        class_size = len(averages)
+
+        for index, item in enumerate(averages):
+
+            if item[0] == student.id:
+                position = index + 1
+                break
+
+    # Fee Summary
+    total_fee = student.total_fee()
+
+    total_paid = student.total_paid()
+
+    balance = student.balance()
+
+    # Teacher Remarks
+    if average >= 80:
+        remark = "Excellent Performance. Keep it up."
+
+    elif average >= 70:
+        remark = "Very Good Performance."
+
+    elif average >= 60:
+        remark = "Good Work. Keep improving."
+
+    elif average >= 50:
+        remark = "Fair Performance."
+
+    else:
+        remark = "Needs more effort."
 
     context = {
+
+        "school": school,
+
         "student": student,
+
+        "exam": exam,
+
         "marks": marks,
+
         "total": total,
-        "average": round(average, 2),
+
+        "average": average,
+
         "overall_grade": overall_grade,
+
         "position": position,
-        "class_size": classmates.count(),
+
+        "class_size": class_size,
+
+        "remark": remark,
+
+        "total_fee": total_fee,
+
+        "total_paid": total_paid,
+
+        "balance": balance,
     }
-    return render(request, "students/student_report.html", context)
 
-
+    return render(
+        request,
+        "students/student_report.html",
+        context,
+    )
 
 def calculate_overall_grade(average):
     if average >= 80:
@@ -671,65 +851,412 @@ def calculate_overall_grade(average):
         return "E"
 
 
-@login_required
-@admin_or_teacher
-def print_report(request, id):
-    student = get_object_or_404(Student, id=id)
-    marks = Mark.objects.filter(student=student)
 
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = (
-        f'attachment; filename="{student.admission_number}_report.pdf"'
+    
+
+
+@login_required
+def print_report(request, id):
+
+    school = SchoolProfile.objects.first()
+
+    student = get_object_or_404(Student, id=id)
+
+    marks = Mark.objects.filter(student=student).select_related(
+        "subject",
+        "exam",
     )
 
-    doc = SimpleDocTemplate(response)
+    exam = marks.first().exam if marks.exists() else None
+
+    total = sum(mark.marks for mark in marks)
+
+    average = round(total / marks.count(), 2) if marks.exists() else 0
+
+    if average >= 80:
+        overall_grade = "A"
+    elif average >= 75:
+        overall_grade = "A-"
+    elif average >= 70:
+        overall_grade = "B+"
+    elif average >= 65:
+        overall_grade = "B"
+    elif average >= 60:
+        overall_grade = "B-"
+    elif average >= 55:
+        overall_grade = "C+"
+    elif average >= 50:
+        overall_grade = "C"
+    elif average >= 45:
+        overall_grade = "C-"
+    elif average >= 40:
+        overall_grade = "D+"
+    elif average >= 35:
+        overall_grade = "D"
+    else:
+        overall_grade = "E"
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(buffer)
+
     styles = getSampleStyleSheet()
 
-    elements = []
+    title = styles["Heading1"]
+    title.alignment = TA_CENTER
 
-    elements.append(Paragraph("<b>STUDENT REPORT CARD</b>", styles["Title"]))
-    elements.append(Paragraph(f"Student: {student.first_name} {student.last_name}", styles["Normal"]))
-    elements.append(Paragraph(f"Admission No: {student.admission_number}", styles["Normal"]))
+    story = []
+    if school and school.logo:
+        try:
+            logo = Image(
+                school.logo.path,
+                width=70,
+                height=70,
+            )
+            story.append(logo)
+        except Exception:
+            pass
+    story.append(
+        Paragraph(
+            f"<b>{school.name}</b>",
+            title,
+        )
+    )
+   
+    if school.motto:
+        story.append(
+            Paragraph(
+                school.motto,
+                styles["Italic"],
+            )
+        )
 
-    if student.school_class:
-        elements.append(Paragraph(f"Class: {student.school_class.name}", styles["Normal"]))
+    story.append(
+        Paragraph(
+            school.address,
+            styles["Normal"],
+        )
+    )
 
-    elements.append(Paragraph("<br/>", styles["Normal"]))
+    story.append(
+        Paragraph(
+            f"Phone: {school.phone}",
+            styles["Normal"],
+        )
+    )
 
-    data = [["Subject", "Marks", "Grade"]]
+    if school.email:
+        story.append(
+            Paragraph(
+                school.email,
+                styles["Normal"],
+            )
+        )
 
-    total = 0
+    story.append(
+        Paragraph(
+            f"{school.current_term} | {school.academic_year}",
+            styles["Normal"],
+        )
+    )
 
-    for mark in marks:
-        data.append([
-            mark.subject.name,
-            str(mark.marks),
-            mark.grade,
+    story.append(Spacer(1, 0.2 * inch))
+
+    story.append(
+        Paragraph(
+            "<b>STUDENT REPORT CARD</b>",
+            title,
+        )
+    )
+
+    story.append(Spacer(1, 0.3 * inch))
+    
+
+    
+
+    
+    student_info = [
+
+        ["Admission No", student.admission_number],
+
+        ["Student Name",
+         f"{student.first_name} {student.last_name}"],
+
+        ["Gender", student.gender],
+
+        ["Class", str(student.school_class)],
+
+        ["Date of Birth",
+         str(student.date_of_birth)],
+
+        ["Exam",
+         str(exam) if exam else "N/A"],
+
+    ]
+
+    info_table = Table(
+        student_info,
+        colWidths=[2 * inch, 4 * inch],
+    )
+
+    info_table.setStyle(
+
+        TableStyle(
+
+            [
+
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+
+                ("BACKGROUND", (0, 0), (0, -1), HexColor("#d9edf7")),
+
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+
+            ]
+
+        )
+
+    )
+
+    story.append(info_table)
+
+    if student.photo:
+        try:
+            photo = Image(
+                student.photo.path,
+                width=90,
+                height=110,
+            )
+            story.append(photo)
+        except Exception:
+            pass
+    story.append(Spacer(1, 0.3 * inch))
+
+    data = [
+
+        ["No", "Subject", "Marks", "Grade"]
+
+    ]
+
+    for index, mark in enumerate(marks, start=1):
+
+        data.append(
+
+            [
+
+                index,
+
+                mark.subject.name,
+
+                mark.marks,
+
+                mark.grade,
+
+            ]
+
+        )
+
+    results = Table(
+        data,
+        colWidths=[0.6 * inch, 3.5 * inch, 1 * inch, 1 * inch],
+    )
+
+    results.setStyle(
+
+        TableStyle(
+
+            [
+
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+
+                ("BACKGROUND", (0, 0), (-1, 0), HexColor("#4472C4")),
+
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+
+            ]
+
+        )
+
+    )
+
+    story.append(results)
+
+    story.append(Spacer(1, 0.3 * inch))
+
+    # Performance Summary
+    summary = [
+        ["Total Marks", total],
+        ["Average", average],
+        ["Overall Grade", overall_grade],
+    ]
+
+    summary_table = Table(
+        summary,
+        colWidths=[2.5 * inch, 2 * inch],
+    )
+
+    summary_table.setStyle(
+        TableStyle([
+            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ("BACKGROUND", (0, 0), (0, -1), HexColor("#d9edf7")),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
         ])
-        total += mark.marks
+    )
 
-    table = Table(data)
+    story.append(summary_table)
 
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("GRID", (0, 0), (-1, -1), 1, colors.black),
-        ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
-    ]))
+    story.append(Spacer(1, 0.3 * inch))
 
-    elements.append(table)
+    # Fee Summary
+    total_fee = student.total_fee()
+    total_paid = student.total_paid()
+    balance = student.balance()
 
-    average = total / marks.count() if marks.count() else 0
+    fee_data = [
+        ["Total Fee", f"KSh {total_fee}"],
+        ["Amount Paid", f"KSh {total_paid}"],
+        ["Balance", f"KSh {balance}"],
+    ]
 
-    elements.append(Paragraph("<br/>", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Total Marks:</b> {total}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Average:</b> {average:.2f}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Overall Grade:</b> {calculate_overall_grade(average)}", styles["Normal"]))
+    fee_table = Table(
+        fee_data,
+        colWidths=[2.5 * inch, 2 * inch],
+    )
 
-    doc.build(elements)
+    fee_table.setStyle(
+        TableStyle([
+            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ("BACKGROUND", (0, 0), (0, -1), HexColor("#dff0d8")),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ])
+    )
 
-    return response
+    story.append(fee_table)
+
+    story.append(Spacer(1, 0.4 * inch))
+
+    # Teacher's Remark
+    if average >= 80:
+        remark = "Excellent Performance. Keep it up."
+    elif average >= 70:
+        remark = "Very Good Performance."
+    elif average >= 60:
+        remark = "Good Work. Keep Improving."
+    elif average >= 50:
+        remark = "Fair Performance."
+    else:
+        remark = "Needs More Effort."
+
+    story.append(
+        Paragraph(
+            "<b>Teacher's Remarks</b>",
+            styles["Heading2"],
+        )
+    )
+
+    story.append(
+        Paragraph(
+            remark,
+            styles["Normal"],
+        )
+    )
+
+    story.append(Spacer(1, 0.5 * inch))
+
+    # Signature Section
+    # Signature Section
+
+    story.append(
+        Spacer(1, 0.5 * inch)
+    )
+
+
+    signature_content = []
+
+
+# Principal Signature Image
+    if school and school.principal_signature:
+        try:
+            signature = Image(
+                school.principal_signature.path,
+                width=120,
+                height=50,
+            )
+
+            signature_content.append(signature)
+
+        except Exception:
+            signature_content.append("")
+
+
+    else:
+        signature_content.append("")
+
+
+    signature_table = Table(
+        [
+            [
+                "________________________",
+                signature_content[0],
+            ],
+
+            [
+                "Class Teacher",
+                school.principal_name or "Principal",
+            ],
+
+            [
+                "",
+                "Principal",
+            ],
+        ],
+
+        colWidths=[
+            3 * inch,
+            3 * inch,
+        ],
+    )
+
+
+    signature_table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0,0), (-1,-1), "CENTER"),
+                ("TOPPADDING", (0,0), (-1,-1), 10),
+            ]
+        )
+    )
+
+
+    story.append(signature_table)
+
+    story.append(Spacer(1, 0.3 * inch))
+
+    story.append(
+        Paragraph(
+            "Generated by School Management System",
+            styles["Italic"],
+        )
+    )
+
+    # Build PDF
+    doc.build(story)
+
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=False,
+        filename=f"{student.admission_number}_Report.pdf",
+        content_type="application/pdf",
+    )
 # ==========================
 # FEE STRUCTURE
 # ==========================

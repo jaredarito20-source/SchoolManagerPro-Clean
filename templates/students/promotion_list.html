@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Student Promotion</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <p style="color:green;">
+            {{ message }}
+        </p>
+    {% endfor %}
+{% endif %}
+
+<form method="post" action="{% url 'promote_students' %}">
+
+    {% csrf_token %}
+
+    <p>
+        <strong>Promote From</strong><br>
+
+        <select name="from_class" required>
+
+            {% for class in classes %}
+
+            <option value="{{ class.id }}">
+                {{ class.name }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+        <strong>Promote To</strong><br>
+
+        <select name="to_class" required>
+
+            {% for class in classes %}
+
+            <option value="{{ class.id }}">
+                {{ class.name }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <button type="submit">
+        Promote Students
+    </button>
+
+</form>
+
+{% endblock %}
