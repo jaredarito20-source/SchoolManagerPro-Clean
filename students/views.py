@@ -872,6 +872,38 @@ def print_report(request, id):
     total = sum(mark.marks for mark in marks)
 
     average = round(total / marks.count(), 2) if marks.exists() else 0
+    # Calculate Position
+    students = Student.objects.filter(
+        school_class=student.school_class
+    )
+
+    results = []
+
+    for s in students:
+        student_marks = Mark.objects.filter(student=s)
+
+        total_marks = sum(m.marks for m in student_marks)
+
+        results.append(
+            (
+                s.id,
+                total_marks,
+            )
+        )
+
+    results.sort(
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    position = 1
+
+    for index, item in enumerate(results, start=1):
+        if item[0] == student.id:
+            position = index
+            break
+
+    class_size = len(results)
 
     if average >= 80:
         overall_grade = "A"
@@ -905,12 +937,11 @@ def print_report(request, id):
     title = styles["Heading1"]
     title.alignment = TA_CENTER
 
-    normal = normal
+    normal = styles["Normal"]
     normal.alignment = TA_CENTER
 
-    italic = italic
+    italic = styles["Italic"]
     italic.alignment = TA_CENTER
-
     story = []
     if school and school.logo:
         try:
@@ -1061,16 +1092,7 @@ def print_report(request, id):
     story.append(Spacer(1, 0.3 * inch))
 
         
-    if student.photo:
-            try:
-                photo = Image(
-                    student.photo.path,
-                    width=90,
-                    height=110,
-                )
-                story.append(photo)
-            except Exception:
-                pass
+    
     story.append(Spacer(1, 0.3 * inch))
 
     data = [
@@ -1113,6 +1135,7 @@ def print_report(request, id):
             overall_grade,
         ]
     )
+    
 
     data.append(
     [
