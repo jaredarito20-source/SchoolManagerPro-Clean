@@ -195,6 +195,7 @@ class FeePayment(models.Model):
         max_length=50,
         unique=True,
     )
+    date_paid = models.DateField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.student} - {self.amount_paid}"

@@ -10,9 +10,12 @@ from datetime import date
 from django.contrib.auth.decorators import login_required,user_passes_test
 from django.contrib.auth.models import User, Group
 from django.contrib import messages
+from django.contrib.auth.hashers import make_password
 
 
+        
 
+       
 from .models import (
     Student,
     Teacher,
@@ -71,16 +74,47 @@ def in_group(group_name):
         )
     return user_passes_test(check)
 @login_required
-@admin_required
 def home(request):
+
     school = SchoolProfile.objects.first()
+
+    total_students = Student.objects.count()
+    total_teachers = Teacher.objects.count()
+    total_classes = SchoolClass.objects.count()
+    total_subjects = Subject.objects.count()
+
+    total_fee_paid = (
+        FeePayment.objects.aggregate(
+            total=Sum("amount_paid")
+        )["total"] or 0
+    )
+
+    attendance_today = Attendance.objects.filter(
+        date=date.today()
+    ).count()
+
+    upcoming_exams = Exam.objects.order_by("-year", "term")[:5]
+
+    recent_students = Student.objects.order_by("-id")[:5]
+
+    recent_payments = FeePayment.objects.order_by("-id")[:5]
+
+    today_timetable = Timetable.objects.filter(
+        day=date.today().strftime("%A")
+    )
 
     context = {
         "school": school,
-        "total_students": Student.objects.count(),
-        "total_teachers": Teacher.objects.count(),
-        "total_classes": SchoolClass.objects.count(),
-        "total_subjects": Subject.objects.count(),
+        "total_students": total_students,
+        "total_teachers": total_teachers,
+        "total_classes": total_classes,
+        "total_subjects": total_subjects,
+        "total_fee_paid": total_fee_paid,
+        "attendance_today": attendance_today,
+        "upcoming_exams": upcoming_exams,
+        "recent_students": recent_students,
+        "recent_payments": recent_payments,
+        "today_timetable": today_timetable,
     }
 
     return render(request, "students/home.html", context)
@@ -711,6 +745,105 @@ def fee_structure_list(request):
         {"fees": fees},
     )
 
+@login_required
+@admin_or_bursar
+def print_receipt(request, id):
+
+    payment = get_object_or_404(
+        FeePayment,
+        id=id
+    )
+
+    response = HttpResponse(
+        content_type="application/pdf"
+    )
+
+    response["Content-Disposition"] = (
+        f'attachment; filename="Receipt_{payment.receipt_number}.pdf"'
+    )
+
+    doc = SimpleDocTemplate(response)
+
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    elements.append(
+        Paragraph(
+            "<b>SCHOOL MANAGEMENT SYSTEM</b>",
+            styles["Title"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            "<b>OFFICIAL FEE RECEIPT</b>",
+            styles["Heading2"],
+        )
+    )
+
+    elements.append(
+        Paragraph("<br/>", styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Receipt Number:</b> {payment.receipt_number}",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Student:</b> {payment.student.first_name} {payment.student.last_name}",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Admission No:</b> {payment.student.admission_number}",
+            styles["Normal"],
+        )
+    )
+
+    if payment.student.school_class:
+        elements.append(
+            Paragraph(
+                f"<b>Class:</b> {payment.student.school_class.name}",
+                styles["Normal"],
+            )
+        )
+
+    elements.append(
+        Paragraph(
+            f"<b>Amount Paid:</b> KSh {payment.amount_paid}",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Date:</b> {payment.date_paid}",
+            styles["Normal"],
+        )
+    )
+
+    elements.append(
+        Paragraph("<br/>", styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(
+            "<b>Thank you for your payment.</b>",
+            styles["Heading2"],
+        )
+    )
+
+    doc.build(elements)
+
+    return response
+
 
 
 @login_required
@@ -1005,16 +1138,267 @@ def timetable_list(request):
             "timetables": timetables
         },
     )
+@login_required
+@admin_required
+def edit_timetable(request, id):
+
+    timetable = get_object_or_404(Timetable, id=id)
+
+    if request.method == "POST":
+
+        timetable.school_class = SchoolClass.objects.get(
+            id=request.POST["school_class"]
+        )
+
+        timetable.subject = Subject.objects.get(
+            id=request.POST["subject"]
+        )
+
+        timetable.teacher = Teacher.objects.get(
+            id=request.POST["teacher"]
+        )
+
+        timetable.day = request.POST["day"]
+        timetable.start_time = request.POST["start_time"]
+        timetable.end_time = request.POST["end_time"]
+
+        timetable.save()
+
+        return redirect("timetable_list")
+
+    return render(
+        request,
+        "students/edit_timetable.html",
+        {
+            "timetable": timetable,
+            "classes": SchoolClass.objects.all(),
+            "subjects": Subject.objects.all(),
+            "teachers": Teacher.objects.all(),
+        },
+    )
+@login_required
+@admin_required
+def delete_timetable(request, id):
+
+    timetable = get_object_or_404(Timetable, id=id)
+
+    if request.method == "POST":
+        timetable.delete()
+        return redirect("timetable_list")
+
+    return render(
+        request,
+        "students/delete_timetable.html",
+        {
+            "timetable": timetable,
+        },
+    )
 
 @login_required
-@user_passes_test(is_admin)
+@admin_required
 def user_list(request):
-    users = User.objects.all()
+
+    users = User.objects.all().order_by("username")
 
     return render(
         request,
         "students/user_list.html",
         {
             "users": users,
+        },
+    )
+
+@login_required
+@admin_required
+def add_user(request):
+
+    if request.method == "POST":
+
+        username = request.POST["username"]
+        password = request.POST["password"]
+        first_name = request.POST["first_name"]
+        last_name = request.POST["last_name"]
+        email = request.POST["email"]
+        group_name = request.POST["group"]
+
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Username already exists.")
+
+            return redirect("add_user")
+
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+        )
+
+        if group_name != "Administrator":
+            group = Group.objects.get(name=group_name)
+            user.groups.add(group)
+
+        messages.success(request, "User created successfully.")
+
+        return redirect("user_list")
+
+    groups = Group.objects.all()
+
+    return render(
+        request,
+        "students/add_user.html",
+        {
+            "groups": groups,
+        },
+    )
+
+
+@login_required
+@admin_required
+def edit_user(request, id):
+    return HttpResponse(f"Edit User {id}")
+
+
+@login_required
+@admin_required
+def delete_user(request, id):
+    return HttpResponse(f"Delete User {id}")
+
+
+@login_required
+@user_passes_test(is_admin)
+def add_user(request):
+
+    if request.method == "POST":
+
+        username = request.POST["username"]
+        password = request.POST["password"]
+        group_name = request.POST["group"]
+
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+        )
+
+        group = Group.objects.get(name=group_name)
+        user.groups.add(group)
+
+        messages.success(request, "User created successfully.")
+
+        return redirect("user_list")
+
+    groups = Group.objects.all()
+
+    return render(
+        request,
+        "students/add_user.html",
+        {
+            "groups": groups,
+        },
+    )
+
+@login_required
+@user_passes_test(is_admin)
+def edit_user(request, id):
+    user = get_object_or_404(User, id=id)
+
+    if request.method == "POST":
+        user.username = request.POST["username"]
+
+        group_name = request.POST["group"]
+
+        # Remove old groups
+        user.groups.clear()
+
+        # Add new group
+        group = Group.objects.get(name=group_name)
+        user.groups.add(group)
+
+        user.save()
+
+        messages.success(request, "User updated successfully.")
+
+        return redirect("user_list")
+
+    groups = Group.objects.all()
+
+    return render(
+        request,
+        "students/edit_user.html",
+        {
+            "user_obj": user,
+            "groups": groups,
+        },
+    )
+
+
+@login_required
+@user_passes_test(is_admin)
+def edit_user(request, id):
+
+    user = get_object_or_404(User, id=id)
+
+    if request.method == "POST":
+
+        user.username = request.POST["username"]
+        user.first_name = request.POST["first_name"]
+        user.last_name = request.POST["last_name"]
+        user.email = request.POST["email"]
+
+        # Change password only if entered
+        password = request.POST.get("password")
+        if password:
+            user.password = make_password(password)
+
+        # Remove old groups
+        user.groups.clear()
+
+        # Assign new group
+        group = Group.objects.get(name=request.POST["group"])
+        user.groups.add(group)
+
+        user.save()
+
+        messages.success(request, "User updated successfully.")
+
+        return redirect("user_list")
+
+    groups = Group.objects.all()
+
+    return render(
+        request,
+        "students/edit_user.html",
+        {
+            "user_obj": user,
+            "groups": groups,
+        },
+    )
+
+@login_required
+@user_passes_test(is_admin)
+def delete_user(request, id):
+
+    user = get_object_or_404(User, id=id)
+
+    # Prevent deleting yourself
+    if user == request.user:
+        messages.error(request, "You cannot delete your own account.")
+        return redirect("user_list")
+
+    if request.method == "POST":
+        user.delete()
+
+        messages.success(
+            request,
+            "User deleted successfully."
+        )
+
+        return redirect("user_list")
+
+    return render(
+        request,
+        "students/delete_user.html",
+        {
+            "user_obj": user,
         },
     )

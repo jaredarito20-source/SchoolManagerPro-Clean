@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit User</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <p>
+        Username<br>
+        <input
+            type="text"
+            name="username"
+            value="{{ user_obj.username }}"
+            required
+        >
+    </p>
+
+    <p>
+        First Name<br>
+        <input
+            type="text"
+            name="first_name"
+            value="{{ user_obj.first_name }}"
+        >
+    </p>
+
+    <p>
+        Last Name<br>
+        <input
+            type="text"
+            name="last_name"
+            value="{{ user_obj.last_name }}"
+        >
+    </p>
+
+    <p>
+        Email<br>
+        <input
+            type="email"
+            name="email"
+            value="{{ user_obj.email }}"
+        >
+    </p>
+
+    <p>
+        New Password (leave blank to keep current password)<br>
+        <input type="password" name="password">
+    </p>
+
+    <p>
+        Group<br>
+        <select name="group">
+
+            {% for group in groups %}
+
+            <option
+                value="{{ group.name }}"
+                {% if user_obj.groups.first and user_obj.groups.first.id == group.id %}
+                selected
+                {% endif %}
+            >
+                {{ group.name }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <button type="submit">
+        Save Changes
+    </button>
+
+</form>
+
+{% endblock %}

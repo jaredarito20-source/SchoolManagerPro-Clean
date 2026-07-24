@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Timetable</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <p>
+        Class<br>
+        <select name="school_class" required>
+            {% for class in classes %}
+            <option value="{{ class.id }}">
+                {{ class.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        Subject<br>
+        <select name="subject" required>
+            {% for subject in subjects %}
+            <option value="{{ subject.id }}">
+                {{ subject.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        Teacher<br>
+        <select name="teacher" required>
+            {% for teacher in teachers %}
+            <option value="{{ teacher.id }}">
+                {{ teacher.first_name }} {{ teacher.last_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        Day<br>
+        <select name="day">
+            <option>Monday</option>
+            <option>Tuesday</option>
+            <option>Wednesday</option>
+            <option>Thursday</option>
+            <option>Friday</option>
+        </select>
+    </p>
+
+    <p>
+        Start Time<br>
+        <input type="time" name="start_time" required>
+    </p>
+
+    <p>
+        End Time<br>
+        <input type="time" name="end_time" required>
+    </p>
+
+    <button type="submit">Save Timetable</button>
+
+</form>
+
+{% endblock %}

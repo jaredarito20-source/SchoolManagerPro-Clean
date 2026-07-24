@@ -100,6 +100,38 @@ path(
     views.user_list,
     name="user_list",
 ),
+
+# User Management
+path("users/", views.user_list, name="user_list"),
+path("users/add/", views.add_user, name="add_user"),
+path("users/edit/<int:id>/", views.edit_user, name="edit_user"),
+path("users/delete/<int:id>/", views.delete_user, name="delete_user"),
+path("users/edit/<int:id>/", views.edit_user, name="edit_user"),
+path("users/edit/<int:id>/", views.edit_user, name="edit_user"),
+
+path(
+    "users/delete/<int:id>/",
+    views.delete_user,
+    name="delete_user",
+),
+
+path(
+    "timetable/edit/<int:id>/",
+    views.edit_timetable,
+    name="edit_timetable",
+),
+
+path(
+    "timetable/delete/<int:id>/",
+    views.delete_timetable,
+    name="delete_timetable",
+),
+
+path(
+    "payments/<int:id>/receipt/",
+    views.print_receipt,
+    name="print_receipt",
+),
     ]
 
 

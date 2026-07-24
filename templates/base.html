@@ -32,6 +32,7 @@
         <a href="{% url 'fee_balance_list' %}">📋 Fee Balances</a>
         <a href="{% url 'attendance_list' %}">📅 Attendance</a>
         <a href="{% url 'timetable_list' %}">🕒 Timetable</a>
+        <a href="{% url 'user_list' %}">👥 Users</a>
 
     {% elif user.groups.all.0.name == "Teachers" %}
 

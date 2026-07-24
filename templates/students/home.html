@@ -2,80 +2,173 @@
 
 {% block content %}
 
-{% if school %}
+<h2>Dashboard</h2>
 
-<div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,.1);margin-bottom:20px;">
+<h3>Welcome{% if user.first_name %}, {{ user.first_name }}{% endif %}</h3>
 
-    {% if school.logo %}
-        <img src="{{ school.logo.url }}" width="100" style="float:left;margin-right:20px;">
-    {% endif %}
+<hr>
 
-    <h1>{{ school.name }}</h1>
+<table width="100%">
+<tr>
 
-    <p><strong>{{ school.motto }}</strong></p>
+<td align="center">
+<h2>{{ total_students }}</h2>
+Students
+</td>
 
-    <p>
-        {{ school.address }}<br>
-        {{ school.phone }}<br>
-        {{ school.email }}
-    </p>
+<td align="center">
+<h2>{{ total_teachers }}</h2>
+Teachers
+</td>
 
-</div>
+<td align="center">
+<h2>{{ total_classes }}</h2>
+Classes
+</td>
 
-{% endif %}
+<td align="center">
+<h2>{{ total_subjects }}</h2>
+Subjects
+</td>
 
-<h1>Dashboard</h1>
+<td align="center">
+<h2>KSh {{ total_fee_paid }}</h2>
+Fees Collected
+</td>
 
-<style>
-.dashboard{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(220px,1fr));
-    gap:20px;
-    margin-top:20px;
-}
+</tr>
+</table>
 
-.stat-card{
-    background:white;
-    padding:25px;
-    border-radius:8px;
-    box-shadow:0 2px 5px rgba(0,0,0,.1);
-    text-align:center;
-}
+<hr>
 
-.stat-card h2{
-    color:#1565c0;
-    font-size:40px;
-}
+<h3>Today's Attendance</h3>
 
-.stat-card p{
-    margin-top:10px;
-    color:#555;
-    font-size:18px;
-}
-</style>
+<p>
 
-<div class="dashboard">
+<b>{{ attendance_today }}</b>
 
-    <div class="stat-card">
-        <h2>{{ total_students }}</h2>
-        <p>Students</p>
-    </div>
+attendance records captured today.
 
-    <div class="stat-card">
-        <h2>{{ total_teachers }}</h2>
-        <p>Teachers</p>
-    </div>
+</p>
 
-    <div class="stat-card">
-        <h2>{{ total_classes }}</h2>
-        <p>Classes</p>
-    </div>
+<hr>
 
-    <div class="stat-card">
-        <h2>{{ total_subjects }}</h2>
-        <p>Subjects</p>
-    </div>
+<h3>Recent Students</h3>
 
-</div>
+<table border="1" cellpadding="6">
+
+<tr>
+
+<th>Admission No</th>
+<th>Name</th>
+<th>Class</th>
+
+</tr>
+
+{% for student in recent_students %}
+
+<tr>
+
+<td>{{ student.admission_number }}</td>
+
+<td>{{ student.first_name }} {{ student.last_name }}</td>
+
+<td>{{ student.school_class }}</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="3">
+No students found.
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<hr>
+
+<h3>Recent Fee Payments</h3>
+
+<table border="1" cellpadding="6">
+
+<tr>
+
+<th>Student</th>
+<th>Amount</th>
+
+</tr>
+
+{% for payment in recent_payments %}
+
+<tr>
+
+<td>{{ payment.student }}</td>
+
+<td>KSh {{ payment.amount_paid }}</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="2">
+No payments.
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<hr>
+
+<h3>Today's Timetable</h3>
+
+<table border="1" cellpadding="6">
+
+<tr>
+
+<th>Class</th>
+<th>Subject</th>
+<th>Teacher</th>
+<th>Time</th>
+
+</tr>
+
+{% for lesson in today_timetable %}
+
+<tr>
+
+<td>{{ lesson.school_class }}</td>
+
+<td>{{ lesson.subject }}</td>
+
+<td>{{ lesson.teacher }}</td>
+
+<td>{{ lesson.start_time }} - {{ lesson.end_time }}</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="4">
+No lessons today.
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
 
 {% endblock %}

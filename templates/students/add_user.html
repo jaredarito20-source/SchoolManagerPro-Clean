@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add User</h2>
+{% if messages %}
+    {% for message in messages %}
+        <p style="color:red;">
+            {{ message }}
+        </p>
+    {% endfor %}
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+
+    <p>
+        Username<br>
+        <input type="text" name="username" required>
+    </p>
+
+    <p>
+        Password<br>
+        <input type="password" name="password" required>
+    </p>
+
+    <p>
+        Group<br>
+        <select name="group">
+            {% for group in groups %}
+            <option value="{{ group.name }}">
+                {{ group.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <button type="submit">Create User</button>
+
+</form>
+
+{% endblock %}
