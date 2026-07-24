@@ -905,6 +905,12 @@ def print_report(request, id):
     title = styles["Heading1"]
     title.alignment = TA_CENTER
 
+    normal = normal
+    normal.alignment = TA_CENTER
+
+    italic = italic
+    italic.alignment = TA_CENTER
+
     story = []
     if school and school.logo:
         try:
@@ -1018,45 +1024,104 @@ def print_report(request, id):
         )
 
     )
-
-    story.append(info_table)
+    # Student Photo
+    photo = ""
 
     if student.photo:
         try:
             photo = Image(
                 student.photo.path,
-                width=90,
-                height=110,
+                width=1.2 * inch,
+                height=1.5 * inch,
             )
-            story.append(photo)
         except Exception:
-            pass
+            photo = ""
+
+    # Combine Student Info and Photo
+    details = Table(
+        [
+            [
+                info_table,
+                photo,
+            ]
+        ],
+        colWidths=[5.3 * inch, 1.5 * inch],
+    )
+
+    details.setStyle(
+        TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ])
+    )
+
+    story.append(details)
+
+    story.append(Spacer(1, 0.3 * inch))
+
+        
+    if student.photo:
+            try:
+                photo = Image(
+                    student.photo.path,
+                    width=90,
+                    height=110,
+                )
+                story.append(photo)
+            except Exception:
+                pass
     story.append(Spacer(1, 0.3 * inch))
 
     data = [
-
-        ["No", "Subject", "Marks", "Grade"]
-
+    [
+        "No",
+        "Subject",
+        "Marks",
+        "Grade",
+    ]
     ]
 
     for index, mark in enumerate(marks, start=1):
 
         data.append(
-
             [
-
                 index,
-
                 mark.subject.name,
-
                 mark.marks,
-
                 mark.grade,
-
             ]
-
         )
 
+    # Summary rows
+    data.append(["", "", "", ""])
+
+    data.append(
+        [
+            "",
+            "TOTAL",
+            total,
+            "",
+        ]
+    )
+
+    data.append(
+        [
+            "",
+            "AVERAGE",
+            average,
+            overall_grade,
+        ]
+    )
+
+    data.append(
+    [
+        "",
+        "POSITION",
+        f"{position} of {class_size}",
+        "",
+    ]
+    )
     results = Table(
         data,
         colWidths=[0.6 * inch, 3.5 * inch, 1 * inch, 1 * inch],
@@ -1064,27 +1129,35 @@ def print_report(request, id):
 
     results.setStyle(
 
-        TableStyle(
+    TableStyle(
 
-            [
+        [
 
-                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ("GRID", (0,0), (-1,-1), 1, colors.black),
 
-                ("BACKGROUND", (0, 0), (-1, 0), HexColor("#4472C4")),
+            ("BACKGROUND", (0,0), (-1,0), HexColor("#1F4E79")),
 
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.white),
 
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
 
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("ALIGN", (0,0), (-1,-1), "CENTER"),
 
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+            ("BACKGROUND", (0,1), (-1,-3), colors.beige),
 
-            ]
+            ("BACKGROUND", (0,-2), (-1,-2), HexColor("#D9EAD3")),
 
-        )
+            ("BACKGROUND", (0,-1), (-1,-1), HexColor("#FFF2CC")),
+
+            ("FONTNAME", (0,-2), (-1,-1), "Helvetica-Bold"),
+
+            ("BOTTOMPADDING", (0,0), (-1,0), 10),
+
+        ]
 
     )
+
+)
 
     story.append(results)
 
