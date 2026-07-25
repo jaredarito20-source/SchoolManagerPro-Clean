@@ -738,7 +738,7 @@ def student_report(request, id):
             class_marks = Mark.objects.filter(
                 student=s,
                 exam=exam
-            )
+            ).select_related("subject")
 
             if class_marks.exists():
 
@@ -880,14 +880,26 @@ def print_report(request, id):
     results = []
 
     for s in students:
-        student_marks = Mark.objects.filter(student=s)
 
-        total_marks = sum(m.marks for m in student_marks)
+        if exam:
+            student_marks = Mark.objects.filter(
+                student=s,
+                exam=exam,
+            )
+        else:
+            student_marks = Mark.objects.filter(student=s)
+        if student_marks.exists():
+            average_marks = (
+                sum(m.marks for m in student_marks)
+                / student_marks.count()
+            )
+        else:
+            average_marks = 0
 
         results.append(
             (
                 s.id,
-                total_marks,
+                average_marks,
             )
         )
 
@@ -904,30 +916,9 @@ def print_report(request, id):
             break
 
     class_size = len(results)
+    
 
-    if average >= 80:
-        overall_grade = "A"
-    elif average >= 75:
-        overall_grade = "A-"
-    elif average >= 70:
-        overall_grade = "B+"
-    elif average >= 65:
-        overall_grade = "B"
-    elif average >= 60:
-        overall_grade = "B-"
-    elif average >= 55:
-        overall_grade = "C+"
-    elif average >= 50:
-        overall_grade = "C"
-    elif average >= 45:
-        overall_grade = "C-"
-    elif average >= 40:
-        overall_grade = "D+"
-    elif average >= 35:
-        overall_grade = "D"
-    else:
-        overall_grade = "E"
-
+    overall_grade = calculate_overall_grade(average)
     buffer = BytesIO()
 
     doc = SimpleDocTemplate(buffer)
@@ -1037,23 +1028,20 @@ def print_report(request, id):
     )
 
     info_table.setStyle(
-
         TableStyle(
-
             [
-
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
 
-                ("BACKGROUND", (0, 0), (0, -1), HexColor("#d9edf7")),
+                ("BACKGROUND", (0, 0), (0, -1), HexColor("#D9EAD3")),
 
-                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
 
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
 
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ]
-
         )
-
     )
     # Student Photo
     photo = ""
@@ -1089,7 +1077,7 @@ def print_report(request, id):
 
     story.append(details)
 
-    story.append(Spacer(1, 0.3 * inch))
+    
 
         
     
@@ -1151,69 +1139,107 @@ def print_report(request, id):
     )
 
     results.setStyle(
-
     TableStyle(
-
         [
+            ("GRID", (0, 0), (-1, -1), 1, colors.black),
 
-            ("GRID", (0,0), (-1,-1), 1, colors.black),
+            ("BACKGROUND", (0, 0), (-1, 0), HexColor("#1F4E79")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
 
-            ("BACKGROUND", (0,0), (-1,0), HexColor("#1F4E79")),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
 
-            ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
 
-            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            # Summary rows
+            ("BACKGROUND", (0, -3), (-1, -3), colors.lightgrey),
+            ("BACKGROUND", (0, -2), (-1, -2), HexColor("#D9EAD3")),
+            ("BACKGROUND", (0, -1), (-1, -1), HexColor("#FFF2CC")),
 
-            ("ALIGN", (0,0), (-1,-1), "CENTER"),
+            ("FONTNAME", (0, -3), (-1, -1), "Helvetica-Bold"),
 
-            ("BACKGROUND", (0,1), (-1,-3), colors.beige),
-
-            ("BACKGROUND", (0,-2), (-1,-2), HexColor("#D9EAD3")),
-
-            ("BACKGROUND", (0,-1), (-1,-1), HexColor("#FFF2CC")),
-
-            ("FONTNAME", (0,-2), (-1,-1), "Helvetica-Bold"),
-
-            ("BOTTOMPADDING", (0,0), (-1,0), 10),
-
+            ("ALIGN", (1, -3), (1, -1), "LEFT"),
+            ("FONTNAME", (1, -3), (1, -1), "Helvetica-Bold"),
         ]
-
     )
-
 )
-
     story.append(results)
 
     story.append(Spacer(1, 0.3 * inch))
 
-    # Performance Summary
-    summary = [
-        ["Total Marks", total],
-        ["Average", average],
-        ["Overall Grade", overall_grade],
-    ]
+    # Principal's Remarks
 
-    summary_table = Table(
-        summary,
-        colWidths=[2.5 * inch, 2 * inch],
+    if average >= 80:
+        principal_remark = "Excellent performance. Keep up the outstanding work."
+    elif average >= 70:
+        principal_remark = "Very good performance. Continue working hard."
+    elif average >= 60:
+        principal_remark = "Good performance. Aim even higher next term."
+    elif average >= 50:
+        principal_remark = "Fair performance. More effort will lead to better results."
+    else:
+        principal_remark = "Needs improvement. Work harder and remain focused."
+
+    story.append(
+        Paragraph(
+            "<b>Principal's Remarks</b>",
+            styles["Heading2"],
+        )
     )
 
-    summary_table.setStyle(
-        TableStyle([
-            ("GRID", (0, 0), (-1, -1), 1, colors.black),
-            ("BACKGROUND", (0, 0), (0, -1), HexColor("#d9edf7")),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ])
+    story.append(
+        Paragraph(
+            principal_remark,
+            styles["Normal"],
+        )
     )
-
-    story.append(summary_table)
 
     story.append(Spacer(1, 0.3 * inch))
 
+    story.append(
+    Paragraph(
+        f"<b>{school.principal_name}</b>",
+        styles["Normal"],
+    )
+)
+
+    story.append(
+        Paragraph(
+            "Principal",
+            styles["Normal"],
+        )
+    )
+
+    if school.principal_signature:
+        try:
+            signature = Image(
+                school.principal_signature.path,
+                width=2 * inch,
+                height=0.8 * inch,
+            )
+            story.append(signature)
+        except Exception:
+            pass
+
+    story.append(Spacer(1, 0.3 * inch))
+
+    # Performance Summary
+    
     # Fee Summary
     total_fee = student.total_fee()
     total_paid = student.total_paid()
     balance = student.balance()
+
+    story.append(
+    Paragraph(
+        "<b>FEE SUMMARY</b>",
+        styles["Heading2"],
+    )
+)
+
+    
 
     fee_data = [
         ["Total Fee", f"KSh {total_fee}"],
