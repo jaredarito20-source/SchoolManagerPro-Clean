@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
+from .models import *
+
 
 from .models import (
     Student,
@@ -13,6 +15,8 @@ from .models import (
     FeePayment,
     Attendance,
     Timetable,
+    ExamTimetable,
+
 )
 
 admin.site.register(Student)
@@ -21,12 +25,60 @@ admin.site.register(Subject)
 admin.site.register(SchoolClass)
 admin.site.register(Exam)
 admin.site.register(Mark)
-admin.site.register(SchoolProfile)
+
 admin.site.register(FeeStructure)
 admin.site.register(FeePayment)
 admin.site.register(Attendance)
 admin.site.register(Timetable)
+admin.site.register(ExamTimetable)
 
 admin.site.site_header = "School Management Administration"
 admin.site.site_title = "School Admin"
 admin.site.index_title = "Welcome to School Management"
+
+@admin.register(SchoolProfile)
+class SchoolProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "current_term",
+        "academic_year",
+        "phone",
+    )
+
+    fieldsets = (
+        (
+            "School Information",
+            {
+                "fields": (
+                    "name",
+                    "motto",
+                    "address",
+                    "phone",
+                    "email",
+                    "website",
+                    "logo",
+                    "school_stamp",
+                )
+            },
+        ),
+        (
+            "Academic Information",
+            {
+                "fields": (
+                    "current_term",
+                    "academic_year",
+                    "closing_date",
+                    "opening_date",
+                )
+            },
+        ),
+        (
+            "Principal",
+            {
+                "fields": (
+                    "principal_name",
+                    "principal_signature",
+                )
+            },
+        ),
+    )

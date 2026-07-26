@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 
+
 urlpatterns = [
 
     # Dashboard
@@ -84,4 +85,69 @@ urlpatterns = [
     # Student Promotion
     path("promotion/", views.promotion_list, name="promotion_list"),
     path("promotion/promote/", views.promote_students, name="promote_students"),
+
+    # Logout
+    path("logout/", views.logout_view, name="logout"),
+
+    # print timetable
+   
+   # ------------------------
+# Exam Timetable
+# ------------------------
+
+    path(
+        "exam-timetable/",
+        views.exam_timetable_list,
+        name="exam_timetable_list",
+    ),
+
+    path(
+        "exam-timetable/add/",
+        views.add_exam_timetable,
+        name="add_exam_timetable",
+    ),
+
+    path(
+        "exam-timetable/edit/<int:id>/",
+        views.edit_exam_timetable,
+        name="edit_exam_timetable",
+    ),
+
+    path(
+        "exam-timetable/delete/<int:id>/",
+        views.delete_exam_timetable,
+        name="delete_exam_timetable",
+    ),
+
+    # Print ALL exam timetables
+    path(
+        "exam-timetable/print/",
+        views.print_exam_timetable,
+        name="print_exam_timetable",
+    ),
+
+    # Print one class exam timetable
+    path(
+        "exam-timetable/print/<int:id>/",
+        views.print_class_exam_timetable,
+        name="print_class_exam_timetable",
+    ),
+
+    path(
+        "get-class-exams/<int:class_id>/",
+        views.get_class_exams,
+        name="get_class_exams",
+    ),
+
+    path(
+        "ajax/load-exams/",
+        views.load_exams,
+        name="ajax_load_exams",
+),
+
+    path(
+        "timetable/print/",
+        views.print_timetable,
+        name="print_timetable",
+),
 ]

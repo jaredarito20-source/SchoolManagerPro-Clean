@@ -8,6 +8,12 @@
     <a href="{% url 'add_timetable' %}">
         ➕ Add Timetable
     </a>
+
+    |
+
+    <a href="{% url 'print_timetable' %}" class="btn btn-success">
+        🖨 Print Timetable
+    </a>
 </p>
 
 <table border="1" cellpadding="8">
@@ -34,17 +40,13 @@
     <td>{{ timetable.end_time }}</td>
 
     <td>
-
         <a href="{% url 'edit_timetable' timetable.id %}">
             ✏ Edit
         </a>
-
         |
-
         <a href="{% url 'delete_timetable' timetable.id %}">
             🗑 Delete
         </a>
-
     </td>
 
 </tr>

@@ -11,7 +11,10 @@ from django.contrib.auth.decorators import login_required,user_passes_test
 from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
-from django.shortcuts import render, get_object_or_404
+from django.contrib.auth import logout
+from django.shortcuts import redirect
+from django.http import HttpResponse
+
 
 from io import BytesIO
 from django.http import FileResponse
@@ -52,6 +55,7 @@ from .models import (
     FeePayment,
     Attendance,
     Timetable,
+    ExamTimetable,
 )
 from .decorators import (
     admin_required,
@@ -61,6 +65,7 @@ from .decorators import (
     admin_or_teacher,
     admin_or_bursar,
     admin_teacher_secretary,
+    in_group,
 )
 # ======================================
 # User Role Checks
@@ -87,20 +92,11 @@ def is_secretary(user):
 
 
 
-def in_group(group_name):
-    def check(user):
-        return (
-            user.is_superuser or
-            (
-                user.is_authenticated and
-                user.groups.filter(name=group_name).exists()
-            )
-        )
-    return user_passes_test(check)
+
 
 
 @login_required
-@admin_required
+
 def home(request):
     school = SchoolProfile.objects.first()
 
@@ -206,7 +202,11 @@ def edit_student(request, id):
 
 
 @login_required
-@admin_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    
+)
 def promotion_list(request):
     classes = SchoolClass.objects.all().order_by("name")
 
@@ -220,7 +220,10 @@ def promotion_list(request):
 
 
 @login_required
-@admin_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
 def promote_students(request):
 
     if request.method == "POST":
@@ -254,7 +257,10 @@ def promote_students(request):
 
 
 @login_required
-@admin_teacher_secretary
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
 def delete_student(request, id):
     student = get_object_or_404(Student, id=id)
 
@@ -268,7 +274,11 @@ def delete_student(request, id):
 
 
 @login_required
-@admin_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+)
 def teacher_list(request):
     teachers = Teacher.objects.all()
     return render(request, "students/teacher_list.html", {
@@ -277,7 +287,11 @@ def teacher_list(request):
 
 
 @login_required
-@admin_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+)
 def add_teacher(request):
     if request.method == "POST":
         Teacher.objects.create(
@@ -296,7 +310,11 @@ def add_teacher(request):
 
 
 @login_required
-@admin_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+)
 def edit_teacher(request, id):
     teacher = get_object_or_404(Teacher, id=id)
 
@@ -318,7 +336,10 @@ def edit_teacher(request, id):
 
 
 @login_required
-@admin_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
 def delete_teacher(request, id):
     teacher = get_object_or_404(Teacher, id=id)
 
@@ -332,7 +353,6 @@ def delete_teacher(request, id):
 
 
 @login_required
-@admin_required
 def subject_list(request):
     subjects = Subject.objects.all()
     return render(request, "students/subject_list.html", {
@@ -342,7 +362,10 @@ def subject_list(request):
 
 
 @login_required
-@admin_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
 def add_subject(request):
     if request.method == "POST":
         teacher = None
@@ -365,7 +388,10 @@ def add_subject(request):
 
 
 @login_required
-@admin_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
 def edit_subject(request, id):
     subject = get_object_or_404(Subject, id=id)
 
@@ -391,7 +417,10 @@ def edit_subject(request, id):
 
 
 @login_required
-@admin_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
 def delete_subject(request, id):
     subject = get_object_or_404(Subject, id=id)
 
@@ -916,12 +945,18 @@ def print_report(request, id):
             break
 
     class_size = len(results)
-    
 
     overall_grade = calculate_overall_grade(average)
+
     buffer = BytesIO()
 
-    doc = SimpleDocTemplate(buffer)
+    doc = SimpleDocTemplate(
+        buffer,
+        leftMargin=0.45 * inch,
+        rightMargin=0.45 * inch,
+        topMargin=0.45 * inch,
+        bottomMargin=0.45 * inch,
+    )
 
     styles = getSampleStyleSheet()
 
@@ -933,7 +968,12 @@ def print_report(request, id):
 
     italic = styles["Italic"]
     italic.alignment = TA_CENTER
+
     story = []
+
+    # ==========================
+    # School Logo
+    # ==========================
     if school and school.logo:
         try:
             logo = Image(
@@ -941,35 +981,56 @@ def print_report(request, id):
                 width=70,
                 height=70,
             )
-            story.append(logo)
+
+            logo_table = Table(
+                [[logo]],
+                colWidths=[6.8 * inch],
+            )
+
+            logo_table.setStyle(
+                TableStyle(
+                    [
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ]
+                )
+            )
+
+            story.append(logo_table)
+
         except Exception:
             pass
+
+# ==========================
+# School Name
+# ==========================
     story.append(
         Paragraph(
             f"<b>{school.name}</b>",
             title,
         )
     )
-   
+
+    # School Motto
     if school.motto:
         story.append(
             Paragraph(
                 school.motto,
-                styles["Italic"],
+                italic,
             )
         )
-
-    story.append(
-        Paragraph(
-            school.address,
-            styles["Normal"],
-        )
+        story.append(
+    Paragraph(
+        school.address,
+        normal,
     )
+)
 
     story.append(
         Paragraph(
             f"Phone: {school.phone}",
-            styles["Normal"],
+            normal,
         )
     )
 
@@ -977,14 +1038,14 @@ def print_report(request, id):
         story.append(
             Paragraph(
                 school.email,
-                styles["Normal"],
+                normal,
             )
         )
 
     story.append(
         Paragraph(
             f"{school.current_term} | {school.academic_year}",
-            styles["Normal"],
+            normal,
         )
     )
 
@@ -998,7 +1059,6 @@ def print_report(request, id):
     )
 
     story.append(Spacer(1, 0.3 * inch))
-    
 
     
 
@@ -1057,6 +1117,10 @@ def print_report(request, id):
             photo = ""
 
     # Combine Student Info and Photo
+    # ======================================================
+# STUDENT DETAILS + PHOTO
+# ======================================================
+
     details = Table(
         [
             [
@@ -1064,32 +1128,32 @@ def print_report(request, id):
                 photo,
             ]
         ],
-        colWidths=[5.3 * inch, 1.5 * inch],
+        colWidths=[5.1 * inch, 1.7 * inch],
     )
 
     details.setStyle(
-        TableStyle([
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ])
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
     )
 
-    story.append(details)
-
-    
-
-        
-    
-    story.append(Spacer(1, 0.3 * inch))
+# ======================================================
+# MARKS TABLE
+# ======================================================
 
     data = [
-    [
-        "No",
-        "Subject",
-        "Marks",
-        "Grade",
-    ]
+        [
+            "No",
+            "Subject",
+            "Marks",
+            "Grade",
+        ]
     ]
 
     for index, mark in enumerate(marks, start=1):
@@ -1103,7 +1167,7 @@ def print_report(request, id):
             ]
         )
 
-    # Summary rows
+# Summary rows
     data.append(["", "", "", ""])
 
     data.append(
@@ -1123,54 +1187,81 @@ def print_report(request, id):
             overall_grade,
         ]
     )
-    
 
     data.append(
-    [
-        "",
-        "POSITION",
-        f"{position} of {class_size}",
-        "",
-    ]
+        [
+            "",
+            "POSITION",
+            f"{position} of {class_size}",
+            "",
+        ]
     )
+
     results = Table(
         data,
-        colWidths=[0.6 * inch, 3.5 * inch, 1 * inch, 1 * inch],
+        colWidths=[
+            0.7 * inch,
+            3.8 * inch,
+            0.8 * inch,
+            0.8 * inch,
+        ],
     )
 
     results.setStyle(
-    TableStyle(
-        [
-            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
 
-            ("BACKGROUND", (0, 0), (-1, 0), HexColor("#1F4E79")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("BACKGROUND", (0, 0), (-1, 0), HexColor("#1F4E79")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
 
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
 
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
 
-            # Summary rows
-            ("BACKGROUND", (0, -3), (-1, -3), colors.lightgrey),
-            ("BACKGROUND", (0, -2), (-1, -2), HexColor("#D9EAD3")),
-            ("BACKGROUND", (0, -1), (-1, -1), HexColor("#FFF2CC")),
+                ("BACKGROUND", (0, -3), (-1, -3), colors.lightgrey),
+                ("BACKGROUND", (0, -2), (-1, -2), HexColor("#D9EAD3")),
+                ("BACKGROUND", (0, -1), (-1, -1), HexColor("#FFF2CC")),
 
-            ("FONTNAME", (0, -3), (-1, -1), "Helvetica-Bold"),
-
-            ("ALIGN", (1, -3), (1, -1), "LEFT"),
-            ("FONTNAME", (1, -3), (1, -1), "Helvetica-Bold"),
-        ]
+                ("FONTNAME", (0, -3), (-1, -1), "Helvetica-Bold"),
+                ("ALIGN", (1, -3), (1, -1), "LEFT"),
+                ("FONTNAME", (1, -3), (1, -1), "Helvetica-Bold"),
+            ]
+        )
     )
-)
-    story.append(results)
+
+# ======================================================
+# MAIN CONTAINER (Keeps both tables aligned)
+# ======================================================
+
+    main_table = Table(
+        [
+            [details],
+            [results],
+        ],
+        colWidths=[6.8 * inch],
+    )
+
+    main_table.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ]
+        )
+    )
+
+    story.append(main_table)
 
     story.append(Spacer(1, 0.3 * inch))
 
     # Principal's Remarks
-
     if average >= 80:
         principal_remark = "Excellent performance. Keep up the outstanding work."
     elif average >= 70:
@@ -1198,40 +1289,10 @@ def print_report(request, id):
 
     story.append(Spacer(1, 0.3 * inch))
 
-    story.append(
-    Paragraph(
-        f"<b>{school.principal_name}</b>",
-        styles["Normal"],
-    )
-)
-
-    story.append(
-        Paragraph(
-            "Principal",
-            styles["Normal"],
-        )
-    )
-
-    if school.principal_signature:
-        try:
-            signature = Image(
-                school.principal_signature.path,
-                width=2 * inch,
-                height=0.8 * inch,
-            )
-            story.append(signature)
-        except Exception:
-            pass
-
-    story.append(Spacer(1, 0.3 * inch))
-
-    # Performance Summary
-    
     # Fee Summary
     total_fee = student.total_fee()
     total_paid = student.total_paid()
     balance = student.balance()
-
     story.append(
     Paragraph(
         "<b>FEE SUMMARY</b>",
@@ -1958,7 +2019,10 @@ def add_timetable(request):
 
 
 @login_required
-@admin_or_teacher
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
 def timetable_list(request):
 
     timetables = Timetable.objects.all()
@@ -2348,3 +2412,504 @@ def print_receipt(request, id):
     doc.build(elements)
 
     return response
+
+
+@login_required
+def logout_view(request):
+    logout(request)
+    return redirect("login")
+
+@login_required
+@in_group("Administrators", "Head Teacher", "Senior Teacher")
+def print_timetable(request):
+    timetables = Timetable.objects.select_related(
+        "school_class",
+        "subject",
+        "teacher",
+    ).order_by(
+        "school_class__name",
+        "day",
+        "start_time",
+    )
+
+    school = SchoolProfile.objects.first()
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=0.5 * inch,
+        rightMargin=0.5 * inch,
+        topMargin=0.5 * inch,
+        bottomMargin=0.5 * inch,
+    )
+
+    styles = getSampleStyleSheet()
+    story = []
+
+    if school:
+        story.append(Paragraph(f"<b>{school.name}</b>", styles["Title"]))
+
+    story.append(Paragraph("<b>School Timetable</b>", styles["Heading2"]))
+    story.append(Spacer(1, 0.3 * inch))
+
+    data = [[
+        "Class",
+        "Subject",
+        "Teacher",
+        "Day",
+        "Start",
+        "End",
+    ]]
+
+    for t in timetables:
+        data.append([
+            t.school_class.name,
+            t.subject.name,
+            f"{t.teacher.first_name} {t.teacher.last_name}",
+            t.day,
+            str(t.start_time),
+            str(t.end_time),
+        ])
+
+    table = Table(
+        data,
+        colWidths=[
+            1.1 * inch,
+            1.5 * inch,
+            1.8 * inch,
+            1.0 * inch,
+            0.9 * inch,
+            0.9 * inch,
+        ],
+    )
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), HexColor("#1F4E79")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ("GRID", (0,0), (-1,-1), 1, colors.black),
+        ("BOTTOMPADDING", (0,0), (-1,0), 10),
+        ("BACKGROUND", (0,1), (-1,-1), colors.beige),
+    ]))
+
+    story.append(table)
+
+    doc.build(story)
+
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename="School_Timetable.pdf",
+    )
+
+
+
+    # Continue generating your PDF here
+    # Generate PDF here
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+    "Teachers",
+)
+def exam_timetable_list(request):
+
+    timetables = ExamTimetable.objects.select_related(
+        "school_class",
+        "exam",
+        "subject",
+        "supervisor",
+    ).order_by(
+        "school_class__name",
+        "exam_date",
+        "start_time",
+    )
+
+    return render(
+        request,
+        "students/exam_timetable_list.html",
+        {
+            "timetables": timetables,
+        },
+    )
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+    "Teachers",
+)
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+    "Teachers",
+)
+def print_exam_timetable(request):
+
+    school = SchoolProfile.objects.first()
+
+    timetables = ExamTimetable.objects.select_related(
+        "school_class",
+        "exam",
+        "subject",
+        "supervisor",
+    ).order_by(
+        "school_class__name",
+        "exam_date",
+        "start_time",
+    )
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+    )
+
+    styles = getSampleStyleSheet()
+
+    story = []
+
+    if school:
+        story.append(
+            Paragraph(
+                f"<b>{school.name}</b>",
+                styles["Title"],
+            )
+        )
+
+    story.append(
+        Paragraph(
+            "<b>School Examination Timetable</b>",
+            styles["Heading2"],
+        )
+    )
+
+    story.append(Spacer(1,12))
+
+    data = [[
+        "Class",
+        "Exam",
+        "Subject",
+        "Date",
+        "Day",
+        "Start",
+        "End",
+        "Room",
+        "Supervisor",
+    ]]
+
+    for t in timetables:
+
+        supervisor = ""
+
+        if t.supervisor:
+            supervisor = (
+                f"{t.supervisor.first_name} "
+                f"{t.supervisor.last_name}"
+            )
+
+        data.append([
+            t.school_class.name,
+            t.exam.name,
+            t.subject.name,
+            str(t.exam_date),
+            t.day,
+            str(t.start_time),
+            str(t.end_time),
+            t.room,
+            supervisor,
+        ])
+
+    table = Table(data)
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.darkblue),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("GRID",(0,0),(-1,-1),1,colors.black),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("ALIGN",(0,0),(-1,-1),"CENTER"),
+        ("BOTTOMPADDING",(0,0),(-1,0),8),
+    ]))
+
+    story.append(table)
+
+    doc.build(story)
+
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename="School_Exam_Timetable.pdf",
+    )
+
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
+def add_exam_timetable(request):
+
+    classes = SchoolClass.objects.all()
+    exams = Exam.objects.all()
+    subjects = Subject.objects.all()
+    teachers = Teacher.objects.all()
+
+    if request.method == "POST":
+
+        ExamTimetable.objects.create(
+            school_class=SchoolClass.objects.get(
+                id=request.POST["school_class"]
+            ),
+            exam=Exam.objects.get(
+                id=request.POST["exam"]
+            ),
+            subject=Subject.objects.get(
+                id=request.POST["subject"]
+            ),
+            exam_date=request.POST["exam_date"],
+            day=request.POST["day"],
+            start_time=request.POST["start_time"],
+            end_time=request.POST["end_time"],
+            room=request.POST["room"],
+            supervisor=Teacher.objects.get(
+                id=request.POST["supervisor"]
+            ),
+        )
+
+        return redirect("exam_timetable_list")
+
+    return render(
+        request,
+        "students/add_exam_timetable.html",
+        {
+            "classes": classes,
+            "exams": exams,
+            "subjects": subjects,
+            "teachers": teachers,
+        },
+    )
+
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+    "Teachers",
+)
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+    "Teachers",
+)
+def print_class_exam_timetable(request, id):
+
+    school_class = get_object_or_404(SchoolClass, id=id)
+
+    school = SchoolProfile.objects.first()
+
+    timetables = ExamTimetable.objects.filter(
+        school_class=school_class
+    ).select_related(
+        "exam",
+        "subject",
+        "supervisor",
+    ).order_by(
+        "exam_date",
+        "start_time",
+    )
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=0.5 * inch,
+        rightMargin=0.5 * inch,
+        topMargin=0.5 * inch,
+        bottomMargin=0.5 * inch,
+    )
+
+    styles = getSampleStyleSheet()
+
+    story = []
+
+    if school:
+        story.append(
+            Paragraph(
+                f"<b>{school.name}</b>",
+                styles["Title"],
+            )
+        )
+
+    story.append(
+        Paragraph(
+            f"<b>{school_class.name} Examination Timetable</b>",
+            styles["Heading2"],
+        )
+    )
+
+    story.append(Spacer(1, 0.3 * inch))
+
+    data = [[
+        "Exam",
+        "Subject",
+        "Date",
+        "Day",
+        "Start",
+        "End",
+        "Room",
+        "Supervisor",
+    ]]
+
+    for t in timetables:
+
+        supervisor = ""
+
+        if t.supervisor:
+            supervisor = (
+                f"{t.supervisor.first_name} "
+                f"{t.supervisor.last_name}"
+            )
+
+        data.append([
+            t.exam.name,
+            t.subject.name,
+            str(t.exam_date),
+            t.day,
+            str(t.start_time),
+            str(t.end_time),
+            t.room,
+            supervisor,
+        ])
+
+    table = Table(data)
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.darkblue),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("GRID", (0,0), (-1,-1), 1, colors.black),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("BOTTOMPADDING", (0,0), (-1,0), 8),
+        ("BACKGROUND", (0,1), (-1,-1), colors.beige),
+    ]))
+
+    story.append(table)
+
+    doc.build(story)
+
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f"{school_class.name}_Exam_Timetable.pdf",
+    )
+@login_required
+@in_group("Administrators", "Head Teacher")
+@login_required
+@in_group("Administrators", "Head Teacher")
+def edit_exam_timetable(request, id):
+
+    timetable = get_object_or_404(ExamTimetable, id=id)
+
+    classes = SchoolClass.objects.all()
+    exams = Exam.objects.all()
+    subjects = Subject.objects.all()
+    teachers = Teacher.objects.all()
+
+    if request.method == "POST":
+
+        timetable.school_class = SchoolClass.objects.get(
+            id=request.POST["school_class"]
+        )
+
+        timetable.exam = Exam.objects.get(
+            id=request.POST["exam"]
+        )
+
+        timetable.subject = Subject.objects.get(
+            id=request.POST["subject"]
+        )
+
+        timetable.exam_date = request.POST["exam_date"]
+        timetable.day = request.POST["day"]
+        timetable.start_time = request.POST["start_time"]
+        timetable.end_time = request.POST["end_time"]
+        timetable.room = request.POST["room"]
+
+        timetable.supervisor = Teacher.objects.get(
+            id=request.POST["supervisor"]
+        )
+
+        timetable.save()
+
+        return redirect("exam_timetable_list")
+
+    return render(
+        request,
+        "students/edit_exam_timetable.html",
+        {
+            "timetable": timetable,
+            "classes": classes,
+            "exams": exams,
+            "subjects": subjects,
+            "teachers": teachers,
+        },
+    )
+
+@login_required
+@in_group("Administrators", "Head Teacher")
+def delete_exam_timetable(request, id):
+    return HttpResponse("Delete Exam Timetable")
+
+
+from django.http import JsonResponse
+
+@login_required
+def load_exams(request):
+    class_id = request.GET.get("class_id")
+
+    exams = Exam.objects.filter(
+        school_class_id=class_id
+    ).values("id", "name")
+
+    return JsonResponse(list(exams), safe=False)
+
+from django.http import JsonResponse
+
+@login_required
+def get_class_exams(request, class_id):
+
+    exams = Exam.objects.filter(
+        school_class_id=class_id
+    )
+
+    data = []
+
+    for exam in exams:
+        data.append({
+            "id": exam.id,
+            "name": exam.name,
+            "term": exam.term,
+        })
+
+    return JsonResponse(data, safe=False)
+
+

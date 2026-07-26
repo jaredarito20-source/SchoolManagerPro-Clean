@@ -1,4 +1,5 @@
 {% load static %}
+{% load group_tags %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -19,13 +20,15 @@
 
     <a href="{% url 'home' %}">🏠 Dashboard</a>
 
-    {% if user.is_superuser or user.groups.all.0.name == "Administrators" %}
-
+    {% if user.is_superuser or user|has_group:"Administrators" %}
         <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
         <a href="{% url 'teacher_list' %}">👩‍🏫 Teachers</a>
         <a href="{% url 'subject_list' %}">📚 Subjects</a>
         <a href="{% url 'class_list' %}">🏫 Classes</a>
-        <a href="{% url 'exam_list' %}">📝 Exams</a>
+        
+        <a href="{% url 'exam_timetable_list' %}">
+            🗓 Exam Timetable
+        </a>
         <a href="{% url 'promotion_list' %}">🎓 Student Promotion</a>
         <a href="{% url 'mark_list' %}">📊 Marks</a>
         <a href="{% url 'fee_structure_list' %}">💰 Fee Structure</a>
@@ -35,22 +38,40 @@
         <a href="{% url 'timetable_list' %}">🕒 Timetable</a>
         <a href="{% url 'user_list' %}">👥 Users</a>
 
-    {% elif user.groups.all.0.name == "Teachers" %}
+    {% elif user|has_group:"Teachers" %}
 
         <a href="{% url 'mark_list' %}">📊 Marks</a>
         <a href="{% url 'attendance_list' %}">📅 Attendance</a>
         <a href="{% url 'timetable_list' %}">🕒 Timetable</a>
 
-    {% elif user.groups.all.0.name == "Bursars" %}
+    {% elif user|has_group:"Bursars" %}
 
         <a href="{% url 'fee_structure_list' %}">💰 Fee Structure</a>
         <a href="{% url 'payment_list' %}">💵 Fee Payments</a>
         <a href="{% url 'fee_balance_list' %}">📋 Fee Balances</a>
 
-    {% elif user.groups.all.0.name == "Secretaries" %}
+    {% elif user|has_group:"Secretaries" %}
 
         <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
         <a href="{% url 'attendance_list' %}">📅 Attendance</a>
+
+    {% elif user|has_group:"Head Teacher" %}
+
+    <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
+    <a href="{% url 'teacher_list' %}">👩‍🏫 Teachers</a>
+    <a href="{% url 'subject_list' %}">📚 Subjects</a>
+    <a href="{% url 'class_list' %}">🏫 Classes</a>
+    
+    <a href="{% url 'mark_list' %}">📊 Marks</a>
+    <a href="{% url 'attendance_list' %}">📅 Attendance</a>
+    <a href="{% url 'timetable_list' %}">🕒 Timetable</a>
+    <a href="{% url 'exam_list' %}">📝 Exams</a>
+    <a href="{% url 'exam_timetable_list' %}">
+        🗓 Exam Timetable
+    </a>
+    
+
+        
         
 
 

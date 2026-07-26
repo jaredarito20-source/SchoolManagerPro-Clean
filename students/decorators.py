@@ -55,3 +55,15 @@ def admin_teacher_secretary(view_func):
         u.groups.filter(name="Secretaries").exists()
     )(view_func)
     return decorated_view
+
+
+
+def in_group(*groups):
+    def decorator(view_func):
+        return user_passes_test(
+            lambda u: u.is_authenticated and (
+                u.is_superuser or
+                u.groups.filter(name__in=groups).exists()
+            )
+        )(view_func)
+    return decorator

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>🗓 Add Exam Timetable</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <p>
+        <label>Class</label><br>
+        <select name="school_class" id="school_class" required>
+            <option value="">Select Class</option>
+
+            {% for class in classes %}
+                <option value="{{ class.id }}">
+                    {{ class.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        <label>Exam</label><br>
+        <select name="exam" id="exam" required>
+            <option value="">Select Exam</option>
+        </select>
+    </p>
+
+    <p>
+        <label>Subject</label><br>
+        <select name="subject" required>
+            {% for subject in subjects %}
+            <option value="{{ subject.id }}">
+                {{ subject.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        <label>Exam Date</label><br>
+        <input type="date" name="exam_date" required>
+    </p>
+
+    <p>
+        <label>Day</label><br>
+        <select name="day" required>
+            <option>Monday</option>
+            <option>Tuesday</option>
+            <option>Wednesday</option>
+            <option>Thursday</option>
+            <option>Friday</option>
+        </select>
+    </p>
+
+    <p>
+        <label>Start Time</label><br>
+        <input type="time" name="start_time" required>
+    </p>
+
+    <p>
+        <label>End Time</label><br>
+        <input type="time" name="end_time" required>
+    </p>
+
+    <p>
+        <label>Room</label><br>
+        <input type="text" name="room">
+    </p>
+
+    <p>
+        <label>Supervisor</label><br>
+        <select name="supervisor">
+            {% for teacher in teachers %}
+            <option value="{{ teacher.id }}">
+                {{ teacher.first_name }} {{ teacher.last_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <button type="submit">
+        💾 Save Exam Timetable
+    </button>
+
+</form>
+
+<script>
+document.getElementById("school_class").addEventListener("change", function () {
+
+    const classId = this.value;
+
+    if (!classId) return;
+
+    fetch("/get-class-exams/" + classId + "/")
+    .then(response => response.json())
+    .then(data => {
+
+        const examSelect = document.getElementById("exam");
+
+        examSelect.innerHTML = "";
+
+        if (data.length === 0) {
+
+            examSelect.innerHTML =
+                "<option value=''>No exams available</option>";
+
+            return;
+        }
+
+        data.forEach(function(exam){
+
+            const option = document.createElement("option");
+
+            option.value = exam.id;
+            option.text = exam.name + " - Term " +
+                          exam.term + " (" +
+                          exam.year + ")";
+
+            examSelect.appendChild(option);
+
+        });
+
+    });
+
+});
+</script>
+
+{% endblock %}

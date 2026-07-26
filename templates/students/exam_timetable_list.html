@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📅 Examination Timetable</h2>
+
+<p>
+    <a href="{% url 'add_exam_timetable' %}">
+        <button>➕ Add Exam Timetable</button>
+    </a>
+
+    <a href="{% url 'print_exam_timetable' %}">
+        <button>🖨 Print School Exam Timetable</button>
+    </a>
+</p>
+
+<table border="1" cellpadding="8">
+
+    <tr>
+        <th>Class</th>
+        <th>Exam</th>
+        <th>Subject</th>
+        <th>Date</th>
+        <th>Day</th>
+        <th>Start Time</th>
+        <th>End Time</th>
+        <th>Room</th>
+        <th>Supervisor</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for timetable in timetables %}
+
+    <tr>
+
+        <td>{{ timetable.school_class.name }}</td>
+
+        <td>{{ timetable.exam.name }}</td>
+
+        <td>{{ timetable.subject.name }}</td>
+
+        <td>{{ timetable.exam_date }}</td>
+
+        <td>{{ timetable.day }}</td>
+
+        <td>{{ timetable.start_time }}</td>
+
+        <td>{{ timetable.end_time }}</td>
+
+        <td>{{ timetable.room }}</td>
+
+        <td>
+            {% if timetable.supervisor %}
+                {{ timetable.supervisor.first_name }}
+                {{ timetable.supervisor.last_name }}
+            {% else %}
+                Not Assigned
+            {% endif %}
+        </td>
+
+        <td>
+
+            <a href="{% url 'edit_exam_timetable' timetable.id %}">
+                ✏ Edit
+            </a>
+
+            |
+
+            <a href="{% url 'delete_exam_timetable' timetable.id %}">
+                🗑 Delete
+            </a>
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+
+        <td colspan="10">
+            No examination timetable has been added.
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+{% endblock %}

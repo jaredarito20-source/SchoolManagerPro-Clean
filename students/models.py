@@ -118,7 +118,6 @@ class Exam(models.Model):
     def __str__(self):
         return f"{self.name} - Term {self.term} ({self.year})"
 
-
 class Mark(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -146,10 +145,12 @@ class SchoolProfile(models.Model):
     phone = models.CharField(max_length=20)
     email = models.EmailField(blank=True)
     website = models.CharField(max_length=100, blank=True)
+    
 
     current_term = models.CharField(max_length=20)
     academic_year = models.CharField(max_length=20)
     principal_name = models.CharField(max_length=100, blank=True)
+
     principal_signature = models.ImageField(
         upload_to="signatures/",
         blank=True,
@@ -161,6 +162,14 @@ class SchoolProfile(models.Model):
         blank=True,
         null=True,
     )
+    closing_date = models.DateField(null=True, blank=True)
+    opening_date = models.DateField(null=True, blank=True)
+    school_stamp = models.ImageField(
+        upload_to="school/",
+        blank=True,
+        null=True,
+)
+    
 
     def __str__(self):
         return self.name
@@ -296,4 +305,58 @@ class Timetable(models.Model):
             f"{self.school_class} - "
             f"{self.subject} - "
             f"{self.day}"
-        )     
+        ) 
+
+class ExamTimetable(models.Model):
+    DAYS = [
+        ("Monday", "Monday"),
+        ("Tuesday", "Tuesday"),
+        ("Wednesday", "Wednesday"),
+        ("Thursday", "Thursday"),
+        ("Friday", "Friday"),
+    ]
+
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE
+    )
+
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE
+    )
+
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE
+    )
+
+    exam_date = models.DateField()
+
+    day = models.CharField(
+        max_length=15,
+        choices=DAYS,
+    )
+
+    start_time = models.TimeField()
+
+    end_time = models.TimeField()
+
+    room = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    supervisor = models.ForeignKey(
+        Teacher,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return (
+            f"{self.school_class} - "
+            f"{self.subject} - "
+            f"{self.exam_date}"
+        )

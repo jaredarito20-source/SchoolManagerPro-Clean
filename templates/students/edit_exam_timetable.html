@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Exam Timetable</h2>
+
+<form method="POST">
+{% csrf_token %}
+
+<p>
+<label>Class</label><br>
+
+<select name="school_class">
+
+{% for class in classes %}
+<option value="{{ class.id }}"
+{% if class.id == timetable.school_class.id %}selected{% endif %}>
+{{ class.name }}
+</option>
+{% endfor %}
+
+</select>
+</p>
+
+
+<p>
+<label>Exam</label><br>
+
+<select name="exam">
+
+{% for exam in exams %}
+<option value="{{ exam.id }}"
+{% if exam.id == timetable.exam.id %}selected{% endif %}>
+{{ exam.name }}
+</option>
+{% endfor %}
+
+</select>
+</p>
+
+
+<p>
+<label>Subject</label><br>
+
+<select name="subject">
+
+{% for subject in subjects %}
+<option value="{{ subject.id }}"
+{% if subject.id == timetable.subject.id %}selected{% endif %}>
+{{ subject.name }}
+</option>
+{% endfor %}
+
+</select>
+</p>
+
+
+<p>
+<label>Date</label><br>
+<input
+type="date"
+name="exam_date"
+value="{{ timetable.exam_date|date:'Y-m-d' }}">
+</p>
+
+
+<p>
+<label>Day</label><br>
+
+<select name="day">
+
+<option {% if timetable.day == "Monday" %}selected{% endif %}>Monday</option>
+<option {% if timetable.day == "Tuesday" %}selected{% endif %}>Tuesday</option>
+<option {% if timetable.day == "Wednesday" %}selected{% endif %}>Wednesday</option>
+<option {% if timetable.day == "Thursday" %}selected{% endif %}>Thursday</option>
+<option {% if timetable.day == "Friday" %}selected{% endif %}>Friday</option>
+
+</select>
+
+</p>
+
+
+<p>
+<label>Start Time</label><br>
+<input
+type="time"
+name="start_time"
+value="{{ timetable.start_time|time:'H:i' }}">
+</p>
+
+
+<p>
+<label>End Time</label><br>
+<input
+type="time"
+name="end_time"
+value="{{ timetable.end_time|time:'H:i' }}">
+</p>
+
+
+<p>
+<label>Room</label><br>
+<input
+type="text"
+name="room"
+value="{{ timetable.room }}">
+</p>
+
+
+<p>
+<label>Supervisor</label><br>
+
+<select name="supervisor">
+
+{% for teacher in teachers %}
+<option value="{{ teacher.id }}"
+{% if teacher.id == timetable.supervisor.id %}selected{% endif %}>
+{{ teacher.first_name }} {{ teacher.last_name }}
+</option>
+{% endfor %}
+
+</select>
+
+</p>
+
+<button type="submit">
+Save Changes
+</button>
+
+<a href="{% url 'exam_timetable_list' %}">
+Cancel
+</a>
+
+</form>
+
+{% endblock %}
