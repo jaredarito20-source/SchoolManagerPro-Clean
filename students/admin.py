@@ -32,6 +32,9 @@ admin.site.register(Attendance)
 admin.site.register(Timetable)
 admin.site.register(ExamTimetable)
 
+admin.site.register(InventoryCategory)
+admin.site.register(InventoryItem)
+
 admin.site.site_header = "School Management Administration"
 admin.site.site_title = "School Admin"
 admin.site.index_title = "Welcome to School Management"

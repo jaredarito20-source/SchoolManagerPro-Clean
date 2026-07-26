@@ -1,87 +1,264 @@
 {% load static %}
 {% load group_tags %}
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
     <title>School Management System</title>
 
-    
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-    
+    <link rel="stylesheet"
+          href="{% static 'css/styles.css' %}">
 
 </head>
+
 <body>
 
 <div class="sidebar">
 
-    
-
     <h2>🏫 School</h2>
 
-    <a href="{% url 'home' %}">🏠 Dashboard</a>
+    <a href="{% url 'home' %}">
+        🏠 Dashboard
+    </a>
 
     {% if user.is_superuser or user|has_group:"Administrators" %}
-        <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
-        <a href="{% url 'teacher_list' %}">👩‍🏫 Teachers</a>
-        <a href="{% url 'subject_list' %}">📚 Subjects</a>
-        <a href="{% url 'class_list' %}">🏫 Classes</a>
-        
+
+    <!-- Academic -->
+
+    <button class="dropdown-btn">
+        📚 Academic ▼
+    </button>
+
+    <div class="dropdown-container">
+
+        <a href="{% url 'student_list' %}">
+            👨‍🎓 Students
+        </a>
+
+        <a href="{% url 'teacher_list' %}">
+            👩‍🏫 Teachers
+        </a>
+
+        <a href="{% url 'subject_list' %}">
+            📚 Subjects
+        </a>
+
+        <a href="{% url 'class_list' %}">
+            🏫 Classes
+        </a>
+
+        <a href="{% url 'mark_list' %}">
+            📊 Marks
+        </a>
+
+        <a href="{% url 'promotion_list' %}">
+            🎓 Student Promotion
+        </a>
+
+    </div>
+
+    <!-- Examination -->
+
+    <button class="dropdown-btn">
+        📝 Examination ▼
+    </button>
+
+    <div class="dropdown-container">
+
+        <a href="{% url 'exam_list' %}">
+            📝 Exams
+        </a>
+
         <a href="{% url 'exam_timetable_list' %}">
             🗓 Exam Timetable
         </a>
-        <a href="{% url 'promotion_list' %}">🎓 Student Promotion</a>
-        <a href="{% url 'mark_list' %}">📊 Marks</a>
-        <a href="{% url 'fee_structure_list' %}">💰 Fee Structure</a>
-        <a href="{% url 'payment_list' %}">💵 Fee Payments</a>
-        <a href="{% url 'fee_balance_list' %}">📋 Fee Balances</a>
-        <a href="{% url 'attendance_list' %}">📅 Attendance</a>
-        <a href="{% url 'timetable_list' %}">🕒 Timetable</a>
-        <a href="{% url 'user_list' %}">👥 Users</a>
+
+    </div>
+
+    <!-- Finance -->
+
+    <button class="dropdown-btn">
+        💰 Finance ▼
+    </button>
+
+    <div class="dropdown-container">
+
+        <a href="{% url 'fee_structure_list' %}">
+            💰 Fee Structure
+        </a>
+
+        <a href="{% url 'fee_payment_list' %}">
+            💵 Fee Payments
+        </a>
+
+        <a href="{% url 'fee_balance_list' %}">
+            📋 Fee Balances
+        </a>
+
+        <a href="{% url 'finance_dashboard' %}">
+            📊 Finance Dashboard
+        </a>
+
+    </div>
+
+    <!-- Attendance -->
+
+    <button class="dropdown-btn">
+        📅 Attendance ▼
+    </button>
+
+    <div class="dropdown-container">
+
+        <a href="{% url 'take_attendance' %}">
+            ✅ Take Attendance
+        </a>
+
+        <a href="{% url 'attendance_list' %}">
+            📋 Attendance Register
+        </a>
+
+    </div>
+
+    <!-- Timetable -->
+
+    <button class="dropdown-btn">
+        🕒 Timetable ▼
+    </button>
+
+    <div class="dropdown-container">
+
+        <a href="{% url 'timetable_list' %}">
+            🏫 School Timetable
+        </a>
+
+        <a href="{% url 'exam_timetable_list' %}">
+            🗓 Exam Timetable
+        </a>
+
+    </div>
+
+    <!-- Inventory -->
+
+    <button class="dropdown-btn">
+        📦 Inventory ▼
+    </button>
+
+    <div class="dropdown-container">
+
+        <a href="{% url 'inventory_list' %}">
+            📦 Inventory
+        </a>
+
+    </div>
+
+    <!-- Administration -->
+
+    <button class="dropdown-btn">
+        ⚙ Administration ▼
+    </button>
+
+    <div class="dropdown-container">
+
+        <a href="{% url 'user_list' %}">
+            👥 Users
+        </a>
+
+    </div>
 
     {% elif user|has_group:"Teachers" %}
 
-        <a href="{% url 'mark_list' %}">📊 Marks</a>
-        <a href="{% url 'attendance_list' %}">📅 Attendance</a>
-        <a href="{% url 'timetable_list' %}">🕒 Timetable</a>
+        <a href="{% url 'mark_list' %}">
+            📊 Marks
+        </a>
 
-    {% elif user|has_group:"Bursars" %}
+        <a href="{% url 'attendance_list' %}">
+            📅 Attendance
+        </a>
 
-        <a href="{% url 'fee_structure_list' %}">💰 Fee Structure</a>
-        <a href="{% url 'payment_list' %}">💵 Fee Payments</a>
-        <a href="{% url 'fee_balance_list' %}">📋 Fee Balances</a>
+        <a href="{% url 'timetable_list' %}">
+            🕒 Timetable
+        </a>
+
+    {% elif user|has_group:"Bursar" %}
+
+        <a href="{% url 'fee_structure_list' %}">
+            💰 Fee Structure
+        </a>
+
+        <a href="{% url 'fee_payment_list' %}">
+            💵 Fee Payments
+        </a>
+
+        <a href="{% url 'fee_balance_list' %}">
+            📋 Fee Balances
+        </a>
+
+        <a href="{% url 'finance_dashboard' %}">
+            📊 Finance Dashboard
+        </a>
 
     {% elif user|has_group:"Secretaries" %}
 
-        <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
-        <a href="{% url 'attendance_list' %}">📅 Attendance</a>
+        <a href="{% url 'student_list' %}">
+            👨‍🎓 Students
+        </a>
+
+        <a href="{% url 'attendance_list' %}">
+            📅 Attendance
+        </a>
 
     {% elif user|has_group:"Head Teacher" %}
 
-    <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
-    <a href="{% url 'teacher_list' %}">👩‍🏫 Teachers</a>
-    <a href="{% url 'subject_list' %}">📚 Subjects</a>
-    <a href="{% url 'class_list' %}">🏫 Classes</a>
-    
-    <a href="{% url 'mark_list' %}">📊 Marks</a>
-    <a href="{% url 'attendance_list' %}">📅 Attendance</a>
-    <a href="{% url 'timetable_list' %}">🕒 Timetable</a>
-    <a href="{% url 'exam_list' %}">📝 Exams</a>
-    <a href="{% url 'exam_timetable_list' %}">
-        🗓 Exam Timetable
-    </a>
-    
+        <a href="{% url 'student_list' %}">
+            👨‍🎓 Students
+        </a>
 
-        
-        
+        <a href="{% url 'teacher_list' %}">
+            👩‍🏫 Teachers
+        </a>
 
+        <a href="{% url 'subject_list' %}">
+            📚 Subjects
+        </a>
+
+        <a href="{% url 'class_list' %}">
+            🏫 Classes
+        </a>
+
+        <a href="{% url 'mark_list' %}">
+            📊 Marks
+        </a>
+
+        <a href="{% url 'attendance_list' %}">
+            📅 Attendance
+        </a>
+
+        <a href="{% url 'timetable_list' %}">
+            🕒 Timetable
+        </a>
+
+        <a href="{% url 'exam_list' %}">
+            📝 Exams
+        </a>
+
+        <a href="{% url 'exam_timetable_list' %}">
+            🗓 Exam Timetable
+        </a>
 
     {% endif %}
 
     <hr>
 
-    <a href="{% url 'logout' %}">🚪 Logout</a>
-
-</div>
+    <a href="{% url 'logout' %}">
+        🚪 Logout
+    </a>
 
 </div>
 
@@ -95,6 +272,29 @@
     {% endblock %}
 
 </div>
+
+<script>
+
+document.querySelectorAll(".dropdown-btn").forEach(function(button){
+
+    button.addEventListener("click", function(){
+
+        this.classList.toggle("active");
+
+        const container = this.nextElementSibling;
+
+        if(container.style.display === "block"){
+            container.style.display = "none";
+        }
+        else{
+            container.style.display = "block";
+        }
+
+    });
+
+});
+
+</script>
 
 </body>
 </html>

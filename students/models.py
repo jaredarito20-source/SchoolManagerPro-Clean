@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Sum
+from django.contrib.auth.models import User
 
 
 class Teacher(models.Model):
@@ -73,7 +74,7 @@ class Student(models.Model):
 
     def total_paid(self):
         total = self.feepayment_set.aggregate(
-            total=Sum("amount_paid")
+            total=Sum("amount")
         )["total"]
 
         return total or 0
@@ -199,16 +200,30 @@ class FeeStructure(models.Model):
 
 
 class FeePayment(models.Model):
+
+    PAYMENT_METHODS = [
+        ("Cash", "Cash"),
+        ("M-Pesa", "M-Pesa"),
+        ("Bank", "Bank"),
+        ("Cheque", "Cheque"),
+    ]
+
     student = models.ForeignKey(
         Student,
-        on_delete=models.CASCADE,
+        on_delete=models.CASCADE
     )
 
-    payment_date = models.DateField(auto_now_add=True)
-
-    amount_paid = models.DecimalField(
+    amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+    )
+
+    payment_date = models.DateField()
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHODS,
+        default="Cash",
     )
 
     receipt_number = models.CharField(
@@ -216,26 +231,27 @@ class FeePayment(models.Model):
         unique=True,
     )
 
-    # M-Pesa fields
-    mpesa_receipt = models.CharField(
-        max_length=30,
+    reference = models.CharField(
+        max_length=100,
         blank=True,
-        null=True,
     )
 
-    phone_number = models.CharField(
-        max_length=20,
+    remarks = models.TextField(
         blank=True,
-        null=True,
     )
 
-    payment_method = models.CharField(
-        max_length=20,
-        default="Cash",
+    recorded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
 
     def __str__(self):
-        return f"{self.student} - {self.amount_paid}"
+        return (
+            f"{self.student} - "
+            f"{self.amount}"
+        )
 class Attendance(models.Model):
     STATUS_CHOICES = [
         ("Present", "Present"),
@@ -255,14 +271,28 @@ class Attendance(models.Model):
     )
 
     date = models.DateField()
+
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
         default="Present",
     )
 
+    remarks = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "date"],
+                name="unique_student_attendance_date",
+            )
+        ]
+
     def __str__(self):
-        return f"{self.student} - {self.date} - {self.status}" 
+        return f"{self.student} - {self.date} - {self.status}"
 
 class Timetable(models.Model):
     DAYS = [
@@ -360,3 +390,42 @@ class ExamTimetable(models.Model):
             f"{self.subject} - "
             f"{self.exam_date}"
         )
+
+class InventoryCategory(models.Model):
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+    )
+
+    def __str__(self):
+        return self.name
+
+
+class InventoryItem(models.Model):
+    category = models.ForeignKey(
+        InventoryCategory,
+        on_delete=models.CASCADE,
+    )
+
+    name = models.CharField(max_length=150)
+
+    quantity = models.PositiveIntegerField(default=0)
+
+    unit = models.CharField(
+        max_length=30,
+        default="Pieces",
+    )
+
+    minimum_stock = models.PositiveIntegerField(default=5)
+
+    location = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    def __str__(self):
+        return self.name

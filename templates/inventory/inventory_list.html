@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📦 Inventory</h2>
+
+<p>
+    <a href="{% url 'add_inventory_item' %}">
+        ➕ Add Inventory Item
+    </a>
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0">
+
+    <tr>
+        <th>Category</th>
+        <th>Item</th>
+        <th>Quantity</th>
+        <th>Unit</th>
+        <th>Minimum Stock</th>
+        <th>Location</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for item in items %}
+
+    <tr>
+
+        <td>{{ item.category }}</td>
+
+        <td>{{ item.name }}</td>
+
+        <td>{{ item.quantity }}</td>
+
+        <td>{{ item.unit }}</td>
+
+        <td>{{ item.minimum_stock }}</td>
+
+        <td>{{ item.location }}</td>
+
+        <td>
+
+            {% if item.quantity <= item.minimum_stock %}
+
+                <span style="color:red;">
+                    Low Stock
+                </span>
+
+            {% else %}
+
+                <span style="color:green;">
+                    In Stock
+                </span>
+
+            {% endif %}
+
+        </td>
+
+        <td>
+
+            <a href="{% url 'edit_inventory_item' item.id %}">
+                ✏ Edit
+            </a>
+
+            |
+
+            <a href="{% url 'delete_inventory_item' item.id %}">
+                🗑 Delete
+            </a>
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+
+        <td colspan="8">
+            No inventory items found.
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+{% endblock %}

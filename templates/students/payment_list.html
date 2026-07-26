@@ -5,8 +5,8 @@
 <h2>Fee Payments</h2>
 
 <p>
-    <a href="{% url 'add_payment' %}">
-        ➕ Record Payment
+    <a href="{% url 'add_fee_payment' %}">
+        💰 Receive Payment
     </a>
 </p>
 
@@ -24,21 +24,13 @@
 
     <tr>
 
-        <td>
-            {{ payment.student }}
-        </td>
+        <td>{{ payment.student }}</td>
 
-        <td>
-            {{ payment.receipt_number }}
-        </td>
+        <td>{{ payment.receipt_number }}</td>
 
-        <td>
-            KSh {{ payment.amount_paid }}
-        </td>
+        <td>KSh {{ payment.amount }}</td>
 
-        <td>
-            {{ payment.payment_date }}
-        </td>
+        <td>{{ payment.payment_date }}</td>
 
         <td>
 
@@ -46,10 +38,11 @@
                 🖨 Print Receipt
             </a>
 
+            |
+
             <a href="{% url 'fee_statement' payment.student.id %}">
                 📄 Fee Statement
-</a>
-            
+            </a>
 
         </td>
 

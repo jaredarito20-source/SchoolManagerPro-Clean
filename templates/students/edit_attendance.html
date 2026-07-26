@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Attendance</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+
+        <strong>Student</strong><br>
+
+        {{ attendance.student.first_name }}
+        {{ attendance.student.last_name }}
+
+    </p>
+
+    <p>
+
+        <strong>Class</strong><br>
+
+        {{ attendance.school_class.name }}
+
+    </p>
+
+    <p>
+
+        <strong>Date</strong><br>
+
+        {{ attendance.date }}
+
+    </p>
+
+    <p>
+
+        <label>Status</label><br>
+
+        <select name="status">
+
+            <option value="Present"
+                {% if attendance.status == "Present" %}
+                selected
+                {% endif %}
+            >
+                Present
+            </option>
+
+            <option value="Absent"
+                {% if attendance.status == "Absent" %}
+                selected
+                {% endif %}
+            >
+                Absent
+            </option>
+
+            <option value="Late"
+                {% if attendance.status == "Late" %}
+                selected
+                {% endif %}
+            >
+                Late
+            </option>
+
+            <option value="Excused"
+                {% if attendance.status == "Excused" %}
+                selected
+                {% endif %}
+            >
+                Excused
+            </option>
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label>Remarks</label><br>
+
+        <textarea
+            name="remarks"
+            rows="3"
+            cols="50"
+        >{{ attendance.remarks }}</textarea>
+
+    </p>
+
+    <button type="submit">
+        💾 Save Changes
+    </button>
+
+    <a href="{% url 'attendance_list' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

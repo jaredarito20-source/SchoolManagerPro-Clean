@@ -52,8 +52,24 @@ urlpatterns = [
     path("fees/add/", views.add_fee_structure, name="add_fee_structure"),
 
     # Fee Payments
-    path("payments/", views.payment_list, name="payment_list"),
-    path("payments/add/", views.add_payment, name="add_payment"),
+    path(
+        "fees/payments/",
+        views.fee_payment_list,
+        name="fee_payment_list",
+    ),
+
+    path(
+    "fees/payment/edit/<int:id>/",
+    views.edit_payment,
+    name="edit_payment",
+    ),
+
+    path(
+        "fees/payment/delete/<int:id>/",
+        views.delete_payment,
+        name="delete_payment",
+    ),
+    
     path("payments/<int:id>/receipt/", views.print_receipt, name="print_receipt"),
 
     # Fee Balances
@@ -62,14 +78,22 @@ urlpatterns = [
     # Fee Statements
     path("statement/<int:id>/", views.fee_statement, name="fee_statement"),
     path("statement/<int:id>/print/", views.print_fee_statement, name="print_fee_statement"),
+    path(
+        "fees/payment/add/",
+        views.add_fee_payment,
+        name="add_fee_payment",
+    ),
+    path(
+        "finance/dashboard/",
+        views.finance_dashboard,
+        name="finance_dashboard",
+    ),
 
     # Attendance
-    path("attendance/", views.attendance_list, name="attendance_list"),
+    
     path("attendance/add/", views.add_attendance, name="add_attendance"),
-    path("attendance/take/", views.take_attendance, name="take_attendance"),
-    path("attendance/edit/<int:id>/", views.edit_attendance, name="edit_attendance"),
-    path("attendance/delete/<int:id>/", views.delete_attendance, name="delete_attendance"),
-
+    
+   
     # Timetable
     path("timetable/", views.timetable_list, name="timetable_list"),
     path("timetable/add/", views.add_timetable, name="add_timetable"),
@@ -149,5 +173,60 @@ urlpatterns = [
         "timetable/print/",
         views.print_timetable,
         name="print_timetable",
+),
+
+# attendance register
+    path(
+    "attendance/take/",
+    views.take_attendance,
+    name="take_attendance",
+),
+
+    path(
+    "attendance/",
+    views.attendance_list,
+    name="attendance_list",
+),
+
+path(
+    "attendance/edit/<int:id>/",
+    views.edit_attendance,
+    name="edit_attendance",
+),
+
+path(
+    "attendance/delete/<int:id>/",
+    views.delete_attendance,
+    name="delete_attendance",
+),
+
+path(
+    "attendance/print/",
+    views.print_attendance,
+    name="print_attendance",
+),
+
+path(
+    "inventory/",
+    views.inventory_list,
+    name="inventory_list",
+),
+
+path(
+    "inventory/add/",
+    views.add_inventory_item,
+    name="add_inventory_item",
+),
+
+path(
+    "inventory/edit/<int:id>/",
+    views.edit_inventory_item,
+    name="edit_inventory_item",
+),
+
+path(
+    "inventory/delete/<int:id>/",
+    views.delete_inventory_item,
+    name="delete_inventory_item",
 ),
 ]

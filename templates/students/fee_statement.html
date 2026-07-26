@@ -62,7 +62,7 @@
 <tr>
     <td>{{ payment.receipt_number }}</td>
     <td>{{ payment.payment_date }}</td>
-    <td>KSh {{ payment.amount_paid }}</td>
+    <td>KSh {{ payment.amount }}</td>
 </tr>
 
 {% empty %}
@@ -85,7 +85,7 @@
 
 &nbsp;&nbsp;
 
-<a href="{% url 'payment_list' %}">
+<a href="{% url 'fee_payment_list' %}">
     ⬅ Back to Payments
 </a>
 

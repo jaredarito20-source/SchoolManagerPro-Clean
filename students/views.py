@@ -1,7 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 
 from django.db.models import Sum, Avg
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+
+from reportlab.pdfgen import canvas
+
+
+
+
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -14,19 +19,21 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.http import HttpResponse
+import uuid
 
-
+from reportlab.lib import colors
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle,
+    Paragraph,
+    Spacer,
+)
 from io import BytesIO
 from django.http import FileResponse
-
-
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.colors import HexColor
-
-
-
 from reportlab.lib.pagesizes import A4
-
 from reportlab.platypus import (
     SimpleDocTemplate,
     Table,
@@ -35,14 +42,8 @@ from reportlab.platypus import (
     Spacer,
     Image,
 )
-from reportlab.lib.units import inch
+
 from reportlab.pdfbase import pdfmetrics
-
-
-
-        
-
-       
 from .models import (
     Student,
     Teacher,
@@ -56,6 +57,8 @@ from .models import (
     Attendance,
     Timetable,
     ExamTimetable,
+    InventoryCategory,
+    InventoryItem,
 )
 from .decorators import (
     admin_required,
@@ -106,7 +109,7 @@ def home(request):
     total_subjects = Subject.objects.count()
 
     total_payments = FeePayment.objects.aggregate(
-        total=Sum("amount_paid")
+        total=Sum("amount")
     )["total"] or 0
 
     total_balance = sum(
@@ -1443,6 +1446,67 @@ def print_report(request, id):
 # ==========================
 # FEE STRUCTURE
 # ==========================
+
+
+
+
+@login_required
+@admin_or_bursar
+@in_group("Administrators", "Head Teacher", "Bursar")
+def finance_dashboard(request):
+
+    # Total expected fees
+    total_expected = 0
+
+    students = Student.objects.select_related("school_class")
+
+    for student in students:
+
+        structure = FeeStructure.objects.filter(
+            school_class=student.school_class
+        ).first()
+
+        if structure:
+            total_expected += (
+                structure.tuition_fee
+                + structure.activity_fee
+                + structure.exam_fee
+                + structure.other_fee
+            )
+
+    # Total collected
+    total_collected = (
+        FeePayment.objects.aggregate(
+            total=Sum("amount")
+        )["total"] or 0
+    )
+
+    # Outstanding balance
+    outstanding = total_expected - total_collected
+
+    # Today's collections
+    today_collection = (
+        FeePayment.objects.filter(
+            payment_date=date.today()
+        ).aggregate(
+            total=Sum("amount")
+        )["total"] or 0
+    )
+
+    # Number of payments
+    total_payments = FeePayment.objects.count()
+
+    return render(
+        request,
+        "fees/finance_dashboard.html",
+        {
+            "total_expected": total_expected,
+            "total_collected": total_collected,
+            "outstanding": outstanding,
+            "today_collection": today_collection,
+            "total_payments": total_payments,
+        },
+    )
 @login_required
 @admin_or_bursar
 @in_group("Bursar")
@@ -1457,6 +1521,7 @@ def fee_structure_list(request):
 
 @login_required
 @admin_or_bursar
+@in_group("Administrators", "Bursar")
 def print_receipt(request, id):
 
     payment = get_object_or_404(
@@ -1464,96 +1529,159 @@ def print_receipt(request, id):
         id=id
     )
 
-    response = HttpResponse(
-        content_type="application/pdf"
-    )
+    school = SchoolProfile.objects.first()
 
-    response["Content-Disposition"] = (
-        f'attachment; filename="Receipt_{payment.receipt_number}.pdf"'
-    )
+    buffer = BytesIO()
 
-    doc = SimpleDocTemplate(response)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+    )
 
     styles = getSampleStyleSheet()
 
-    elements = []
+    story = []
 
-    elements.append(
-        Paragraph(
-            "<b>SCHOOL MANAGEMENT SYSTEM</b>",
-            styles["Title"],
-        )
-    )
-
-    elements.append(
-        Paragraph(
-            "<b>OFFICIAL FEE RECEIPT</b>",
-            styles["Heading2"],
-        )
-    )
-
-    elements.append(
-        Paragraph("<br/>", styles["Normal"])
-    )
-
-    elements.append(
-        Paragraph(
-            f"<b>Receipt Number:</b> {payment.receipt_number}",
-            styles["Normal"],
-        )
-    )
-
-    elements.append(
-        Paragraph(
-            f"<b>Student:</b> {payment.student.first_name} {payment.student.last_name}",
-            styles["Normal"],
-        )
-    )
-
-    elements.append(
-        Paragraph(
-            f"<b>Admission No:</b> {payment.student.admission_number}",
-            styles["Normal"],
-        )
-    )
-
-    if payment.student.school_class:
-        elements.append(
+    if school:
+        story.append(
             Paragraph(
-                f"<b>Class:</b> {payment.student.school_class.name}",
-                styles["Normal"],
+                f"<b>{school.name}</b>",
+                styles["Title"],
             )
         )
 
-    elements.append(
-        Paragraph(
-            f"<b>Amount Paid:</b> KSh {payment.amount_paid}",
-            styles["Normal"],
-        )
-    )
+        if school.address:
+            story.append(
+                Paragraph(
+                    school.address,
+                    styles["Normal"],
+                )
+            )
 
-    elements.append(
-        Paragraph(
-            f"<b>Date:</b> {payment.date_paid}",
-            styles["Normal"],
-        )
-    )
+        if school.phone:
+            story.append(
+                Paragraph(
+                    f"Phone: {school.phone}",
+                    styles["Normal"],
+                )
+            )
 
-    elements.append(
-        Paragraph("<br/>", styles["Normal"])
-    )
+    story.append(Spacer(1, 20))
 
-    elements.append(
+    story.append(
         Paragraph(
-            "<b>Thank you for your payment.</b>",
+            "<b>OFFICIAL SCHOOL FEE RECEIPT</b>",
             styles["Heading2"],
         )
     )
 
-    doc.build(elements)
+    story.append(Spacer(1, 15))
 
-    return response
+    data = [
 
+        ["Receipt No", payment.receipt_number],
+
+        [
+            "Student",
+            f"{payment.student.first_name} {payment.student.last_name}",
+        ],
+
+        [
+            "Admission No",
+            payment.student.admission_number,
+        ],
+
+        [
+            "Class",
+            payment.student.school_class.name,
+        ],
+
+        [
+            "Amount Paid",
+            f"KSh {payment.amount}",
+        ],
+
+        [
+            "Payment Method",
+            payment.payment_method,
+        ],
+
+        [
+            "Reference",
+            payment.reference,
+        ],
+
+        [
+            "Payment Date",
+            str(payment.payment_date),
+        ],
+
+        [
+            "Recorded By",
+            payment.recorded_by.username
+            if payment.recorded_by
+            else "",
+        ],
+
+    ]
+
+    table = Table(
+        data,
+        colWidths=[170, 300],
+    )
+
+    table.setStyle(
+        TableStyle([
+
+            ("GRID", (0,0), (-1,-1), 1, colors.black),
+
+            ("BACKGROUND", (0,0), (0,-1), colors.lightgrey),
+
+            ("FONTNAME", (0,0), (-1,-1), "Helvetica"),
+
+            ("BOTTOMPADDING", (0,0), (-1,-1), 8),
+
+            ("TOPPADDING", (0,0), (-1,-1), 8),
+
+        ])
+    )
+
+    story.append(table)
+
+    story.append(Spacer(1, 30))
+
+    story.append(
+        Paragraph(
+            "Thank you for your payment.",
+            styles["Heading3"],
+        )
+    )
+
+    story.append(Spacer(1, 40))
+
+    story.append(
+        Paragraph(
+            "__________________________",
+            styles["Normal"],
+        )
+    )
+
+    story.append(
+        Paragraph(
+            "Bursar Signature",
+            styles["Normal"],
+        )
+    )
+
+    doc.build(story)
+
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=False,
+        filename="Receipt.pdf",
+    )
 
 
 @login_required
@@ -1591,206 +1719,158 @@ def add_fee_structure(request):
 # ==========================
 @login_required
 @admin_or_bursar
-@in_group("Bursar")
-def payment_list(request):
+@in_group("Administrators", "Bursar")
+def fee_payment_list(request):
 
-    payments = FeePayment.objects.all()
-
-    return render(
-        request,
-        "students/payment_list.html",
-        {"payments": payments},
-    )
-
-@login_required
-@admin_or_bursar
-def add_payment(request):
-
-    if request.method == "POST":
-
-        student = get_object_or_404(
-            Student,
-            id=request.POST["student"]
-        )
-
-        last_payment = FeePayment.objects.order_by("-id").first()
-
-        if last_payment:
-            last_number = int(last_payment.receipt_number.replace("RCP", ""))
-            receipt_number = f"RCP{last_number + 1:06d}"
-        else:
-            receipt_number = "RCP000001"
-
-        FeePayment.objects.create(
-            student=student,
-            amount_paid=request.POST["amount_paid"],
-            receipt_number=receipt_number,
-        )
-
-        messages.success(
-            request,
-            f"Payment recorded successfully. Receipt No. {receipt_number}"
-        )
-
-        return redirect("payment_list")
-
-    students = Student.objects.all().order_by(
-        "admission_number"
-    )
+    payments = FeePayment.objects.select_related(
+        "student",
+        "student__school_class",
+    ).order_by("-payment_date", "-id")
 
     return render(
         request,
-        "students/add_payment.html",
+        "students/fee_payment_list.html",
         {
-            "students": students,
+            "payments": payments,
         },
     )
 
+
+
+
+
 @login_required
 @admin_or_bursar
+@in_group("Administrators", "Head Teacher", "Bursar")
 def print_fee_statement(request, id):
 
-    student = get_object_or_404(Student, id=id)
-
-    school = SchoolProfile.objects.first()
+    student = Student.objects.get(id=id)
 
     payments = FeePayment.objects.filter(
         student=student
     ).order_by("payment_date")
 
-    response = HttpResponse(content_type="application/pdf")
+    fee_structure = FeeStructure.objects.filter(
+        school_class=student.school_class
+    ).first()
 
-    response["Content-Disposition"] = (
-        f'inline; filename="Fee_Statement_{student.admission_number}.pdf"'
-    )
-
-    doc = SimpleDocTemplate(response)
-
-    styles = getSampleStyleSheet()
-
-    elements = []
-
-    if school:
-        elements.append(
-            Paragraph(
-                f"<b><font size='18'>{school.name}</font></b>",
-                styles["Title"],
-            )
+    if fee_structure:
+        total_fees = (
+            fee_structure.tuition_fee
+            + fee_structure.activity_fee
+            + fee_structure.exam_fee
+            + fee_structure.other_fee
         )
+    else:
+        total_fees = 0
 
-        elements.append(
-            Paragraph(
-                school.address,
-                styles["Normal"],
-            )
-        )
+    total_paid = payments.aggregate(
+        total=Sum("amount")
+    )["total"] or 0
 
-        elements.append(
-            Paragraph(
-                f"Phone: {school.phone}",
-                styles["Normal"],
-            )
-        )
+    balance = total_fees - total_paid
 
-        elements.append(
-            Paragraph(
-                f"Email: {school.email}",
-                styles["Normal"],
-            )
-        )
+    buffer = BytesIO()
 
-    elements.append(
-        Paragraph("<br/>", styles["Normal"])
-    )
+    pdf = canvas.Canvas(buffer)
 
-    elements.append(
-        Paragraph(
-            "<b>STUDENT FEE STATEMENT</b>",
-            styles["Heading1"],
-        )
-    )
+    pdf.setTitle("Fee Statement")
 
-    elements.append(
-        Paragraph("<br/>", styles["Normal"])
-    )
+    y = 800
 
-    elements.append(
-        Paragraph(
-            f"<b>Student:</b> {student.first_name} {student.last_name}",
-            styles["Normal"],
-        )
-    )
+    pdf.setFont("Helvetica-Bold", 18)
+    pdf.drawString(170, y, "STUDENT FEE STATEMENT")
 
-    elements.append(
-        Paragraph(
-            f"<b>Admission No:</b> {student.admission_number}",
-            styles["Normal"],
-        )
-    )
+    y -= 40
 
-    if student.school_class:
-        elements.append(
-            Paragraph(
-                f"<b>Class:</b> {student.school_class.name}",
-                styles["Normal"],
-            )
-        )
+    pdf.setFont("Helvetica", 12)
 
-    elements.append(
-        Paragraph("<br/>", styles["Normal"])
-    )
+    pdf.drawString(50, y, f"Student: {student.first_name} {student.last_name}")
+    y -= 20
 
-    data = [["Receipt", "Date", "Amount"]]
+    pdf.drawString(50, y, f"Admission No: {student.admission_number}")
+    y -= 20
+
+    pdf.drawString(50, y, f"Class: {student.school_class.name}")
+
+    y -= 40
+
+    pdf.setFont("Helvetica-Bold", 12)
+
+    pdf.drawString(50, y, f"Total Fees : KSh {total_fees}")
+    y -= 20
+
+    pdf.drawString(50, y, f"Total Paid : KSh {total_paid}")
+    y -= 20
+
+    pdf.drawString(50, y, f"Balance    : KSh {balance}")
+
+    y -= 40
+
+    pdf.setFont("Helvetica-Bold", 12)
+
+    pdf.drawString(50, y, "PAYMENT HISTORY")
+
+    y -= 25
+
+    pdf.setFont("Helvetica", 11)
+
+    pdf.drawString(50, y, "Date")
+    pdf.drawString(140, y, "Receipt")
+    pdf.drawString(280, y, "Method")
+    pdf.drawString(430, y, "Amount")
+
+    y -= 20
 
     for payment in payments:
-        data.append([
+
+        pdf.drawString(
+            50,
+            y,
+            payment.payment_date.strftime("%d-%m-%Y"),
+        )
+
+        pdf.drawString(
+            140,
+            y,
             payment.receipt_number,
-            str(payment.payment_date),
-            f"KSh {payment.amount_paid}",
-        ])
-
-    table = Table(data)
-
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.darkblue),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
-        ("GRID", (0,0), (-1,-1), 1, colors.black),
-        ("BACKGROUND", (0,1), (-1,-1), colors.beige),
-    ]))
-
-    elements.append(table)
-
-    elements.append(
-        Paragraph("<br/>", styles["Normal"])
-    )
-
-    elements.append(
-        Paragraph(
-            f"<b>Total Fee:</b> KSh {student.total_fee()}",
-            styles["Normal"],
         )
-    )
 
-    elements.append(
-        Paragraph(
-            f"<b>Total Paid:</b> KSh {student.total_paid()}",
-            styles["Normal"],
+        pdf.drawString(
+            280,
+            y,
+            payment.payment_method,
         )
-    )
 
-    elements.append(
-        Paragraph(
-            f"<b>Balance:</b> KSh {student.balance()}",
-            styles["Heading2"],
+        pdf.drawString(
+            430,
+            y,
+            f"KSh {payment.amount}",
         )
+
+        y -= 20
+
+        if y < 60:
+            pdf.showPage()
+            y = 800
+
+    pdf.save()
+
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=False,
+        filename="fee_statement.pdf",
     )
-
-    doc.build(elements)
-
-    return response
 
 @login_required
 @admin_or_bursar
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Bursar",
+)
 def fee_statement(request, id):
 
     student = get_object_or_404(Student, id=id)
@@ -1799,20 +1879,40 @@ def fee_statement(request, id):
         student=student
     ).order_by("-payment_date")
 
-    context = {
-        "student": student,
-        "payments": payments,
-        "total_fee": student.total_fee(),
-        "total_paid": student.total_paid(),
-        "balance": student.balance(),
-    }
+    # Get the student's fee structure
+    fee_structure = FeeStructure.objects.filter(
+        school_class=student.school_class
+    ).first()
+
+    if fee_structure:
+        total_fees = (
+            fee_structure.tuition_fee
+            + fee_structure.activity_fee
+            + fee_structure.exam_fee
+            + fee_structure.other_fee
+        )
+    else:
+        total_fees = 0
+
+    total_paid = (
+        payments.aggregate(
+            total=Sum("amount")
+        )["total"] or 0
+    )
+
+    balance = total_fees - total_paid
 
     return render(
         request,
-        "students/fee_statement.html",
-        context,
+        "fees/fee_statement.html",
+        {
+            "student": student,
+            "payments": payments,
+            "total_fees": total_fees,
+            "total_paid": total_paid,
+            "balance": balance,
+        },
     )
-
 @login_required
 @admin_or_bursar
 @in_group("Bursar")
@@ -1824,24 +1924,114 @@ def fee_balance_list(request):
         "fees/fee_balance_list.html",
         {"students": students},
     )
+@login_required
+@admin_or_bursar
+def edit_payment(request, id):
+    return HttpResponse("Edit Payment - Coming Soon")
+
+
+@login_required
+@admin_or_bursar
+def delete_payment(request, id):
+    return HttpResponse("Delete Payment - Coming Soon")
+
+
+@login_required
+@admin_or_bursar
+@in_group("Administrators", "Bursar")
+def add_fee_payment(request):
+
+    students = Student.objects.select_related(
+        "school_class"
+    ).order_by(
+        "admission_number"
+    )
+
+    if request.method == "POST":
+
+        FeePayment.objects.create(
+
+            student=Student.objects.get(
+                id=request.POST["student"]
+            ),
+
+            amount=request.POST["amount"],
+
+            payment_date=request.POST["payment_date"],
+
+            payment_method=request.POST["payment_method"],
+
+            receipt_number="RCPT-" + uuid.uuid4().hex[:8].upper(),
+
+            reference=request.POST["reference"],
+
+            remarks=request.POST["remarks"],
+
+            recorded_by=request.user,
+
+        )
+
+        messages.success(
+            request,
+            "Fee payment recorded successfully."
+        )
+
+        return redirect("fee_payment_list")
+
+    return render(
+    request,
+    "students/add_fee_payment.html",
+    {
+        "students": students,
+        "today": date.today(),
+    },
+)
 
 
 
 @login_required
-@admin_teacher_secretary
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+    "Teachers",
+)
 def attendance_list(request):
-    attendance = Attendance.objects.all().order_by("-date")
+
+    attendances = Attendance.objects.select_related(
+        "student",
+        "school_class",
+    )
+
+    classes = SchoolClass.objects.all()
+
+    school_class = request.GET.get("school_class")
+    date = request.GET.get("date")
+
+    if school_class:
+        attendances = attendances.filter(
+            school_class_id=school_class
+        )
+
+    if date:
+        attendances = attendances.filter(
+            date=date
+        )
+
+    attendances = attendances.order_by(
+        "-date",
+        "school_class__name",
+        "student__admission_number",
+    )
 
     return render(
         request,
         "students/attendance_list.html",
         {
-            "attendance": attendance,
+            "attendances": attendances,
+            "classes": classes,
         },
     )
-
-
-
 @login_required
 @admin_teacher_secretary
 def add_attendance(request):
@@ -1874,107 +2064,202 @@ def add_attendance(request):
     )
 
 
+from datetime import date
+
 @login_required
-@admin_teacher_secretary
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+    "Teachers",
+)
 def take_attendance(request):
 
     classes = SchoolClass.objects.all()
 
+    students = None
     selected_class = None
-    students = []
+    selected_date = date.today()
 
-    if request.method == "POST":
+    # -------------------------
+    # LOAD STUDENTS
+    # -------------------------
+    if request.method == "GET":
 
-        school_class = SchoolClass.objects.get(
-            id=request.POST["school_class"]
+        class_id = request.GET.get("school_class")
+
+        if class_id:
+
+            selected_class = SchoolClass.objects.get(
+                id=class_id
+            )
+
+            students = Student.objects.filter(
+                school_class=selected_class
+            ).order_by(
+                "admission_number"
+            )
+
+            if request.GET.get("date"):
+                selected_date = request.GET.get("date")
+
+    # -------------------------
+    # SAVE ATTENDANCE
+    # -------------------------
+    elif request.method == "POST":
+
+        class_id = request.POST.get("school_class")
+
+        selected_class = SchoolClass.objects.get(
+            id=class_id
         )
 
-        attendance_date = request.POST["date"]
+        selected_date = request.POST.get("date")
 
         students = Student.objects.filter(
-            school_class=school_class
+            school_class=selected_class
         )
 
         for student in students:
 
             status = request.POST.get(
-                f"status_{student.id}",
-                "Present"
+                f"status_{student.id}"
+            )
+
+            remarks = request.POST.get(
+                f"remarks_{student.id}"
             )
 
             Attendance.objects.update_or_create(
+
                 student=student,
-                date=attendance_date,
+                date=selected_date,
+
                 defaults={
-                    "school_class": school_class,
+                    "school_class": selected_class,
                     "status": status,
+                    "remarks": remarks,
                 }
+
             )
 
-        return redirect("attendance_list")
-
-    class_id = request.GET.get("class")
-
-    if class_id:
-        selected_class = SchoolClass.objects.get(id=class_id)
-
-        students = Student.objects.filter(
-            school_class=selected_class
+        messages.success(
+            request,
+            "Attendance saved successfully."
         )
+
+        return redirect("take_attendance")
 
     return render(
         request,
         "students/take_attendance.html",
         {
             "classes": classes,
-            "selected_class": selected_class,
             "students": students,
+            "selected_class": selected_class,
+            "selected_date": selected_date,
             "today": date.today(),
         },
     )
-
-
 @login_required
-@admin_teacher_secretary
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
 def edit_attendance(request, id):
+
     attendance = get_object_or_404(
         Attendance,
         id=id
     )
 
     if request.method == "POST":
+
         attendance.status = request.POST["status"]
+
+        attendance.remarks = request.POST["remarks"]
+
         attendance.save()
+
+        messages.success(
+            request,
+            "Attendance updated successfully."
+        )
+
         return redirect("attendance_list")
 
     return render(
         request,
         "students/edit_attendance.html",
         {
-            "attendance": attendance
+            "attendance": attendance,
         },
     )
 
 
 @login_required
-@admin_teacher_secretary
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
 def delete_attendance(request, id):
+
     attendance = get_object_or_404(
         Attendance,
         id=id
     )
 
     if request.method == "POST":
+
         attendance.delete()
+
+        messages.success(
+            request,
+            "Attendance deleted successfully."
+        )
+
         return redirect("attendance_list")
 
     return render(
         request,
         "students/delete_attendance.html",
         {
-            "attendance": attendance
+            "attendance": attendance,
         },
     )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+)
+def print_attendance(request):
+
+    attendances = Attendance.objects.select_related(
+        "student",
+        "school_class",
+    )
+
+    school_class = request.GET.get("school_class")
+    date = request.GET.get("date")
+
+    if school_class:
+        attendances = attendances.filter(
+            school_class_id=school_class
+        )
+
+    if date:
+        attendances = attendances.filter(
+            date=date
+        )
+
+    attendances = attendances.order_by(
+        "-date",
+        "school_class__name",
+        "student__admission_number",
+    )
+
 # ==========================
 # TIMETABLE
 # ==========================
@@ -2366,7 +2651,7 @@ def print_receipt(request, id):
         ["Student", f"{payment.student.first_name} {payment.student.last_name}"],
         ["Admission No", payment.student.admission_number],
         ["Class", payment.student.school_class.name if payment.student.school_class else ""],
-        ["Amount Paid", f"KSh {payment.amount_paid}"],
+        ["Amount Paid", f"KSh {payment.amount}"],
     ]
 
     table = Table(data, colWidths=[2.5*inch, 3.5*inch])
@@ -2911,5 +3196,40 @@ def get_class_exams(request, class_id):
         })
 
     return JsonResponse(data, safe=False)
+@login_required
+@admin_or_teacher
+@in_group("Administrators", "Store Keeper", "Head Teacher")
+def inventory_list(request):
+
+    items = InventoryItem.objects.select_related(
+     "category"
+    ).order_by(
+        "category__name",
+        "name",
+    )
+
+    return render(
+        request,
+        "inventory/inventory_list.html",
+        {
+            "items": items,
+        },
+    )
+
+@login_required
+def add_inventory_item(request):
+    return HttpResponse("Add Inventory Item")
+
+
+@login_required
+def edit_inventory_item(request, id):
+    return HttpResponse("Edit Inventory Item")
+
+
+@login_required
+def delete_inventory_item(request, id):
+    return HttpResponse("Delete Inventory Item")
+
+
 
 

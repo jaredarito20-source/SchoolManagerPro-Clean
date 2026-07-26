@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Receive Fee Payment</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+
+        <label>Student</label><br>
+
+        <select name="student" required>
+
+            <option value="">
+                Select Student
+            </option>
+
+            {% for student in students %}
+
+            <option value="{{ student.id }}">
+
+                {{ student.admission_number }}
+                -
+                {{ student.first_name }}
+                {{ student.last_name }}
+                ({{ student.school_class.name }})
+
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label>Amount Paid</label><br>
+
+        <input
+            type="number"
+            name="amount"
+            step="0.01"
+            required
+        >
+
+    </p>
+
+    <p>
+
+        <label>Payment Date</label><br>
+
+        <input
+            type="date"
+            name="payment_date"
+            value="{{ today|date:'Y-m-d' }}"
+            required
+        >
+
+    </p>
+
+    <p>
+
+        <label>Payment Method</label><br>
+
+        <select name="payment_method">
+
+            <option>Cash</option>
+            <option>M-Pesa</option>
+            <option>Bank</option>
+            <option>Cheque</option>
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label>M-Pesa / Bank Reference</label><br>
+
+        <input
+            type="text"
+            name="reference"
+        >
+
+    </p>
+
+    <p>
+
+        <label>Remarks</label><br>
+
+        <textarea
+            name="remarks"
+            rows="3"
+        ></textarea>
+
+    </p>
+
+    <button type="submit">
+
+        💰 Save Payment
+
+    </button>
+
+</form>
+
+{% endblock %}

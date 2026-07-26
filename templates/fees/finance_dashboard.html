@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📊 Finance Dashboard</h2>
+
+<table border="0" cellpadding="15" cellspacing="15">
+
+<tr>
+
+<td style="background:#2196F3;color:white;border-radius:10px;">
+<h3>Total Expected Fees</h3>
+<h2>KSh {{ total_expected }}</h2>
+</td>
+
+<td style="background:#4CAF50;color:white;border-radius:10px;">
+<h3>Total Collected</h3>
+<h2>KSh {{ total_collected }}</h2>
+</td>
+
+</tr>
+
+<tr>
+
+<td style="background:#FF9800;color:white;border-radius:10px;">
+<h3>Outstanding Balance</h3>
+<h2>KSh {{ outstanding }}</h2>
+</td>
+
+<td style="background:#9C27B0;color:white;border-radius:10px;">
+<h3>Today's Collection</h3>
+<h2>KSh {{ today_collection }}</h2>
+</td>
+
+</tr>
+
+<tr>
+
+<td style="background:#607D8B;color:white;border-radius:10px;">
+<h3>Total Payments</h3>
+<h2>{{ total_payments }}</h2>
+</td>
+
+</tr>
+
+</table>
+
+{% endblock %}

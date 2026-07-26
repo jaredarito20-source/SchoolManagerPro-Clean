@@ -1,32 +1,158 @@
-<table border="1" cellpadding="8" cellspacing="0">
-    <tr>
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📋 Attendance Register</h2>
+
+<p>
+    <a href="{% url 'take_attendance' %}">
+        ➕ Take Attendance
+    </a>
+
+    |
+
+        <a href="{% url 'print_attendance' %}?action=view&school_class={{ request.GET.school_class }}&date={{ request.GET.date }}">
+        🖨 Print Attendance
+    </a>
+
+    |
+
+    <a href="{% url 'print_attendance' %}?action=download&school_class={{ request.GET.school_class }}&date={{ request.GET.date }}">
+        📥 Download PDF
+    </a>
+</p>
+
+<hr>
+
+<form method="GET">
+
+    <label><strong>Class</strong></label>
+
+    <select name="school_class">
+
+        <option value="">All Classes</option>
+
+        {% for class in classes %}
+
+        <option value="{{ class.id }}"
+        {% if request.GET.school_class == class.id|stringformat:"s" %}
+            selected
+        {% endif %}
+        >
+            {{ class.name }}
+        </option>
+
+        {% endfor %}
+
+    </select>
+
+    &nbsp;&nbsp;
+
+    <label><strong>Date</strong></label>
+
+    <input
+        type="date"
+        name="date"
+        value="{{ request.GET.date }}"
+    >
+
+    &nbsp;
+
+    <button type="submit">
+        🔍 Filter
+    </button>
+
+</form>
+
+<br>
+
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+
+    <tr style="background:#1F4E79;color:white;">
+
         <th>Date</th>
-        <th>Student</th>
         <th>Class</th>
+        <th>Admission No</th>
+        <th>Student Name</th>
         <th>Status</th>
+        <th>Remarks</th>
         <th>Actions</th>
+
     </tr>
 
-    {% for record in attendance %}
+    {% for attendance in attendances %}
+
     <tr>
-        <td>{{ record.date }}</td>
-        <td>{{ record.student }}</td>
-        <td>{{ record.school_class }}</td>
-        <td>{{ record.status }}</td>
+
+        <td>{{ attendance.date }}</td>
+
+        <td>{{ attendance.school_class.name }}</td>
+
+        <td>{{ attendance.student.admission_number }}</td>
 
         <td>
-            <a href="{% url 'edit_attendance' record.id %}">
+            {{ attendance.student.first_name }}
+            {{ attendance.student.last_name }}
+        </td>
+
+        <td>
+
+            {% if attendance.status == "Present" %}
+                ✅ Present
+
+            {% elif attendance.status == "Absent" %}
+                ❌ Absent
+
+            {% elif attendance.status == "Late" %}
+                ⏰ Late
+
+            {% elif attendance.status == "Excused" %}
+                🟡 Excused
+
+            {% endif %}
+
+        </td>
+
+        <td>
+
+            {% if attendance.remarks %}
+                {{ attendance.remarks }}
+            {% else %}
+                -
+            {% endif %}
+
+        </td>
+
+        <td>
+
+            <a href="{% url 'edit_attendance' attendance.id %}">
                 ✏ Edit
             </a>
+
             |
-            <a href="{% url 'delete_attendance' record.id %}">
+
+            <a href="{% url 'delete_attendance' attendance.id %}">
                 🗑 Delete
             </a>
+
         </td>
+
     </tr>
+
     {% empty %}
+
     <tr>
-        <td colspan="5">No attendance records found.</td>
+
+        <td colspan="7" align="center">
+
+            No attendance records found.
+
+        </td>
+
     </tr>
+
     {% endfor %}
+
 </table>
+
+{% endblock %}
