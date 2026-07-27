@@ -8,6 +8,9 @@
     <a href="{% url 'add_book' %}">
         ➕ Add Book
     </a>
+    <a href="{% url 'borrow_list' %}" class="btn">
+        📋 Borrowed Books
+    </a>
 </p>
 
 <table border="1" cellpadding="8" cellspacing="0">
@@ -46,6 +49,13 @@
             <a href="{% url 'edit_book' book.id %}">
                 ✏ Edit
             </a>
+           
+
+            <a href="{% url 'borrow_book' %}" class="btn">
+                📖 Borrow Book
+            </a>
+
+            
 
             |
 

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>📚 Library Dashboard</h1>
+
+<div class="cards">
+
+    <div class="card">
+        <h3>Total Books</h3>
+        <h2>{{ total_books }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Borrowed Books</h3>
+        <h2>{{ borrowed_books }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Available Books</h3>
+        <h2>{{ available_books }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Overdue Books</h3>
+        <h2 style="color:red;">{{ overdue_books }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Active Borrowers</h3>
+        <h2>{{ active_borrowers }}</h2>
+    </div>
+
+</div>
+
+<h2>Recent Borrowings</h2>
+
+<div class="table-container">
+
+    <table class="table">
+
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Book</th>
+                <th>Borrow Date</th>
+                <th>Due Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for borrow in recent_borrowings %}
+
+        <tr>
+
+            <td>{{ borrow.student }}</td>
+
+            <td>{{ borrow.book.title }}</td>
+
+            <td>{{ borrow.borrow_date }}</td>
+
+            <td>{{ borrow.due_date }}</td>
+
+            <td>
+                {% if borrow.status == "Borrowed" %}
+                    <span style="color:red;font-weight:bold;">📖 Borrowed</span>
+                {% else %}
+                    <span style="color:green;font-weight:bold;">✅ Returned</span>
+                {% endif %}
+            </td>
+
+        </tr>
+
+        {% empty %}
+
+        <tr>
+            <td colspan="5">No recent borrowings.</td>
+        </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+{% endblock %}

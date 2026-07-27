@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Borrow Book</h2>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <label>Student</label>
+
+    <select name="student" required>
+
+        <option value="">Select Student</option>
+
+        {% for student in students %}
+
+        <option value="{{ student.id }}">
+            {{ student.admission_number }} -
+            {{ student.first_name }} {{ student.last_name }}
+        </option>
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Book</label>
+
+    <select name="book" required>
+
+        <option value="">Select Book</option>
+
+        {% for book in books %}
+
+        <option value="{{ book.id }}">
+            {{ book.title }}
+            ({{ book.copies }} available)
+        </option>
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Borrow Date</label>
+
+    <input
+        type="date"
+        name="borrow_date"
+        value="{{ today }}"
+        required
+    >
+
+    <br><br>
+
+    <label>Due Date</label>
+
+    <input
+        type="date"
+        name="due_date"
+        required
+    >
+
+    <br><br>
+
+    <button type="submit">
+        Borrow Book
+    </button>
+
+</form>
+
+{% endblock %}

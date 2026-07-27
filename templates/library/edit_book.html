@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>✏ Edit Book</h2>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+        <label>Title</label><br>
+        <input type="text" name="title" value="{{ book.title }}" required>
+    </p>
+
+    <p>
+        <label>Author</label><br>
+        <input type="text" name="author" value="{{ book.author }}" required>
+    </p>
+
+    <p>
+        <label>ISBN</label><br>
+        <input type="text" name="isbn" value="{{ book.isbn }}" required>
+    </p>
+
+    <p>
+        <label>Category</label><br>
+        <input type="text" name="category" value="{{ book.category }}" required>
+    </p>
+
+    <p>
+        <label>Publisher</label><br>
+        <input type="text" name="publisher" value="{{ book.publisher }}">
+    </p>
+
+    <p>
+        <label>Publication Year</label><br>
+        <input type="number"
+               name="publication_year"
+               value="{{ book.publication_year }}">
+    </p>
+
+    <p>
+        <label>Copies</label><br>
+        <input type="number"
+               name="copies"
+               value="{{ book.copies }}"
+               min="1"
+               required>
+    </p>
+
+    <p>
+        <label>Shelf</label><br>
+        <input type="text"
+               name="shelf"
+               value="{{ book.shelf }}">
+    </p>
+
+    <button type="submit">
+        💾 Update Book
+    </button>
+
+</form>
+
+{% endblock %}

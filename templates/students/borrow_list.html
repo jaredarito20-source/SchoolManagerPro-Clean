@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📚 Borrowed Books</h2>
+
+<p>
+    <a href="{% url 'borrow_book' %}" class="btn">
+        ➕ Borrow Book
+    </a>
+</p>
+
+<div class="table-container">
+
+<table class="table">
+
+    <thead>
+        <tr>
+            <th>Student</th>
+            <th>Book</th>
+            <th>Borrow Date</th>
+            <th>Due Date</th>
+            <th>Return Date</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+    {% for borrow in borrowed_books %}
+
+        <tr>
+
+            <td>{{ borrow.student }}</td>
+
+            <td>{{ borrow.book.title }}</td>
+
+            <td>{{ borrow.borrow_date }}</td>
+
+            <td>{{ borrow.due_date }}</td>
+
+            <td>
+                {% if borrow.return_date %}
+                    {{ borrow.return_date }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td>
+
+                {% if borrow.status == "Borrowed" %}
+
+                    <span style="color:red;font-weight:bold;">
+                        📖 Borrowed
+                    </span>
+
+                {% else %}
+
+                    <span style="color:green;font-weight:bold;">
+                        ✅ Returned
+                    </span>
+
+                {% endif %}
+
+            </td>
+
+            <td>
+
+                {% if borrow.status == "Borrowed" %}
+
+                    <a href="{% url 'return_book' borrow.id %}" class="btn">
+                        📥 Return Book
+                    </a>
+
+                {% else %}
+
+                    ✔ Completed
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+    {% empty %}
+
+        <tr>
+            <td colspan="7" style="text-align:center;">
+                No borrowed books found.
+            </td>
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

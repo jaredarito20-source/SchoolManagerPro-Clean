@@ -60,6 +60,8 @@ from .models import (
     InventoryCategory,
     InventoryItem,
     StockTransaction,
+    Book,
+    BorrowBook,
 )
 from .decorators import (
     admin_required,
@@ -3663,6 +3665,136 @@ def delete_book(request, id):
         },
     )
 
+@login_required
+@admin_or_teacher
+def borrow_book(request):
 
+    students = Student.objects.all().order_by("admission_number")
+    books = Book.objects.filter(copies__gt=0).order_by("title")
 
+    if request.method == "POST":
 
+        student = Student.objects.get(id=request.POST["student"])
+        book = Book.objects.get(id=request.POST["book"])
+
+        if book.copies <= 0:
+            messages.error(request, "This book is out of stock.")
+            return redirect("borrow_book")
+
+        BorrowBook.objects.create(
+            student=student,
+            book=book,
+            borrow_date=request.POST["borrow_date"],
+            due_date=request.POST["due_date"],
+            issued_by=request.user,
+        )
+
+        book.copies -= 1
+        book.save()
+
+        messages.success(request, "Book borrowed successfully.")
+
+        return redirect("borrow_list")
+
+    return render(
+        request,
+        "students/borrow_book.html",
+        {
+            "students": students,
+            "books": books,
+            "today": date.today(),
+        },
+    )
+
+@login_required
+@admin_or_teacher
+def borrow_list(request):
+
+    borrowed_books = BorrowBook.objects.select_related(
+        "student",
+        "book"
+    ).order_by("-borrow_date")
+
+    return render(
+        request,
+        "students/borrow_list.html",
+        {
+            "borrowed_books": borrowed_books,
+        },
+    )
+
+@login_required
+@admin_or_teacher
+def return_book(request, id):
+
+    borrow = get_object_or_404(BorrowBook, id=id)
+
+    if borrow.status == "Returned":
+
+        messages.warning(
+            request,
+            "This book has already been returned."
+        )
+
+        return redirect("borrow_list")
+
+    borrow.status = "Returned"
+    borrow.return_date = date.today()
+    borrow.save()
+
+    book = borrow.book
+    book.copies += 1
+    book.save()
+
+    messages.success(
+        request,
+        "Book returned successfully."
+    )
+
+    return redirect("borrow_list")
+
+from datetime import date
+from django.db.models import Sum
+
+@login_required
+@admin_or_teacher
+def library_dashboard(request):
+
+    total_books = Book.objects.count()
+
+    borrowed_books = BorrowBook.objects.filter(
+        status="Borrowed"
+    ).count()
+
+    available_books = Book.objects.aggregate(
+        total=Sum("available_copies")
+    )["total"] or 0
+
+    overdue_books = BorrowBook.objects.filter(
+        status="Borrowed",
+        due_date__lt=date.today()
+    ).count()
+
+    active_borrowers = BorrowBook.objects.filter(
+        status="Borrowed"
+    ).values("student").distinct().count()
+
+    recent_borrowings = BorrowBook.objects.select_related(
+        "student",
+        "book"
+    ).order_by("-borrow_date")[:10]
+
+    context = {
+        "total_books": total_books,
+        "borrowed_books": borrowed_books,
+        "available_books": available_books,
+        "overdue_books": overdue_books,
+        "active_borrowers": active_borrowers,
+        "recent_borrowings": recent_borrowings,
+    }
+
+    return render(
+        request,
+        "students/library_dashboard.html",
+        context,
+    )

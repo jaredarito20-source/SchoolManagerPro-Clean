@@ -295,5 +295,29 @@ path(
     name="delete_book",
 ),
 
+path(
+    "library/borrow/",
+    views.borrow_book,
+    name="borrow_book",
+),
+
+path(
+    "library/borrow/list/",
+    views.borrow_list,
+    name="borrow_list",
+),
+
+path(
+    "library/return/<int:id>/",
+    views.return_book,
+    name="return_book",
+),
+
+path(
+    "library/dashboard/",
+    views.library_dashboard,
+    name="library_dashboard",
+),
+
 
 ]
