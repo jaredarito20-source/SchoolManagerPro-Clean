@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>➕ Add Library Book</h2>
+
+<form method="post">
+
+{% csrf_token %}
+
+<p>
+<label>Book Title</label><br>
+<input type="text" name="title" required>
+</p>
+
+<p>
+<label>Author</label><br>
+<input type="text" name="author" required>
+</p>
+
+<p>
+<label>ISBN</label><br>
+<input type="text" name="isbn" required>
+</p>
+
+<p>
+<label>Category</label><br>
+<input type="text" name="category" required>
+</p>
+
+<p>
+<label>Publisher</label><br>
+<input type="text" name="publisher">
+</p>
+
+<p>
+<label>Publication Year</label><br>
+<input type="number" name="publication_year">
+</p>
+
+<p>
+<label>Number of Copies</label><br>
+<input type="number" name="copies" min="1" value="1" required>
+</p>
+
+<p>
+<label>Shelf</label><br>
+<input type="text" name="shelf">
+</p>
+
+<button type="submit">
+💾 Save Book
+</button>
+
+</form>
+
+{% endblock %}

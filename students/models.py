@@ -429,3 +429,82 @@ class InventoryItem(models.Model):
 
     def __str__(self):
         return self.name
+
+class StockTransaction(models.Model):
+
+    TRANSACTION_TYPES = [
+
+        ("RECEIVED", "Received"),
+
+        ("ISSUED", "Issued"),
+
+    ]
+
+    item = models.ForeignKey(
+        InventoryItem,
+        on_delete=models.CASCADE,
+        related_name="transactions",
+    )
+
+    transaction_type = models.CharField(
+        max_length=10,
+        choices=TRANSACTION_TYPES,
+    )
+
+    quantity = models.PositiveIntegerField()
+
+    transaction_date = models.DateField(
+        auto_now_add=True,
+    )
+
+    remarks = models.TextField(
+        blank=True,
+    )
+
+    recorded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+
+        return f"{self.item.name} - {self.transaction_type}"
+
+class Book(models.Model):
+
+    title = models.CharField(max_length=200)
+
+    author = models.CharField(max_length=200)
+
+    isbn = models.CharField(
+        max_length=30,
+        unique=True,
+    )
+
+    category = models.CharField(
+        max_length=100,
+    )
+
+    publisher = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
+    publication_year = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    copies = models.PositiveIntegerField(default=1)
+
+    available_copies = models.PositiveIntegerField(default=1)
+
+    shelf = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    def __str__(self):
+        return self.title

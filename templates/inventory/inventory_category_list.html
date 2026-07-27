@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📦 Inventory Categories</h2>
+
+<p>
+    <a href="{% url 'add_inventory_category' %}">
+        ➕ Add Category
+    </a>
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0">
+
+<tr>
+    <th>Category Name</th>
+</tr>
+
+{% for category in categories %}
+
+<tr>
+
+    <td>{{ category.name }}</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td>No categories found.</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

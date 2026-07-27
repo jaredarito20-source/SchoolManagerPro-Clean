@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📤 Issue Stock</h2>
+
+<h3>{{ item.name }}</h3>
+
+<p>
+Current Stock:
+<strong>{{ item.quantity }} {{ item.unit }}</strong>
+</p>
+
+<form method="post">
+
+{% csrf_token %}
+
+<p>
+<label>Quantity to Issue</label><br>
+<input type="number" name="quantity" required>
+</p>
+
+<p>
+<label>Remarks</label><br>
+<textarea name="remarks" rows="4"></textarea>
+</p>
+
+<button type="submit">
+📤 Issue Stock
+</button>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📚 Library Books</h2>
+
+<p>
+    <a href="{% url 'add_book' %}">
+        ➕ Add Book
+    </a>
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0">
+
+    <tr>
+        <th>Title</th>
+        <th>Author</th>
+        <th>ISBN</th>
+        <th>Category</th>
+        <th>Total Copies</th>
+        <th>Available</th>
+        <th>Shelf</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for book in books %}
+
+    <tr>
+
+        <td>{{ book.title }}</td>
+
+        <td>{{ book.author }}</td>
+
+        <td>{{ book.isbn }}</td>
+
+        <td>{{ book.category }}</td>
+
+        <td>{{ book.copies }}</td>
+
+        <td>{{ book.available_copies }}</td>
+
+        <td>{{ book.shelf }}</td>
+
+        <td>
+
+            <a href="{% url 'edit_book' book.id %}">
+                ✏ Edit
+            </a>
+
+            |
+
+            <a href="{% url 'delete_book' book.id %}">
+                🗑 Delete
+            </a>
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+
+        <td colspan="8">
+            No books found.
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+{% endblock %}

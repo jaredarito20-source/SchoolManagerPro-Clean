@@ -8,17 +8,17 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>School Management System</title>
 
-    <link rel="stylesheet"
-          href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
 </head>
 
 <body>
+
+{% if user.is_authenticated %}
 
 <div class="sidebar">
 
@@ -38,29 +38,17 @@
 
     <div class="dropdown-container">
 
-        <a href="{% url 'student_list' %}">
-            👨‍🎓 Students
-        </a>
+        <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
 
-        <a href="{% url 'teacher_list' %}">
-            👩‍🏫 Teachers
-        </a>
+        <a href="{% url 'teacher_list' %}">👩‍🏫 Teachers</a>
 
-        <a href="{% url 'subject_list' %}">
-            📚 Subjects
-        </a>
+        <a href="{% url 'subject_list' %}">📚 Subjects</a>
 
-        <a href="{% url 'class_list' %}">
-            🏫 Classes
-        </a>
+        <a href="{% url 'class_list' %}">🏫 Classes</a>
 
-        <a href="{% url 'mark_list' %}">
-            📊 Marks
-        </a>
+        <a href="{% url 'mark_list' %}">📊 Marks</a>
 
-        <a href="{% url 'promotion_list' %}">
-            🎓 Student Promotion
-        </a>
+        <a href="{% url 'promotion_list' %}">🎓 Student Promotion</a>
 
     </div>
 
@@ -144,33 +132,61 @@
 
     </div>
 
+    
+
     <!-- Inventory -->
 
-    <button class="dropdown-btn">
-        📦 Inventory ▼
-    </button>
+<button class="dropdown-btn">
+    📦 Inventory ▼
+</button>
 
-    <div class="dropdown-container">
+<div class="dropdown-container">
 
-        <a href="{% url 'inventory_list' %}">
-            📦 Inventory
-        </a>
+    <a href="{% url 'inventory_category_list' %}">
+        📂 Categories
+    </a>
 
-    </div>
+    <a href="{% url 'stock_transaction_list' %}">
+        📋 Stock Transactions
+    </a>
 
-    <!-- Administration -->
+    <a href="{% url 'inventory_list' %}">
+        📦 Inventory Items
+    </a>
 
-    <button class="dropdown-btn">
-        ⚙ Administration ▼
-    </button>
+</div>
 
-    <div class="dropdown-container">
 
-        <a href="{% url 'user_list' %}">
-            👥 Users
-        </a>
 
-    </div>
+<!-- Library -->
+
+<button class="dropdown-btn">
+    📚 Library ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'library_list' %}">
+        📚 Books
+    </a>
+
+</div>
+
+<!-- Administration -->
+
+<button class="dropdown-btn">
+    ⚙ Administration ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'user_list' %}">
+        👥 Users
+    </a>
+
+</div>
+
+    
 
     {% elif user|has_group:"Teachers" %}
 
@@ -220,6 +236,10 @@
             👨‍🎓 Students
         </a>
 
+        <a href="{% url 'library_list' %}">
+            📚 Library
+        </a>
+
         <a href="{% url 'teacher_list' %}">
             👩‍🏫 Teachers
         </a>
@@ -262,11 +282,31 @@
 
 </div>
 
-<div class="content">
+{% endif %}
 
+<div class="{% if user.is_authenticated %}content{% else %}login-content{% endif %}">
+
+    {% if user.is_authenticated %}
     <div class="topbar">
         <h2>School Management System</h2>
     </div>
+    {% endif %}
+
+    {% if messages %}
+
+    {% for message in messages %}
+
+        <div class="alert {{ message.tags }}">
+
+            {{ message }}
+
+        </div>
+
+    {% endfor %}
+
+
+
+{% endif %}
 
     {% block content %}
     {% endblock %}
@@ -281,13 +321,12 @@ document.querySelectorAll(".dropdown-btn").forEach(function(button){
 
         this.classList.toggle("active");
 
-        const container = this.nextElementSibling;
+        var content = this.nextElementSibling;
 
-        if(container.style.display === "block"){
-            container.style.display = "none";
-        }
-        else{
-            container.style.display = "block";
+        if(content.style.display === "block"){
+            content.style.display = "none";
+        }else{
+            content.style.display = "block";
         }
 
     });

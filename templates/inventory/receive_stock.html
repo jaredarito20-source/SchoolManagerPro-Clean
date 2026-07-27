@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Receive Stock</h2>
+
+<h3>{{ item.name }}</h3>
+
+<form method="post">
+
+{% csrf_token %}
+
+<p>
+
+<label>Quantity Received</label><br>
+
+<input
+type="number"
+name="quantity"
+required>
+
+</p>
+
+<p>
+
+<label>Remarks</label><br>
+
+<textarea
+name="remarks"
+rows="4"></textarea>
+
+</p>
+
+<button type="submit">
+
+Receive Stock
+
+</button>
+
+</form>
+
+{% endblock %}

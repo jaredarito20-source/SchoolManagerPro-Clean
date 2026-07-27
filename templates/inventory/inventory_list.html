@@ -2,40 +2,41 @@
 
 {% block content %}
 
-<h2>📦 Inventory</h2>
+<h2>📦 Inventory Items</h2>
 
 <p>
+
     <a href="{% url 'add_inventory_item' %}">
         ➕ Add Inventory Item
     </a>
+
 </p>
 
 <table border="1" cellpadding="8" cellspacing="0">
 
     <tr>
-        <th>Category</th>
+
         <th>Item</th>
+        <th>Category</th>
         <th>Quantity</th>
         <th>Unit</th>
-        <th>Minimum Stock</th>
         <th>Location</th>
         <th>Status</th>
         <th>Actions</th>
+
     </tr>
 
     {% for item in items %}
 
     <tr>
 
-        <td>{{ item.category }}</td>
-
         <td>{{ item.name }}</td>
+
+        <td>{{ item.category.name }}</td>
 
         <td>{{ item.quantity }}</td>
 
         <td>{{ item.unit }}</td>
-
-        <td>{{ item.minimum_stock }}</td>
 
         <td>{{ item.location }}</td>
 
@@ -59,15 +60,29 @@
 
         <td>
 
-            <a href="{% url 'edit_inventory_item' item.id %}">
-                ✏ Edit
-            </a>
-
-            |
+            
 
             <a href="{% url 'delete_inventory_item' item.id %}">
                 🗑 Delete
             </a>
+
+            |
+
+            <a href="{% url 'receive_stock' item.id %}">
+                📥 Receive
+            </a>
+            
+            |
+
+            <a href="{% url 'issue_stock' item.id %}">
+                📤 Issue
+            </a>
+        
+            |
+            <a href="{% url 'edit_inventory_item' item.id %}">
+                ✏ Edit
+            </a>
+           
 
         </td>
 
@@ -77,7 +92,7 @@
 
     <tr>
 
-        <td colspan="8">
+        <td colspan="7">
             No inventory items found.
         </td>
 

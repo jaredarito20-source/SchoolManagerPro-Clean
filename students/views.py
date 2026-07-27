@@ -59,6 +59,7 @@ from .models import (
     ExamTimetable,
     InventoryCategory,
     InventoryItem,
+    StockTransaction,
 )
 from .decorators import (
     admin_required,
@@ -99,6 +100,15 @@ def is_secretary(user):
 
 
 @login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Teachers",
+    "Bursar",
+    "Secretaries",
+)
+def home(request):
+    ...
 
 def home(request):
     school = SchoolProfile.objects.first()
@@ -1995,6 +2005,7 @@ def add_fee_payment(request):
     "Head Teacher",
     "Senior Teacher",
     "Teachers",
+    "Secretaries",
 )
 def attendance_list(request):
 
@@ -2072,6 +2083,7 @@ from datetime import date
     "Head Teacher",
     "Senior Teacher",
     "Teachers",
+    "Secretarires",
 )
 def take_attendance(request):
 
@@ -3197,15 +3209,17 @@ def get_class_exams(request, class_id):
 
     return JsonResponse(data, safe=False)
 @login_required
-@admin_or_teacher
-@in_group("Administrators", "Store Keeper", "Head Teacher")
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Store Keeper",
+)
 def inventory_list(request):
 
     items = InventoryItem.objects.select_related(
-     "category"
-    ).order_by(
-        "category__name",
-        "name",
+        "category"
+    ).all().order_by(
+        "name"
     )
 
     return render(
@@ -3217,18 +3231,437 @@ def inventory_list(request):
     )
 
 @login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Store Keeper",
+)
 def add_inventory_item(request):
-    return HttpResponse("Add Inventory Item")
+
+    categories = InventoryCategory.objects.all()
+
+    if request.method == "POST":
+
+        InventoryItem.objects.create(
+
+            category=InventoryCategory.objects.get(
+                id=request.POST["category"]
+            ),
+
+            name=request.POST["name"],
+
+            quantity=request.POST["quantity"],
+
+            unit=request.POST["unit"],
+
+            minimum_stock=request.POST["minimum_stock"],
+
+            location=request.POST["location"],
+
+            description=request.POST["description"],
+
+        )
+
+        messages.success(
+            request,
+            "Inventory item added successfully."
+        )
+
+        return redirect("inventory_list")
+
+    return render(
+        request,
+        "inventory/add_inventory_item.html",
+        {
+            "categories": categories,
+        },
+    )
 
 
 @login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Store Keeper",
+)
 def edit_inventory_item(request, id):
-    return HttpResponse("Edit Inventory Item")
+
+    item = get_object_or_404(
+        InventoryItem,
+        id=id,
+    )
+
+    categories = InventoryCategory.objects.all()
+
+    if request.method == "POST":
+
+        item.category = InventoryCategory.objects.get(
+            id=request.POST["category"]
+        )
+
+        item.name = request.POST["name"]
+        item.quantity = request.POST["quantity"]
+        item.unit = request.POST["unit"]
+        item.minimum_stock = request.POST["minimum_stock"]
+        item.location = request.POST["location"]
+        item.description = request.POST["description"]
+
+        item.save()
+
+        messages.success(
+            request,
+            "Inventory item updated successfully."
+        )
+
+        return redirect("inventory_list")
+
+    return render(
+        request,
+        "inventory/edit_inventory_item.html",
+        {
+            "item": item,
+            "categories": categories,
+        },
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Store Keeper",
+)
+def delete_inventory_item(request, id):
+
+    item = get_object_or_404(
+        InventoryItem,
+        id=id,
+    )
+
+    if request.method == "POST":
+
+        item.delete()
+
+        messages.success(
+            request,
+            "Inventory item deleted successfully."
+        )
+
+        return redirect("inventory_list")
+
+    return render(
+        request,
+        "inventory/delete_inventory_item.html",
+        {
+            "item": item,
+        },
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Store Keeper",
+)
+def inventory_category_list(request):
+
+    categories = InventoryCategory.objects.all().order_by("name")
+
+    return render(
+        request,
+        "inventory/inventory_category_list.html",
+        {
+            "categories": categories,
+        },
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Store Keeper",
+)
+def add_inventory_category(request):
+
+    if request.method == "POST":
+
+        InventoryCategory.objects.create(
+            name=request.POST["name"]
+        )
+
+        messages.success(
+            request,
+            "Inventory category added successfully."
+        )
+
+        return redirect("inventory_category_list")
+
+    return render(
+        request,
+        "inventory/add_inventory_category.html",
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Store Keeper",
+)
+def receive_stock(request, id):
+
+    item = get_object_or_404(
+        InventoryItem,
+        id=id,
+    )
+
+    if request.method == "POST":
+
+        quantity = int(
+            request.POST["quantity"]
+        )
+
+        item.quantity += quantity
+
+        item.save()
+
+        StockTransaction.objects.create(
+
+            item=item,
+
+            transaction_type="RECEIVED",
+
+            quantity=quantity,
+
+            remarks=request.POST["remarks"],
+
+            recorded_by=request.user,
+
+        )
+
+        messages.success(
+            request,
+            "Stock received successfully."
+        )
+
+        return redirect("inventory_list")
+
+    return render(
+        request,
+        "inventory/receive_stock.html",
+        {
+            "item": item,
+        },
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Store Keeper",
+)
+def issue_stock(request, id):
+
+    item = get_object_or_404(
+        InventoryItem,
+        id=id,
+    )
+
+    if request.method == "POST":
+
+        quantity = int(request.POST["quantity"])
+
+        if quantity > item.quantity:
+
+            messages.error(
+                request,
+                "Not enough stock available."
+            )
+
+            return render(
+                request,
+                "inventory/issue_stock.html",
+                {
+                    "item": item,
+                },
+            )
+            
+
+        item.quantity -= quantity
+        item.save()
+
+        StockTransaction.objects.create(
+
+            item=item,
+
+            transaction_type="ISSUED",
+
+            quantity=quantity,
+
+            remarks=request.POST["remarks"],
+
+            recorded_by=request.user,
+
+        )
+
+        messages.success(
+            request,
+            "Stock issued successfully."
+        )
+
+        return redirect("inventory_list")
+
+    return render(
+        request,
+        "inventory/issue_stock.html",
+        {
+            "item": item,
+        },
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Store Keeper",
+)
+def stock_transaction_list(request):
+
+    transactions = StockTransaction.objects.select_related(
+        "item",
+        "recorded_by",
+    ).order_by("-transaction_date", "-id")
+
+    return render(
+        request,
+        "inventory/stock_transaction_list.html",
+        {
+            "transactions": transactions,
+        },
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Librarian",
+    "Head Teacher",
+)
+def library_list(request):
+
+    books = Book.objects.all().order_by("title")
+
+    return render(
+        request,
+        "library/library_list.html",
+        {
+            "books": books,
+        },
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Librarian",
+    "Head Teacher",
+)
+def add_book(request):
+
+    if request.method == "POST":
+
+        copies = int(request.POST["copies"])
+
+        Book.objects.create(
+
+            title=request.POST["title"],
+
+            author=request.POST["author"],
+
+            isbn=request.POST["isbn"],
+
+            category=request.POST["category"],
+
+            publisher=request.POST["publisher"],
+
+            publication_year=request.POST["publication_year"] or None,
+
+            copies=copies,
+
+            available_copies=copies,
+
+            shelf=request.POST["shelf"],
+
+        )
+
+        messages.success(
+            request,
+            "Book added successfully."
+        )
+
+        return redirect("library_list")
+
+    return render(
+        request,
+        "library/add_book.html",
+    )
+
+@login_required
+@in_group("Administrators", "Librarian", "Head Teacher")
+def edit_book(request, id):
+
+    book = get_object_or_404(Book, id=id)
+
+    if request.method == "POST":
+
+        book.title = request.POST["title"]
+        book.author = request.POST["author"]
+        book.isbn = request.POST["isbn"]
+        book.category = request.POST["category"]
+        book.publisher = request.POST["publisher"]
+        book.publication_year = request.POST["publication_year"] or None
+
+        copies = int(request.POST["copies"])
+
+        difference = copies - book.copies
+
+        book.copies = copies
+        book.available_copies += difference
+
+        book.shelf = request.POST["shelf"]
+
+        book.save()
+
+        messages.success(request, "Book updated successfully.")
+
+        return redirect("library_list")
+
+    return render(
+        request,
+        "library/edit_book.html",
+        {
+            "book": book,
+        },
+    )
 
 
 @login_required
-def delete_inventory_item(request, id):
-    return HttpResponse("Delete Inventory Item")
+@in_group("Administrators", "Librarian")
+def delete_book(request, id):
+
+    book = get_object_or_404(Book, id=id)
+
+    if request.method == "POST":
+
+        book.delete()
+
+        messages.success(request, "Book deleted successfully.")
+
+        return redirect("library_list")
+
+    return render(
+        request,
+        "library/delete_book.html",
+        {
+            "book": book,
+        },
+    )
 
 
 

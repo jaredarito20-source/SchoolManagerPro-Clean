@@ -218,6 +218,35 @@ path(
     name="add_inventory_item",
 ),
 
+
+
+path(
+    "inventory/delete/<int:id>/",
+    views.delete_inventory_item,
+    name="delete_inventory_item",
+),
+
+path(
+    "inventory/categories/",
+    views.inventory_category_list,
+    name="inventory_category_list",
+),
+
+path(
+    "inventory/categories/add/",
+    views.add_inventory_category,
+    name="add_inventory_category",
+),
+
+path(
+    "inventory/",
+    views.inventory_list,
+    name="inventory_list",
+),
+
+
+
+
 path(
     "inventory/edit/<int:id>/",
     views.edit_inventory_item,
@@ -225,8 +254,46 @@ path(
 ),
 
 path(
-    "inventory/delete/<int:id>/",
-    views.delete_inventory_item,
-    name="delete_inventory_item",
+    "inventory/receive/<int:id>/",
+    views.receive_stock,
+    name="receive_stock",
 ),
+
+path(
+    "inventory/issue/<int:id>/",
+    views.issue_stock,
+    name="issue_stock",
+),
+
+path(
+    "inventory/transactions/",
+    views.stock_transaction_list,
+    name="stock_transaction_list",
+),
+
+path(
+    "library/",
+    views.library_list,
+    name="library_list",
+),
+
+path(
+    "library/add/",
+    views.add_book,
+    name="add_book",
+),
+
+path(
+    "library/edit/<int:id>/",
+    views.edit_book,
+    name="edit_book",
+),
+
+path(
+    "library/delete/<int:id>/",
+    views.delete_book,
+    name="delete_book",
+),
+
+
 ]

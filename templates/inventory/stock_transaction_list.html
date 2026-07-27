@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📋 Stock Transactions</h2>
+
+<table border="1" cellpadding="8" cellspacing="0">
+
+<tr>
+
+    <th>Date</th>
+    <th>Item</th>
+    <th>Transaction</th>
+    <th>Quantity</th>
+    <th>Recorded By</th>
+    <th>Remarks</th>
+
+</tr>
+
+{% for transaction in transactions %}
+
+<tr>
+
+    <td>{{ transaction.transaction_date }}</td>
+
+    <td>{{ transaction.item.name }}</td>
+
+    <td>
+
+        {% if transaction.transaction_type == "RECEIVED" %}
+
+            <span style="color:green;">
+                📥 Received
+            </span>
+
+        {% else %}
+
+            <span style="color:red;">
+                📤 Issued
+            </span>
+
+        {% endif %}
+
+    </td>
+
+    <td>{{ transaction.quantity }}</td>
+
+    <td>{{ transaction.recorded_by }}</td>
+
+    <td>{{ transaction.remarks }}</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="6">
+
+No stock transactions found.
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

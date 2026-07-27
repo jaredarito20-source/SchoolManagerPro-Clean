@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>➕ Add Inventory Category</h2>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+
+        <label>Category Name</label><br>
+
+        <input
+            type="text"
+            name="name"
+            required
+        >
+
+    </p>
+
+    <button type="submit">
+
+        Save Category
+
+    </button>
+
+</form>
+
+{% endblock %}
