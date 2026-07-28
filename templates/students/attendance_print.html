@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <h2>📝 Attendance Register</h2>
+</div>
+
+<div class="card">
+
+    <p>
+        <strong>Class:</strong>
+        {% if attendances %}
+            {{ attendances.0.school_class.name }}
+        {% else %}
+            All Classes
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Date:</strong>
+        {% if date %}
+            {{ date }}
+        {% else %}
+            All Dates
+        {% endif %}
+    </p>
+
+</div>
+
+<br>
+
+<div class="table-container">
+
+<table class="table">
+
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Admission No.</th>
+            <th>Student</th>
+            <th>Class</th>
+            <th>Date</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+    {% for attendance in attendances %}
+
+    <tr>
+
+        <td>{{ forloop.counter }}</td>
+
+        <td>{{ attendance.student.admission_number }}</td>
+
+        <td>
+            {{ attendance.student.first_name }}
+            {{ attendance.student.last_name }}
+        </td>
+
+        <td>{{ attendance.school_class.name }}</td>
+
+        <td>{{ attendance.date }}</td>
+
+        <td>
+            {% if attendance.status == "Present" %}
+                <span style="color:green;font-weight:bold;">✅ Present</span>
+            {% elif attendance.status == "Absent" %}
+                <span style="color:red;font-weight:bold;">❌ Absent</span>
+            {% elif attendance.status == "Late" %}
+                <span style="color:orange;font-weight:bold;">⏰ Late</span>
+            {% else %}
+                {{ attendance.status }}
+            {% endif %}
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+        <td colspan="6" style="text-align:center;">
+            No attendance records found.
+        </td>
+    </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+</div>
+
+<br>
+
+<button onclick="window.print()" class="btn btn-primary">
+    🖨 Print Attendance
+</button>
+
+<a href="{% url 'attendance_list' %}" class="btn btn-secondary">
+    ← Back
+</a>
+
+{% endblock %}

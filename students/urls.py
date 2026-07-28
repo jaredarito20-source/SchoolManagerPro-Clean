@@ -319,5 +319,28 @@ path(
     name="library_dashboard",
 ),
 
+path(
+    "library/reports/",
+    views.library_reports,
+    name="library_reports",
+),
+
+path(
+    "library/reports/print/",
+    views.print_library_report,
+    name="print_library_report",
+),
+
+path(
+    "results/class/",
+    views.class_results,
+    name="class_results",
+),
+
+path(
+    "results/class/print/",
+    views.print_class_results,
+    name="print_class_results",
+),
 
 ]

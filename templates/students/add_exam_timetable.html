@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+<p>Exam count: {{ exams|length }}</p>
 
 <h2>🗓 Add Exam Timetable</h2>
 
@@ -22,8 +23,17 @@
 
     <p>
         <label>Exam</label><br>
-        <select name="exam" id="exam" required>
+
+        <select name="exam" required>
+
             <option value="">Select Exam</option>
+
+            {% for exam in exams %}
+                <option value="{{ exam.id }}">
+                    {{ exam.name }} - Term {{ exam.term }} ({{ exam.year }})
+                </option>
+            {% endfor %}
+
         </select>
     </p>
 

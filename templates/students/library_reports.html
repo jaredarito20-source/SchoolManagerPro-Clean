@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>📝 Library Reports</h1>
+
+<p>
+
+    <a href="{% url 'print_library_report' %}" class="btn">
+        🖨 Print PDF Report
+    </a>
+
+</p>
+
+<div class="cards">
+
+    <div class="card">
+        <h3>📖 Currently Borrowed</h3>
+        <h2>{{ borrowed_books.count }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>✅ Returned Books</h3>
+        <h2>{{ returned_books.count }}</h2>
+    </div>
+
+    <div class="card">
+        <h3 style="color:red;">🔴 Overdue Books</h3>
+        <h2 style="color:red;">{{ overdue_books.count }}</h2>
+    </div>
+
+</div>
+
+<h2>🔴 Overdue Books</h2>
+
+<div class="table-container">
+
+<table class="table">
+
+<tr>
+    <th>Student</th>
+    <th>Book</th>
+    <th>Due Date</th>
+</tr>
+
+{% for borrow in overdue_books %}
+
+<tr>
+    <td>{{ borrow.student }}</td>
+    <td>{{ borrow.book.title }}</td>
+    <td>{{ borrow.due_date }}</td>
+</tr>
+
+{% empty %}
+
+<tr>
+    <td colspan="3">No overdue books.</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+{% endblock %}

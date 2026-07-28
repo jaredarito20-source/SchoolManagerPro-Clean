@@ -4,6 +4,8 @@ from django.db.models import Sum, Avg
 
 from reportlab.pdfgen import canvas
 
+from collections import defaultdict
+
 
 
 
@@ -590,29 +592,50 @@ def mark_list(request):
 @login_required
 @admin_or_teacher
 def add_mark(request):
+
+    classes = SchoolClass.objects.all()
+    subjects = Subject.objects.all()
+    exams = Exam.objects.all()
+
+    students = Student.objects.none()
+    selected_class = None
+
     if request.method == "POST":
-        student = Student.objects.get(id=request.POST["student"])
-        subject = Subject.objects.get(id=request.POST["subject"])
-        exam = Exam.objects.get(id=request.POST["exam"])
 
-        marks = float(request.POST["marks"])
+        class_id = request.POST.get("school_class")
 
-        # Check for duplicate
-        if Mark.objects.filter(
-            student=student,
-            subject=subject,
-            exam=exam
-        ).exists():
+        if class_id:
+            selected_class = get_object_or_404(SchoolClass, id=class_id)
+            students = Student.objects.filter(school_class=selected_class)
 
-            students = Student.objects.all()
-            subjects = Subject.objects.all()
-            exams = Exam.objects.all()
-
+        # If only selecting the class, reload the page
+        if "student" not in request.POST or request.POST.get("student") == "":
             return render(request, "students/add_mark.html", {
+                "classes": classes,
                 "students": students,
                 "subjects": subjects,
                 "exams": exams,
-                "error": "Marks for this student, subject and exam already exist."
+                "selected_class": selected_class,
+            })
+
+        student = get_object_or_404(Student, id=request.POST["student"])
+        subject = get_object_or_404(Subject, id=request.POST["subject"])
+        exam = get_object_or_404(Exam, id=request.POST["exam"])
+        marks = float(request.POST["marks"])
+
+        if Mark.objects.filter(
+            student=student,
+            subject=subject,
+            exam=exam,
+        ).exists():
+
+            return render(request, "students/add_mark.html", {
+                "classes": classes,
+                "students": students,
+                "subjects": subjects,
+                "exams": exams,
+                "selected_class": selected_class,
+                "error": "Marks for this student, subject and exam already exist.",
             })
 
         Mark.objects.create(
@@ -625,17 +648,13 @@ def add_mark(request):
 
         return redirect("mark_list")
 
-    students = Student.objects.all()
-    subjects = Subject.objects.all()
-    exams = Exam.objects.all()
-
     return render(request, "students/add_mark.html", {
+        "classes": classes,
         "students": students,
         "subjects": subjects,
         "exams": exams,
+        "selected_class": selected_class,
     })
-
-
 @login_required
 @admin_or_teacher
 def edit_mark(request, id):
@@ -966,12 +985,13 @@ def print_report(request, id):
     buffer = BytesIO()
 
     doc = SimpleDocTemplate(
-        buffer,
-        leftMargin=0.45 * inch,
-        rightMargin=0.45 * inch,
-        topMargin=0.45 * inch,
-        bottomMargin=0.45 * inch,
+    buffer,
+        leftMargin=0.25 * inch,
+        rightMargin=0.25 * inch,
+        topMargin=0.25 * inch,
+        bottomMargin=0.25 * inch,
     )
+        
 
     styles = getSampleStyleSheet()
 
@@ -989,93 +1009,57 @@ def print_report(request, id):
     # ==========================
     # School Logo
     # ==========================
+   # ==========================
+# Header (Logo + School Details)
+# ==========================
+
+    logo = ""
+
     if school and school.logo:
         try:
             logo = Image(
                 school.logo.path,
-                width=70,
-                height=70,
+                width=45,
+                height=45,
             )
-
-            logo_table = Table(
-                [[logo]],
-                colWidths=[6.8 * inch],
-            )
-
-            logo_table.setStyle(
-                TableStyle(
-                    [
-                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ]
-                )
-            )
-
-            story.append(logo_table)
-
         except Exception:
-            pass
+            logo = ""
 
-# ==========================
-# School Name
-# ==========================
-    story.append(
-        Paragraph(
-            f"<b>{school.name}</b>",
-            title,
+    school_info = Paragraph(
+        f"""
+        <font size=16><b>{school.name}</b></font><br/>
+        <font size=9>{school.motto or ""}</font><br/>
+        <font size=9>{school.address}</font><br/>
+        <font size=9>Tel: {school.phone}</font><br/>
+        <font size=9>{school.email or ""}</font><br/>
+        <font size=9>{school.current_term} | {school.academic_year}</font>
+        """,
+        styles["Normal"],
+    )
+
+    header = Table(
+        [
+            [logo, school_info]
+        ],
+        colWidths=[0.8*inch, 6.0*inch],
+    )
+
+    header.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0,0), (-1,-1), "TOP"),
+                ("ALIGN", (0,0), (0,0), "LEFT"),
+                ("ALIGN", (1,0), (1,0), "RIGHT"),
+                ("LEFTPADDING", (0,0), (-1,-1), 0),
+                ("RIGHTPADDING", (0,0), (-1,-1), 0),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+            ]
         )
     )
 
-    # School Motto
-    if school.motto:
-        story.append(
-            Paragraph(
-                school.motto,
-                italic,
-            )
-        )
-        story.append(
-    Paragraph(
-        school.address,
-        normal,
-    )
-)
-
-    story.append(
-        Paragraph(
-            f"Phone: {school.phone}",
-            normal,
-        )
-    )
-
-    if school.email:
-        story.append(
-            Paragraph(
-                school.email,
-                normal,
-            )
-        )
-
-    story.append(
-        Paragraph(
-            f"{school.current_term} | {school.academic_year}",
-            normal,
-        )
-    )
-
-    story.append(Spacer(1, 0.2 * inch))
-
-    story.append(
-        Paragraph(
-            "<b>STUDENT REPORT CARD</b>",
-            title,
-        )
-    )
-
-    story.append(Spacer(1, 0.3 * inch))
-
-    
+    story.append(header)
+    story.append(Spacer(1, 0.05*inch))
+        
 
     
     student_info = [
@@ -1124,10 +1108,10 @@ def print_report(request, id):
     if student.photo:
         try:
             photo = Image(
-                student.photo.path,
-                width=1.2 * inch,
-                height=1.5 * inch,
-            )
+            student.photo.path,
+            width=0.9 * inch,
+            height=1.1 * inch,
+        )
         except Exception:
             photo = ""
 
@@ -1230,12 +1214,12 @@ def print_report(request, id):
                 ("BACKGROUND", (0, 0), (-1, 0), HexColor("#1F4E79")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
 
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
 
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
 
                 ("BACKGROUND", (0, -3), (-1, -3), colors.lightgrey),
                 ("BACKGROUND", (0, -2), (-1, -2), HexColor("#D9EAD3")),
@@ -1274,9 +1258,27 @@ def print_report(request, id):
 
     story.append(main_table)
 
-    story.append(Spacer(1, 0.3 * inch))
+    story.append(Spacer(1, 0.08 * inch))
 
-    # Principal's Remarks
+   # ==========================
+# Teacher's Remark
+# ==========================
+
+    if average >= 80:
+        teacher_remark = "Excellent Performance. Keep it up."
+    elif average >= 70:
+        teacher_remark = "Very Good Performance."
+    elif average >= 60:
+        teacher_remark = "Good Work. Keep Improving."
+    elif average >= 50:
+        teacher_remark = "Fair Performance."
+    else:
+        teacher_remark = "Needs More Effort."
+
+# ==========================
+# Principal's Remark
+# ==========================
+
     if average >= 80:
         principal_remark = "Excellent performance. Keep up the outstanding work."
     elif average >= 70:
@@ -1287,35 +1289,33 @@ def print_report(request, id):
         principal_remark = "Fair performance. More effort will lead to better results."
     else:
         principal_remark = "Needs improvement. Work harder and remain focused."
+    story.append(
+    Spacer(1, 0.10 * inch)
+)
 
     story.append(
         Paragraph(
-            "<b>Principal's Remarks</b>",
-            styles["Heading2"],
-        )
-    )
-
-    story.append(
-        Paragraph(
-            principal_remark,
+            "<font size='8' color='grey'><i>"
+            "Generated by School Management System"
+            "</i></font>",
             styles["Normal"],
         )
     )
 
-    story.append(Spacer(1, 0.3 * inch))
+# ==========================
+# Fee Summary
+# ==========================
 
-    # Fee Summary
     total_fee = student.total_fee()
     total_paid = student.total_paid()
     balance = student.balance()
-    story.append(
-    Paragraph(
-        "<b>FEE SUMMARY</b>",
-        styles["Heading2"],
-    )
-)
 
-    
+    story.append(
+        Paragraph(
+            "<b>FEE SUMMARY</b>",
+            styles["Heading2"],
+        )
+    )
 
     fee_data = [
         ["Total Fee", f"KSh {total_fee}"],
@@ -1337,49 +1337,45 @@ def print_report(request, id):
     )
 
     story.append(fee_table)
+    story.append(Spacer(1, 0.12 * inch))
 
-    story.append(Spacer(1, 0.4 * inch))
+# ==========================
+# Teacher & Principal Remarks
+# ==========================
 
-    # Teacher's Remark
-    if average >= 80:
-        remark = "Excellent Performance. Keep it up."
-    elif average >= 70:
-        remark = "Very Good Performance."
-    elif average >= 60:
-        remark = "Good Work. Keep Improving."
-    elif average >= 50:
-        remark = "Fair Performance."
-    else:
-        remark = "Needs More Effort."
-
-    story.append(
-        Paragraph(
-            "<b>Teacher's Remarks</b>",
-            styles["Heading2"],
-        )
+    remarks_table = Table(
+        [
+            [
+                Paragraph("<b>Teacher's Remarks</b>", styles["Heading3"]),
+                Paragraph("<b>Principal's Remarks</b>", styles["Heading3"]),
+            ],
+            [
+                Paragraph(teacher_remark, styles["Normal"]),
+                Paragraph(principal_remark, styles["Normal"]),
+            ],
+        ],
+        colWidths=[3.3 * inch, 3.3 * inch],
     )
 
-    story.append(
-        Paragraph(
-            remark,
-            styles["Normal"],
-        )
+    remarks_table.setStyle(
+        TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ])
     )
 
-    story.append(Spacer(1, 0.5 * inch))
+    story.append(remarks_table)
 
-    # Signature Section
-    # Signature Section
+    story.append(Spacer(1, 0.15 * inch))
 
-    story.append(
-        Spacer(1, 0.5 * inch)
-    )
-
+# ==========================
+# Signature Section
+# ==========================
 
     signature_content = []
 
-
-# Principal Signature Image
     if school and school.principal_signature:
         try:
             signature = Image(
@@ -1387,55 +1383,36 @@ def print_report(request, id):
                 width=120,
                 height=50,
             )
-
             signature_content.append(signature)
-
         except Exception:
             signature_content.append("")
-
-
     else:
         signature_content.append("")
 
-
     signature_table = Table(
+    [
         [
-            [
-                "________________________",
-                signature_content[0],
-            ],
-
-            [
-                "Class Teacher",
-                school.principal_name or "Principal",
-            ],
-
-            [
-                "",
-                "Principal",
-            ],
+            "__________________________",
+            signature_content[0],
         ],
-
-        colWidths=[
-            3 * inch,
-            3 * inch,
+        [
+            "Class Teacher",
+            school.principal_name or "Principal",
         ],
-    )
-
+    ],
+    colWidths=[3.3 * inch, 3.3 * inch],
+)
 
     signature_table.setStyle(
-        TableStyle(
-            [
-                ("ALIGN", (0,0), (-1,-1), "CENTER"),
-                ("TOPPADDING", (0,0), (-1,-1), 10),
-            ]
-        )
+        TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ])
     )
-
 
     story.append(signature_table)
 
-    story.append(Spacer(1, 0.3 * inch))
+    story.append(Spacer(1, 0.08 * inch))
 
     story.append(
         Paragraph(
@@ -2274,6 +2251,16 @@ def print_attendance(request):
         "student__admission_number",
     )
 
+    return render(
+    request,
+    "students/attendance_print.html",
+    {
+        "attendances": attendances,
+        "school_class": school_class,
+        "date": date,
+    },
+)
+
 # ==========================
 # TIMETABLE
 # ==========================
@@ -2751,7 +2738,7 @@ def print_timetable(request):
         story.append(Paragraph(f"<b>{school.name}</b>", styles["Title"]))
 
     story.append(Paragraph("<b>School Timetable</b>", styles["Heading2"]))
-    story.append(Spacer(1, 0.3 * inch))
+    story.append(Spacer(1, 0.08 * inch))
 
     data = [[
         "Class",
@@ -2806,6 +2793,7 @@ def print_timetable(request):
         as_attachment=True,
         filename="School_Timetable.pdf",
     )
+
 
 
 
@@ -3063,7 +3051,7 @@ def print_class_exam_timetable(request, id):
         )
     )
 
-    story.append(Spacer(1, 0.3 * inch))
+    story.append(Spacer(1, 0.08 * inch))
 
     data = [[
         "Exam",
@@ -3797,4 +3785,324 @@ def library_dashboard(request):
         request,
         "students/library_dashboard.html",
         context,
+    )
+
+@login_required
+@admin_or_teacher
+def library_reports(request):
+
+    borrowed_books = BorrowBook.objects.filter(
+        status="Borrowed"
+    )
+
+    returned_books = BorrowBook.objects.filter(
+        status="Returned"
+    )
+
+    overdue_books = BorrowBook.objects.filter(
+        status="Borrowed",
+        due_date__lt=date.today()
+    )
+
+    context = {
+        "borrowed_books": borrowed_books,
+        "returned_books": returned_books,
+        "overdue_books": overdue_books,
+    }
+
+    return render(
+        request,
+        "students/library_reports.html",
+        context,
+    )
+
+@login_required
+@admin_or_teacher
+def print_library_report(request):
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+    'inline; filename="library_report.pdf"'
+)
+    
+
+    doc = SimpleDocTemplate(response)
+
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    elements.append(
+        Paragraph("<b>Library Report</b>", styles["Title"])
+    )
+
+    elements.append(Spacer(1, 20))
+
+    borrowed = BorrowBook.objects.select_related(
+        "student",
+        "book"
+    ).order_by("-borrow_date")
+
+    data = [
+        [
+            "Student",
+            "Book",
+            "Borrow Date",
+            "Due Date",
+            "Status",
+        ]
+    ]
+
+    for item in borrowed:
+
+        data.append([
+            str(item.student),
+            item.book.title,
+            str(item.borrow_date),
+            str(item.due_date),
+            item.status,
+        ])
+
+    table = Table(data)
+
+    table.setStyle(TableStyle([
+
+        ("BACKGROUND",(0,0),(-1,0),colors.darkblue),
+
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+
+        ("GRID",(0,0),(-1,-1),1,colors.black),
+
+        ("BACKGROUND",(0,1),(-1,-1),colors.beige),
+
+        ("ALIGN",(0,0),(-1,-1),"CENTER"),
+
+    ]))
+
+    elements.append(table)
+
+    doc.build(elements)
+
+    return response
+
+from django.db.models import Avg
+
+@login_required
+@admin_or_teacher
+def class_results(request):
+
+    classes = SchoolClass.objects.all()
+    exams = Exam.objects.all()
+
+    selected_class = None
+    selected_exam = None
+
+    results = []
+    subjects = []
+    subject_analysis = []
+
+    student_count = 0
+    class_average = 0
+    highest_total = 0
+    lowest_total = 0
+
+    if request.method == "POST":
+
+        selected_class = get_object_or_404(
+            SchoolClass,
+            id=request.POST["school_class"]
+        )
+
+        selected_exam = get_object_or_404(
+            Exam,
+            id=request.POST["exam"]
+        )
+
+        students = Student.objects.filter(
+            school_class=selected_class
+        )
+
+        subjects = Subject.objects.all().order_by("name")
+
+        # Student Results
+        for student in students:
+
+            student_marks = {}
+            total = 0
+
+            for subject in subjects:
+
+                mark = Mark.objects.filter(
+                    student=student,
+                    subject=subject,
+                    exam=selected_exam
+                ).first()
+
+                if mark:
+                    student_marks[subject.id] = mark.marks
+                    total += mark.marks
+                else:
+                    student_marks[subject.id] = "-"
+
+            average = total / len(subjects) if subjects else 0
+
+            results.append({
+                "student": student,
+                "marks": student_marks,
+                "total": total,
+                "average": round(average, 2),
+                "grade": calculate_grade(average),
+            })
+
+        # Sort by Total
+        results.sort(
+            key=lambda x: x["total"],
+            reverse=True
+        )
+
+        # Positions
+        for i, row in enumerate(results, start=1):
+            row["position"] = i
+
+        # Summary
+        student_count = len(results)
+
+        if results:
+
+            class_average = round(
+                sum(r["average"] for r in results) / student_count,
+                2
+            )
+
+            highest_total = results[0]["total"]
+            lowest_total = results[-1]["total"]
+
+        # Subject Analysis
+        for subject in subjects:
+
+            subject_marks = Mark.objects.filter(
+                subject=subject,
+                exam=selected_exam,
+                student__school_class=selected_class
+            )
+
+            if subject_marks.exists():
+
+                highest = subject_marks.order_by("-marks").first().marks
+                lowest = subject_marks.order_by("marks").first().marks
+                average = round(
+                    subject_marks.aggregate(
+                        Avg("marks")
+                    )["marks__avg"],
+                    2
+                )
+
+            else:
+
+                highest = "-"
+                lowest = "-"
+                average = "-"
+
+            subject_analysis.append({
+                "subject": subject,
+                "teacher": subject.teacher,
+                "highest": highest,
+                "lowest": lowest,
+                "average": average,
+            })
+
+    return render(
+        request,
+        "students/class_results.html",
+        {
+            "classes": classes,
+            "exams": exams,
+            "subjects": subjects,
+            "results": results,
+            "selected_class": selected_class,
+            "selected_exam": selected_exam,
+
+            "student_count": student_count,
+            "class_average": class_average,
+            "highest_total": highest_total,
+            "lowest_total": lowest_total,
+
+            "subject_analysis": subject_analysis,
+        },
+    )
+
+from django.shortcuts import render, get_object_or_404
+from django.db.models import Avg
+
+@login_required
+@admin_or_teacher
+def print_class_results(request):
+
+    class_id = request.GET.get("class")
+    exam_id = request.GET.get("exam")
+
+    selected_class = get_object_or_404(
+        SchoolClass,
+        id=class_id
+    )
+
+    selected_exam = get_object_or_404(
+        Exam,
+        id=exam_id
+    )
+
+    students = Student.objects.filter(
+        school_class=selected_class
+    )
+
+    subjects = Subject.objects.all().order_by("name")
+
+    results = []
+
+    for student in students:
+
+        student_marks = {}
+        total = 0
+
+        for subject in subjects:
+
+            mark = Mark.objects.filter(
+                student=student,
+                subject=subject,
+                exam=selected_exam
+            ).first()
+
+            if mark:
+                student_marks[subject.id] = mark.marks
+                total += mark.marks
+            else:
+                student_marks[subject.id] = "-"
+
+        average = total / len(subjects) if subjects else 0
+
+        results.append({
+            "student": student,
+            "marks": student_marks,
+            "total": total,
+            "average": round(average, 2),
+            "grade": calculate_grade(average),
+        })
+
+    results.sort(
+        key=lambda x: x["total"],
+        reverse=True
+    )
+
+    for i, row in enumerate(results, start=1):
+        row["position"] = i
+
+    return render(
+        request,
+        "students/print_class_results.html",
+        {
+            "selected_class": selected_class,
+            "selected_exam": selected_exam,
+            "subjects": subjects,
+            "results": results,
+        },
     )
