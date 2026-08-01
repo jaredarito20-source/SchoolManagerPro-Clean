@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Hostel Beds</h2>
+
+<p>
+
+<a href="{% url 'add_hostel_bed' %}">
+    <button>➕ Add Bed</button>
+</a>
+
+</p>
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+
+<tr>
+
+    <th>Block</th>
+    <th>Room</th>
+    <th>Bed</th>
+    <th>Status</th>
+    <th>Actions</th>
+
+</tr>
+
+{% for bed in beds %}
+
+<tr>
+
+    <td>{{ bed.room.block.name }}</td>
+
+    <td>{{ bed.room.room_number }}</td>
+
+    <td>{{ bed.bed_number }}</td>
+
+    <td>
+
+        {% if bed.occupied %}
+
+            🔴 Occupied
+
+        {% else %}
+
+            🟢 Available
+
+        {% endif %}
+
+    </td>
+
+    <td>
+
+        <a href="{% url 'edit_hostel_bed' bed.id %}">
+            ✏ Edit
+        </a>
+
+        |
+
+        <a href="{% url 'delete_hostel_bed' bed.id %}">
+            🗑 Delete
+        </a>
+
+        |
+
+        <a href="{% url 'print_hostel_bed' bed.id %}">
+            🖨 Print
+        </a>
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="5" align="center">
+
+No beds found.
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

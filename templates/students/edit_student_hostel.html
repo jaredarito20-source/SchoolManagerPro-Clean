@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Hostel Allocation</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <table>
+
+        <tr>
+
+            <td><strong>Student</strong></td>
+
+            <td>
+
+                <input
+                    type="text"
+                    value="{{ allocation.student.admission_number }} - {{ allocation.student.first_name }} {{ allocation.student.last_name }}"
+                    readonly
+                >
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Room</strong></td>
+
+            <td>
+
+                <select
+                    name="room"
+                    id="room"
+                    required
+                >
+
+                    {% for room in rooms %}
+
+                        <option
+                            value="{{ room.id }}"
+                            {% if room.id == allocation.room.id %}
+                            selected
+                            {% endif %}
+                        >
+
+                            {{ room.block.name }} -
+                            Room {{ room.room_number }}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Bed</strong></td>
+
+            <td>
+
+                <select
+                    name="bed"
+                    id="bed"
+                    required
+                >
+
+                    <option
+                        value="{{ allocation.bed.id }}"
+                        selected
+                    >
+                        {{ allocation.bed.bed_number }}
+                    </option>
+
+                </select>
+
+            </td>
+
+        </tr>
+
+    </table>
+
+    <br>
+
+    <button type="submit">
+        💾 Update Allocation
+    </button>
+
+    <a href="{% url 'student_hostel_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+<script>
+
+function loadBeds(roomId, selectedBed=null){
+
+    fetch("/hostel/available-beds/" + roomId + "/")
+
+    .then(response => response.json())
+
+    .then(data => {
+
+        let bedSelect = document.getElementById("bed");
+
+        bedSelect.innerHTML = "";
+
+        if(selectedBed){
+
+            bedSelect.innerHTML +=
+                '<option value="{{ allocation.bed.id }}" selected>{{ allocation.bed.bed_number }}</option>';
+
+        }
+
+        data.forEach(function(item){
+
+            if(item.id != "{{ allocation.bed.id }}"){
+
+                bedSelect.innerHTML +=
+                    '<option value="' +
+                    item.id +
+                    '">' +
+                    item.name +
+                    '</option>';
+
+            }
+
+        });
+
+    });
+
+}
+
+document.getElementById("room").addEventListener(
+
+    "change",
+
+    function(){
+
+        loadBeds(this.value);
+
+    }
+
+);
+
+// Load current room beds when page opens
+loadBeds(
+    "{{ allocation.room.id }}",
+    true
+);
+
+</script>
+
+{% endblock %}

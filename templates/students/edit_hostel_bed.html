@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Hostel Bed</h2>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<table>
+
+<tr>
+
+<td>Room</td>
+
+<td>
+
+<select name="room">
+
+{% for room in rooms %}
+
+<option
+value="{{ room.id }}"
+{% if room.id == bed.room.id %}
+selected
+{% endif %}
+>
+
+{{ room.block.name }} - Room {{ room.room_number }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Bed Number</td>
+
+<td>
+
+<input
+type="text"
+name="bed_number"
+value="{{ bed.bed_number }}"
+required
+>
+
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<button type="submit">
+
+💾 Update
+
+</button>
+
+<a href="{% url 'hostel_bed_list' %}">
+
+<button type="button">
+
+Cancel
+
+</button>
+
+</a>
+
+</form>
+
+{% endblock %}

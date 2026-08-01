@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Transfer Student</h2>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<table>
+
+<tr>
+
+<td>Student</td>
+
+<td>
+
+<select
+    name="allocation"
+    required
+>
+
+<option value="">
+
+Select Student
+
+</option>
+
+{% for allocation in allocations %}
+
+<option value="{{ allocation.id }}">
+
+{{ allocation.student }}
+(
+{{ allocation.room.block.name }}
+-
+Room {{ allocation.room.room_number }}
+)
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Transfer To</td>
+
+<td>
+
+<select
+    name="to_room"
+    required
+>
+
+<option value="">
+
+Select Room
+
+</option>
+
+{% for room in rooms %}
+
+{% if not room.is_full %}
+
+<option value="{{ room.id }}">
+
+{{ room.block.name }}
+-
+Room {{ room.room_number }}
+
+(
+{{ room.available_beds }}
+beds available
+)
+
+</option>
+
+{% endif %}
+
+{% endfor %}
+
+</select>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Reason</td>
+
+<td>
+
+<textarea
+name="reason"
+rows="4"
+cols="40"
+></textarea>
+
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<button type="submit">
+
+💾 Transfer Student
+
+</button>
+
+<a href="{% url 'hostel_transfer_list' %}">
+
+<button type="button">
+
+Cancel
+
+</button>
+
+</a>
+
+</form>
+
+{% endblock %}

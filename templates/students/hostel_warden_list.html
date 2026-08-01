@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Hostel Wardens</h2>
+
+<p>
+    <a href="{% url 'add_hostel_warden' %}">
+        <button>➕ Add Hostel Warden</button>
+    </a>
+</p>
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+
+    <tr>
+        <th>Name</th>
+        <th>Hostel Block</th>
+        <th>Designation</th>
+        <th>Gender</th>
+        <th>Phone</th>
+        <th>Email</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for warden in wardens %}
+
+    <tr>
+
+        <td>
+            {{ warden.first_name }} {{ warden.last_name }}
+        </td>
+
+        <td>
+            {{ warden.hostel_block.name }}
+        </td>
+
+        <td>
+            {{ warden.designation }}
+        </td>
+
+        <td>
+            {{ warden.gender }}
+        </td>
+
+        <td>
+            {{ warden.phone }}
+        </td>
+
+        <td>
+            {{ warden.email }}
+        </td>
+
+        <td>
+            {% if warden.active %}
+                Active
+            {% else %}
+                Inactive
+            {% endif %}
+        </td>
+
+        <td>
+
+            <a href="{% url 'edit_hostel_warden' warden.id %}">
+                ✏ Edit
+            </a>
+
+            |
+
+            <a href="{% url 'delete_hostel_warden' warden.id %}">
+                🗑 Delete
+            </a>
+
+            |
+
+            <a href="{% url 'print_hostel_warden' warden.id %}">
+                🖨 Print
+            </a>
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+        <td colspan="8" align="center">
+            No hostel wardens found.
+        </td>
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+{% endblock %}

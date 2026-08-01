@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Remove Hostel Allocation</h2>
+
+<p>
+
+Are you sure you want to remove
+
+<strong>
+
+{{ allocation.student }}
+
+</strong>
+
+from
+
+<strong>
+
+{{ allocation.room }}
+
+</strong>?
+
+</p>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<button type="submit">
+
+Yes, Remove
+
+</button>
+
+<a href="{% url 'student_hostel_list' %}">
+<button type="button">
+
+Cancel
+
+</button>
+</a>
+
+</form>
+
+{% endblock %}

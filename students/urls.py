@@ -507,5 +507,100 @@ path("hostel/rooms/edit/<int:id>/", views.edit_hostel_room, name="edit_hostel_ro
 path("hostel/rooms/delete/<int:id>/", views.delete_hostel_room, name="delete_hostel_room"),
 path("hostel/rooms/print/<int:id>/", views.print_hostel_room, name="print_hostel_room"),
 
+# Student Hostel Allocation
+path("hostel/students/", views.student_hostel_list, name="student_hostel_list"),
+path("hostel/students/add/", views.add_student_hostel, name="add_student_hostel"),
+path("hostel/students/edit/<int:id>/", views.edit_student_hostel, name="edit_student_hostel"),
+path("hostel/students/delete/<int:id>/", views.delete_student_hostel, name="delete_student_hostel"),
+path("hostel/students/print/<int:id>/", views.print_student_hostel, name="print_student_hostel"),
+
+
+# Hostel Wardens
+path("hostel/wardens/", views.hostel_warden_list, name="hostel_warden_list"),
+path("hostel/wardens/add/", views.add_hostel_warden, name="add_hostel_warden"),
+path("hostel/wardens/edit/<int:id>/", views.edit_hostel_warden, name="edit_hostel_warden"),
+path("hostel/wardens/delete/<int:id>/", views.delete_hostel_warden, name="delete_hostel_warden"),
+path("hostel/wardens/print/<int:id>/", views.print_hostel_warden, name="print_hostel_warden"),
+
+
+# Hostel Transfers
+path(
+    "hostel/transfers/",
+    views.hostel_transfer_list,
+    name="hostel_transfer_list",
+),
+
+path(
+    "hostel/transfers/add/",
+    views.add_hostel_transfer,
+    name="add_hostel_transfer",
+),
+
+path(
+    "hostel/transfers/print/<int:id>/",
+    views.print_hostel_transfer,
+    name="print_hostel_transfer",
+),
+
+path(
+    "hostel/rooms/print/<int:id>/",
+    views.print_hostel_room,
+    name="print_hostel_room",
+),
+
+path(
+    "hostel/occupancy-report/",
+    views.hostel_occupancy_report,
+    name="hostel_occupancy_report",
+),
+
+path(
+    "hostel/occupancy-report/print/<int:id>/",
+    views.print_hostel_occupancy_report,
+    name="print_hostel_occupancy_report",
+),
+
+# Hostel Beds
+path(
+    "hostel/beds/",
+    views.hostel_bed_list,
+    name="hostel_bed_list",
+),
+
+path(
+    "hostel/beds/add/",
+    views.add_hostel_bed,
+    name="add_hostel_bed",
+),
+
+path(
+    "hostel/beds/edit/<int:id>/",
+    views.edit_hostel_bed,
+    name="edit_hostel_bed",
+),
+
+path(
+    "hostel/beds/delete/<int:id>/",
+    views.delete_hostel_bed,
+    name="delete_hostel_bed",
+),
+
+path(
+    "hostel/beds/print/<int:id>/",
+    views.print_hostel_bed,
+    name="print_hostel_bed",
+),
+
+path(
+    "hostel/rooms/generate-beds/<int:id>/",
+    views.generate_hostel_beds,
+    name="generate_hostel_beds",
+),
+
+path(
+    "hostel/available-beds/<int:room_id>/",
+    views.available_beds,
+    name="available_beds",
+),
 
 ]

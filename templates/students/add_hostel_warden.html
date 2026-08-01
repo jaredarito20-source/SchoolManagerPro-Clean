@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Hostel Warden</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <table>
+
+        <tr>
+            <td>First Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="first_name"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Last Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="last_name"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Gender</td>
+            <td>
+                <select name="gender" required>
+
+                    <option value="">Select Gender</option>
+
+                    <option value="Male">
+                        Male
+                    </option>
+
+                    <option value="Female">
+                        Female
+                    </option>
+
+                </select>
+            </td>
+        </tr>
+
+        <tr>
+            <td>Hostel Block</td>
+            <td>
+
+                <select
+                    name="hostel_block"
+                    required
+                >
+
+                    <option value="">
+                        Select Hostel Block
+                    </option>
+
+                    {% for block in hostel_blocks %}
+
+                    <option value="{{ block.id }}">
+                        {{ block.name }}
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td>Designation</td>
+            <td>
+
+                <select
+                    name="designation"
+                    required
+                >
+
+                    <option value="">
+                        Select Designation
+                    </option>
+
+                    <option value="Senior Warden">
+                        Senior Warden
+                    </option>
+
+                    <option value="Assistant Warden">
+                        Assistant Warden
+                    </option>
+
+                    <option value="Night Warden">
+                        Night Warden
+                    </option>
+
+                    <option value="Matron">
+                        Matron
+                    </option>
+
+                    <option value="Patron">
+                        Patron
+                    </option>
+
+                </select>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td>Phone</td>
+            <td>
+                <input
+                    type="text"
+                    name="phone"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Email</td>
+            <td>
+                <input
+                    type="email"
+                    name="email"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Active</td>
+            <td>
+
+                <input
+                    type="checkbox"
+                    name="active"
+                    checked
+                >
+
+            </td>
+        </tr>
+
+    </table>
+
+    <br>
+
+    <button type="submit">
+        💾 Save Warden
+    </button>
+
+    <a href="{% url 'hostel_warden_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

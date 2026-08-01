@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Hostel Occupancy Report</h2>
+
+<form method="get">
+
+    <label><strong>Select Hostel Block</strong></label>
+
+    <select name="block" required>
+
+        <option value="">-- Select Block --</option>
+
+        {% for block in blocks %}
+
+        <option value="{{ block.id }}"
+            {% if selected_block and selected_block.id == block.id %}
+                selected
+            {% endif %}
+        >
+            {{ block.name }}
+        </option>
+
+        {% endfor %}
+
+    </select>
+
+    <button type="submit">
+        View Report
+    </button>
+
+</form>
+
+{% if selected_block %}
+
+<hr>
+
+<h3>{{ selected_block.name }}</h3>
+
+<table border="1" cellpadding="8" cellspacing="0" width="60%">
+
+<tr>
+    <th>Total Rooms</th>
+    <td>{{ total_rooms }}</td>
+</tr>
+
+<tr>
+    <th>Total Capacity</th>
+    <td>{{ total_capacity }}</td>
+</tr>
+
+<tr>
+    <th>Occupied Beds</th>
+    <td>{{ total_occupied }}</td>
+</tr>
+
+<tr>
+    <th>Available Beds</th>
+    <td>{{ total_available }}</td>
+</tr>
+
+<tr>
+    <th>Occupancy Rate</th>
+    <td>{{ occupancy_rate }}%</td>
+</tr>
+
+</table>
+
+<br>
+
+<h3>Rooms</h3>
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+
+<tr>
+
+    <th>Room</th>
+    <th>Capacity</th>
+    <th>Occupied</th>
+    <th>Available</th>
+    <th>Status</th>
+
+</tr>
+
+{% for room in rooms %}
+
+<tr>
+
+    <td>{{ room.room_number }}</td>
+
+    <td>{{ room.capacity }}</td>
+
+    <td>{{ room.occupied_beds }}</td>
+
+    <td>{{ room.available_beds }}</td>
+
+    <td>
+
+        {% if room.is_full %}
+
+            🔴 Full
+
+        {% elif room.occupied_beds == 0 %}
+
+            ⚪ Empty
+
+        {% else %}
+
+            🟢 Available
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td colspan="5" align="center">
+
+        No rooms found.
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<br>
+
+<a href="{% url 'print_hostel_occupancy_report' selected_block.id %}">
+
+    <button>
+        🖨 Print Occupancy Report
+    </button>
+
+</a>
+
+{% endif %}
+
+{% endblock %}

@@ -35,7 +35,7 @@
 
     <td>{{ room.capacity }}</td>
 
-    <td>{{ room.occupied }}</td>
+    <td>{{ room.occupied_beds }}</td>
 
     <td>{{ room.available_beds }}</td>
 
@@ -50,6 +50,11 @@
         <a href="{% url 'delete_hostel_room' room.id %}">
             🗑 Delete
         </a>
+
+         <a href="{% url 'generate_hostel_beds' room.id %}">
+            ⚡ Generate Beds
+        </a>
+
 
         |
 

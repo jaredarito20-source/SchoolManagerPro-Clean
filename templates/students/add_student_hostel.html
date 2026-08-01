@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Allocate Student to Hostel</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <table>
+
+        <tr>
+
+            <td><strong>Student</strong></td>
+
+            <td>
+
+                <select name="student" required>
+
+                    <option value="">Select Student</option>
+
+                    {% for student in students %}
+
+                    <option value="{{ student.id }}">
+
+                        {{ student.admission_number }} -
+                        {{ student.first_name }}
+                        {{ student.last_name }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Room</strong></td>
+
+            <td>
+
+                <select
+                    name="room"
+                    id="room"
+                    required
+                >
+
+                    <option value="">
+                        Select Room
+                    </option>
+
+                    {% for room in rooms %}
+
+                    <option value="{{ room.id }}">
+
+                        {{ room.block.name }}
+                        -
+                        Room {{ room.room_number }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Bed</strong></td>
+
+            <td>
+
+                <select
+                    name="bed"
+                    id="bed"
+                    required
+                >
+
+                    <option value="">
+                        Select Room First
+                    </option>
+
+                </select>
+
+            </td>
+
+        </tr>
+
+    </table>
+
+    <br>
+
+    <button type="submit">
+
+        💾 Allocate Student
+
+    </button>
+
+    <a href="{% url 'student_hostel_list' %}">
+
+        <button type="button">
+
+            Cancel
+
+        </button>
+
+    </a>
+
+</form>
+
+<script>
+
+document.getElementById("room").addEventListener(
+    "change",
+    function () {
+
+        let roomId = this.value;
+
+        let bedSelect = document.getElementById("bed");
+
+        bedSelect.innerHTML =
+            '<option>Loading...</option>';
+
+        fetch("/hostel/available-beds/" + roomId + "/")
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            bedSelect.innerHTML =
+                '<option value="">Select Bed</option>';
+
+            if (data.length === 0) {
+
+                bedSelect.innerHTML +=
+                    '<option disabled>No Available Beds</option>';
+
+            } else {
+
+                data.forEach(function(item){
+
+                    bedSelect.innerHTML +=
+                        '<option value="' +
+                        item.id +
+                        '">' +
+                        item.name +
+                        '</option>';
+
+                });
+
+            }
+
+        });
+
+    }
+);
+
+</script>
+
+{% endblock %}

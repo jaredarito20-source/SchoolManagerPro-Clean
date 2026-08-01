@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete Hostel Warden</h2>
+
+<div style="border:1px solid #ccc; padding:20px; width:500px;">
+
+    <p>
+        Are you sure you want to delete this hostel warden?
+    </p>
+
+    <table>
+
+        <tr>
+            <th align="left">Name:</th>
+            <td>
+                {{ warden.first_name }} {{ warden.last_name }}
+            </td>
+        </tr>
+
+        <tr>
+            <th align="left">Hostel Block:</th>
+            <td>
+                {{ warden.hostel_block.name }}
+            </td>
+        </tr>
+
+        <tr>
+            <th align="left">Designation:</th>
+            <td>
+                {{ warden.designation }}
+            </td>
+        </tr>
+
+        <tr>
+            <th align="left">Gender:</th>
+            <td>
+                {{ warden.gender }}
+            </td>
+        </tr>
+
+        <tr>
+            <th align="left">Phone:</th>
+            <td>
+                {{ warden.phone }}
+            </td>
+        </tr>
+
+        <tr>
+            <th align="left">Email:</th>
+            <td>
+                {{ warden.email }}
+            </td>
+        </tr>
+
+    </table>
+
+    <br>
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        <button
+            type="submit"
+            style="background:red;color:white;padding:8px 18px;border:none;border-radius:4px;">
+            🗑 Yes, Delete
+        </button>
+
+        <a href="{% url 'hostel_warden_list' %}">
+            <button
+                type="button"
+                style="padding:8px 18px;">
+                Cancel
+            </button>
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Hostel Warden</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <table>
+
+        <tr>
+            <td>First Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="first_name"
+                    value="{{ warden.first_name }}"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Last Name</td>
+            <td>
+                <input
+                    type="text"
+                    name="last_name"
+                    value="{{ warden.last_name }}"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Gender</td>
+            <td>
+
+                <select name="gender" required>
+
+                    <option value="Male"
+                    {% if warden.gender == "Male" %}
+                    selected
+                    {% endif %}>
+                        Male
+                    </option>
+
+                    <option value="Female"
+                    {% if warden.gender == "Female" %}
+                    selected
+                    {% endif %}>
+                        Female
+                    </option>
+
+                </select>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td>Hostel Block</td>
+            <td>
+
+                <select name="hostel_block" required>
+
+                    {% for block in hostel_blocks %}
+
+                    <option
+                        value="{{ block.id }}"
+                        {% if block.id == warden.hostel_block.id %}
+                        selected
+                        {% endif %}
+                    >
+                        {{ block.name }}
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td>Designation</td>
+            <td>
+
+                <select name="designation" required>
+
+                    <option value="Senior Warden"
+                    {% if warden.designation == "Senior Warden" %}
+                    selected
+                    {% endif %}>
+                        Senior Warden
+                    </option>
+
+                    <option value="Assistant Warden"
+                    {% if warden.designation == "Assistant Warden" %}
+                    selected
+                    {% endif %}>
+                        Assistant Warden
+                    </option>
+
+                    <option value="Night Warden"
+                    {% if warden.designation == "Night Warden" %}
+                    selected
+                    {% endif %}>
+                        Night Warden
+                    </option>
+
+                    <option value="Matron"
+                    {% if warden.designation == "Matron" %}
+                    selected
+                    {% endif %}>
+                        Matron
+                    </option>
+
+                    <option value="Patron"
+                    {% if warden.designation == "Patron" %}
+                    selected
+                    {% endif %}>
+                        Patron
+                    </option>
+
+                </select>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td>Phone</td>
+            <td>
+                <input
+                    type="text"
+                    name="phone"
+                    value="{{ warden.phone }}"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Email</td>
+            <td>
+                <input
+                    type="email"
+                    name="email"
+                    value="{{ warden.email }}"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Active</td>
+            <td>
+
+                <input
+                    type="checkbox"
+                    name="active"
+                    {% if warden.active %}
+                    checked
+                    {% endif %}
+                >
+
+            </td>
+        </tr>
+
+    </table>
+
+    <br>
+
+    <button type="submit">
+        💾 Update Warden
+    </button>
+
+    <a href="{% url 'hostel_warden_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

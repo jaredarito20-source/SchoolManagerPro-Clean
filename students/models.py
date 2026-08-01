@@ -3,6 +3,7 @@ from django.db.models import Sum
 from django.contrib.auth.models import User
 
 
+
 class Teacher(models.Model):
     employee_number = models.CharField(max_length=20, unique=True)
     first_name = models.CharField(max_length=100)
@@ -867,22 +868,50 @@ class HostelRoom(models.Model):
         related_name="rooms",
     )
 
-    room_number = models.CharField(
-        max_length=30,
-    )
+    room_number = models.CharField(max_length=30)
 
     capacity = models.PositiveIntegerField()
-
-    occupied = models.PositiveIntegerField(
-        default=0,
-    )
 
     class Meta:
         unique_together = ("block", "room_number")
 
+    @property
+    def occupied_beds(self):
+        return self.students.count()
+
+    @property
+    def available_beds(self):
+        return self.capacity - self.occupied_beds
+
+    @property
+    def is_full(self):
+        return self.occupied_beds >= self.capacity
+
     def __str__(self):
         return f"{self.block.name} - Room {self.room_number}"
 
+class HostelBed(models.Model):
+
+    room = models.ForeignKey(
+        HostelRoom,
+        on_delete=models.CASCADE,
+        related_name="beds",
+    )
+
+    bed_number = models.CharField(
+        max_length=20,
+    )
+
+    occupied = models.BooleanField(
+        default=False,
+    )
+
+    class Meta:
+        unique_together = ("room", "bed_number")
+        ordering = ["bed_number"]
+
+    def __str__(self):
+        return f"{self.room} - Bed {self.bed_number}"
 class StudentHostel(models.Model):
 
     student = models.OneToOneField(
@@ -897,9 +926,7 @@ class StudentHostel(models.Model):
         related_name="students",
     )
 
-    bed_number = models.CharField(
-        max_length=20,
-    )
+    bed_number = models.CharField(max_length=20)
 
     assigned_date = models.DateField(
         auto_now_add=True,
@@ -911,4 +938,82 @@ class StudentHostel(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.room}"
+
+class HostelWarden(models.Model):
+
+    hostel_block = models.ForeignKey(
+        HostelBlock,
+        on_delete=models.CASCADE,
+        related_name="wardens",
+    )
+
+    first_name = models.CharField(max_length=100)
+
+    last_name = models.CharField(max_length=100)
+
+    designation = models.CharField(
+        max_length=50,
+        choices=[
+            ("Senior Warden", "Senior Warden"),
+            ("Assistant Warden", "Assistant Warden"),
+            ("Night Warden", "Night Warden"),
+            ("Matron", "Matron"),
+            ("Patron", "Patron"),
+        ],
+    )
+
+    gender = models.CharField(
+        max_length=10,
+        choices=[
+            ("Male", "Male"),
+            ("Female", "Female"),
+        ],
+    )
+
+    phone = models.CharField(max_length=20, blank=True)
+
+    email = models.EmailField(blank=True)
+
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+
+class HostelTransfer(models.Model):
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="hostel_transfers",
+    )
+
+    from_room = models.ForeignKey(
+        HostelRoom,
+        on_delete=models.CASCADE,
+        related_name="transfers_from",
+    )
+
+    to_room = models.ForeignKey(
+        HostelRoom,
+        on_delete=models.CASCADE,
+        related_name="transfers_to",
+    )
+
+    transfer_date = models.DateField(
+        auto_now_add=True,
+    )
+
+    reason = models.TextField(
+        blank=True,
+    )
+
+    transferred_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return f"{self.student} ({self.from_room} → {self.to_room})"
 
