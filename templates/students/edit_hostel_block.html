@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Hostel Block</h2>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<p>
+
+<label>Block Name</label><br>
+
+<input
+type="text"
+name="name"
+value="{{ block.name }}"
+required>
+
+</p>
+
+<p>
+
+<label>Description</label><br>
+
+<textarea name="description">{{ block.description }}</textarea>
+
+</p>
+
+<p>
+
+<label>
+
+<input
+type="checkbox"
+name="active"
+{% if block.active %}checked{% endif %}>
+
+Active
+
+</label>
+
+</p>
+
+<button type="submit">
+
+Update
+
+</button>
+
+<a href="{% url 'hostel_block_list' %}">
+<button type="button">
+
+Cancel
+
+</button>
+</a>
+
+</form>
+
+{% endblock %}

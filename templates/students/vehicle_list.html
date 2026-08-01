@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>School Vehicles</h2>
+
+<p>
+    <a href="{% url 'add_vehicle' %}">
+        <button type="button">➕ Add Vehicle</button>
+    </a>
+</p>
+
+{% if vehicles %}
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+
+    <thead>
+        <tr>
+            <th>Registration</th>
+            <th>Vehicle</th>
+            <th>Make</th>
+            <th>Capacity</th>
+            <th>Driver</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+    {% for vehicle in vehicles %}
+
+    <tr>
+
+        <td>{{ vehicle.registration_number }}</td>
+
+        <td>{{ vehicle.vehicle_name }}</td>
+
+        <td>{{ vehicle.make }}</td>
+
+        <td>{{ vehicle.capacity }}</td>
+
+        <td>
+
+            {% if vehicle.driver %}
+                {{ vehicle.driver.first_name }}
+                {{ vehicle.driver.last_name }}
+            {% else %}
+                -
+            {% endif %}
+
+        </td>
+
+        <td>{{ vehicle.status }}</td>
+
+        <td>
+
+            <a href="{% url 'print_vehicle' vehicle.id %}">
+                🖨 Print
+            </a>
+
+            |
+
+            <a href="{% url 'edit_vehicle' vehicle.id %}">
+                ✏ Edit
+            </a>
+
+            |
+
+            <a
+                href="{% url 'delete_vehicle' vehicle.id %}"
+                onclick="return confirm('Delete this vehicle?');"
+            >
+                🗑 Delete
+            </a>
+
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% else %}
+
+<p><strong>No vehicles have been added.</strong></p>
+
+{% endif %}
+
+{% endblock %}

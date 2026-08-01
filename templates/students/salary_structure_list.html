@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Payroll - Salary Structure</h2>
+
+<p>
+    <a href="{% url 'add_salary_structure' %}">
+        <button type="button">➕ Add Salary Structure</button>
+    </a>
+</p>
+
+{% if salaries %}
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+
+    <thead>
+
+        <tr>
+            <th>Teacher</th>
+            <th>Basic Salary</th>
+            <th>House</th>
+            <th>Transport</th>
+            <th>Medical</th>
+            <th>Other Allowance</th>
+            <th>NSSF</th>
+            <th>SHA</th>
+            <th>PAYE</th>
+            <th>Other Deductions</th>
+            <th>Gross Salary</th>
+            <th>Total Deductions</th>
+            <th>Net Salary</th>
+            <th>Actions</th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+    {% for salary in salaries %}
+
+        <tr>
+
+            <td>
+                {{ salary.teacher.first_name }}
+                {{ salary.teacher.last_name }}
+            </td>
+
+            <td>{{ salary.basic_salary }}</td>
+
+            <td>{{ salary.house_allowance }}</td>
+
+            <td>{{ salary.transport_allowance }}</td>
+
+            <td>{{ salary.medical_allowance }}</td>
+
+            <td>{{ salary.other_allowance }}</td>
+
+            <td>{{ salary.nssf }}</td>
+
+            <td>{{ salary.sha }}</td>
+
+            <td>{{ salary.paye }}</td>
+
+            <td>{{ salary.other_deductions }}</td>
+
+            <td>
+                {{ salary.gross_salary }}
+            </td>
+
+            <td>
+                {{ salary.total_deductions }}
+            </td>
+
+            <td>
+                <strong>{{ salary.net_salary }}</strong>
+            </td>
+
+            <td>
+
+                 <a href="{% url 'print_salary_structure' salary.id %}">
+                    🖨 Print
+                </a>
+
+                <a href="{% url 'edit_salary_structure' salary.id %}">
+                    ✏ Edit
+                </a>
+
+                |
+
+                <a href="{% url 'delete_salary_structure' salary.id %}">
+                    🗑 Delete
+                </a>
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% else %}
+
+<p>No salary structures found.</p>
+
+{% endif %}
+
+{% endblock %}

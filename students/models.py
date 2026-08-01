@@ -549,3 +549,366 @@ class BorrowBook(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.book}"
+
+
+class SalaryStructure(models.Model):
+    teacher = models.OneToOneField(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name="salary_structure",
+    )
+
+    basic_salary = models.DecimalField(max_digits=12, decimal_places=2)
+
+    house_allowance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    medical_allowance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    transport_allowance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    other_allowance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    paye = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    sha = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    nssf = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    other_deductions = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    bank_name = models.CharField(max_length=100, blank=True)
+
+    account_number = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    def gross_salary(self):
+        return (
+            self.basic_salary
+            + self.house_allowance
+            + self.medical_allowance
+            + self.transport_allowance
+            + self.other_allowance
+        )
+
+    def total_deductions(self):
+        return (
+            self.paye
+            + self.sha
+            + self.nssf
+            + self.other_deductions
+        )
+
+    def net_salary(self):
+        return self.gross_salary() - self.total_deductions()
+
+    def __str__(self):
+        return str(self.teacher)
+
+
+class Payroll(models.Model):
+
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+    )
+
+    year = models.IntegerField()
+
+    month = models.CharField(max_length=20)
+
+    basic_salary = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    gross_salary = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    paye = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    sha = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    nssf = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    other_deductions = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    deductions = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    net_salary = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    generated_on = models.DateField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        unique_together = ("teacher", "month", "year")
+
+    def __str__(self):
+        return f"{self.teacher} - {self.month} {self.year}"
+
+    # Transport
+
+class Driver(models.Model):
+
+    first_name = models.CharField(max_length=100)
+
+    last_name = models.CharField(max_length=100)
+
+    phone = models.CharField(max_length=20)
+
+    national_id = models.CharField(
+        max_length=20,
+        unique=True,
+    )
+
+    license_number = models.CharField(
+        max_length=50,
+        unique=True,
+    )
+
+    license_expiry = models.DateField()
+
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+
+class Vehicle(models.Model):
+    registration_number = models.CharField(
+        max_length=30,
+        unique=True,
+    )
+
+    vehicle_name = models.CharField(
+        max_length=100,
+    )
+
+    make = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    capacity = models.PositiveIntegerField()
+
+    driver = models.ForeignKey(
+        Driver,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("Active", "Active"),
+            ("Maintenance", "Maintenance"),
+        ],
+        default="Active",
+    )
+
+    def __str__(self):
+        return f"{self.registration_number} - {self.vehicle_name}"
+
+class TransportRoute(models.Model):
+    route_name = models.CharField(max_length=100)
+
+    start_point = models.CharField(max_length=150)
+
+    end_point = models.CharField(max_length=150)
+
+    distance_km = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=0
+    )
+
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="routes"
+    )
+
+    driver = models.ForeignKey(
+        Teacher,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transport_routes"
+    )
+
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.route_name
+
+
+
+
+class StudentTransport(models.Model):
+
+    student = models.OneToOneField(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="transport",
+    )
+
+    route = models.ForeignKey(
+        TransportRoute,
+        on_delete=models.CASCADE,
+        related_name="students",
+    )
+
+    pickup_point = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+
+    dropoff_point = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+
+    active = models.BooleanField(
+        default=True,
+    )
+
+    assigned_date = models.DateField(
+        auto_now_add=True,
+    )
+
+    def __str__(self):
+        return f"{self.student} - {self.route}"
+
+# hostels
+
+class HostelBlock(models.Model):
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    active = models.BooleanField(
+        default=True,
+    )
+
+    def __str__(self):
+        return self.name
+
+class HostelRoom(models.Model):
+
+    block = models.ForeignKey(
+        HostelBlock,
+        on_delete=models.CASCADE,
+        related_name="rooms",
+    )
+
+    room_number = models.CharField(
+        max_length=30,
+    )
+
+    capacity = models.PositiveIntegerField()
+
+    occupied = models.PositiveIntegerField(
+        default=0,
+    )
+
+    class Meta:
+        unique_together = ("block", "room_number")
+
+    def __str__(self):
+        return f"{self.block.name} - Room {self.room_number}"
+
+class StudentHostel(models.Model):
+
+    student = models.OneToOneField(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="hostel",
+    )
+
+    room = models.ForeignKey(
+        HostelRoom,
+        on_delete=models.CASCADE,
+        related_name="students",
+    )
+
+    bed_number = models.CharField(
+        max_length=20,
+    )
+
+    assigned_date = models.DateField(
+        auto_now_add=True,
+    )
+
+    active = models.BooleanField(
+        default=True,
+    )
+
+    def __str__(self):
+        return f"{self.student} - {self.room}"
+

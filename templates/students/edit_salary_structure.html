@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Salary Structure</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <p>
+        <label>Teacher</label><br>
+        <select name="teacher" required>
+            {% for teacher in teachers %}
+            <option value="{{ teacher.id }}"
+                {% if salary.teacher.id == teacher.id %}selected{% endif %}>
+                {{ teacher.first_name }} {{ teacher.last_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </p>
+
+    <p>
+        <label>Basic Salary</label><br>
+        <input type="number" step="0.01" name="basic_salary"
+               value="{{ salary.basic_salary }}" required>
+    </p>
+
+    <p>
+        <label>House Allowance</label><br>
+        <input type="number" step="0.01" name="house_allowance"
+               value="{{ salary.house_allowance }}">
+    </p>
+
+    <p>
+        <label>Transport Allowance</label><br>
+        <input type="number" step="0.01" name="transport_allowance"
+               value="{{ salary.transport_allowance }}">
+    </p>
+
+    <p>
+        <label>Medical Allowance</label><br>
+        <input type="number" step="0.01" name="medical_allowance"
+               value="{{ salary.medical_allowance }}">
+    </p>
+
+    <p>
+        <label>Other Allowance</label><br>
+        <input type="number" step="0.01" name="other_allowance"
+               value="{{ salary.other_allowance }}">
+    </p>
+
+    <hr>
+
+    <p>
+        <label>NSSF</label><br>
+        <input type="number" step="0.01" name="nssf"
+               value="{{ salary.nssf }}">
+    </p>
+
+    <p>
+        <label>SHA</label><br>
+        <input type="number" step="0.01" name="sha"
+               value="{{ salary.sha }}">
+    </p>
+
+    <p>
+        <label>PAYE</label><br>
+        <input type="number" step="0.01" name="paye"
+               value="{{ salary.paye }}">
+    </p>
+
+    <p>
+        <label>Other Deductions</label><br>
+        <input type="number" step="0.01" name="other_deductions"
+               value="{{ salary.other_deductions }}">
+    </p>
+
+    <button type="submit">Update Salary Structure</button>
+
+    <a href="{% url 'salary_structure_list' %}">
+        <button type="button">Cancel</button>
+    </a>
+
+</form>
+
+{% endblock %}

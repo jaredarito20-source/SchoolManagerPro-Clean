@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Driver</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+        <label>First Name</label><br>
+        <input type="text" name="first_name" value="{{ driver.first_name }}" required>
+    </p>
+
+    <p>
+        <label>Last Name</label><br>
+        <input type="text" name="last_name" value="{{ driver.last_name }}" required>
+    </p>
+
+    <p>
+        <label>Phone</label><br>
+        <input type="text" name="phone" value="{{ driver.phone }}" required>
+    </p>
+
+    <p>
+        <label>National ID</label><br>
+        <input type="text" name="national_id" value="{{ driver.national_id }}" required>
+    </p>
+
+    <p>
+        <label>License Number</label><br>
+        <input type="text" name="license_number" value="{{ driver.license_number }}" required>
+    </p>
+
+    <p>
+        <label>License Expiry</label><br>
+        <input type="date" name="license_expiry" value="{{ driver.license_expiry|date:'Y-m-d' }}" required>
+    </p>
+
+    <p>
+        <label>
+            <input type="checkbox" name="active"
+            {% if driver.active %}checked{% endif %}>
+            Active
+        </label>
+    </p>
+
+    <button type="submit">Update</button>
+
+    <a href="{% url 'driver_list' %}">
+        <button type="button">Cancel</button>
+    </a>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Payroll Records</h2>
+
+<p>
+    <a href="{% url 'generate_payroll' %}">
+        <button>Generate Payroll</button>
+    </a>
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0">
+
+    <thead>
+
+        <tr>
+            <th>Teacher</th>
+            <th>Month</th>
+            <th>Year</th>
+            <th>Gross Salary</th>
+            <th>Deductions</th>
+            <th>Net Salary</th>
+            <th>Generated On</th>
+            <th>Payslip</th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+    {% for payroll in payrolls %}
+
+        <tr>
+
+            <td>
+                {{ payroll.teacher.first_name }}
+                {{ payroll.teacher.last_name }}
+            </td>
+
+            <td>{{ payroll.month }}</td>
+
+            <td>{{ payroll.year }}</td>
+
+            <td>KSh {{ payroll.gross_salary }}</td>
+
+            <td>KSh {{ payroll.deductions }}</td>
+
+            <td>
+                <strong>
+                    KSh {{ payroll.net_salary }}
+                </strong>
+            </td>
+
+            <td>{{ payroll.generated_on }}</td>
+
+            <td>
+
+                <a href="{% url 'print_payslip' payroll.id %}">
+                    🖨 Print
+                </a>
+
+            </td>
+
+        </tr>
+
+    {% empty %}
+
+        <tr>
+
+            <td colspan="8" align="center">
+
+                No payroll has been generated.
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% endblock %}

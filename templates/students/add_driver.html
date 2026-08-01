@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Driver</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+        <label>First Name</label><br>
+        <input type="text" name="first_name" required>
+    </p>
+
+    <p>
+        <label>Last Name</label><br>
+        <input type="text" name="last_name" required>
+    </p>
+
+    <p>
+        <label>Phone</label><br>
+        <input type="text" name="phone" required>
+    </p>
+
+    <p>
+        <label>National ID</label><br>
+        <input type="text" name="national_id" required>
+    </p>
+
+    <p>
+        <label>License Number</label><br>
+        <input type="text" name="license_number" required>
+    </p>
+
+    <p>
+        <label>License Expiry</label><br>
+        <input type="date" name="license_expiry" required>
+    </p>
+
+    <p>
+        <label>
+            <input type="checkbox" name="active" checked>
+            Active
+        </label>
+    </p>
+
+    <button type="submit">Save</button>
+
+    <a href="{% url 'driver_list' %}">
+        <button type="button">Cancel</button>
+    </a>
+
+</form>
+
+{% endblock %}

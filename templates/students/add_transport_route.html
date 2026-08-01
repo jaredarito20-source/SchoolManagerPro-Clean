@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Transport Route</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+        <label>Route Name</label><br>
+        <input type="text" name="route_name" required>
+    </p>
+
+    <p>
+        <label>Start Point</label><br>
+        <input type="text" name="start_point" required>
+    </p>
+
+    <p>
+        <label>End Point</label><br>
+        <input type="text" name="end_point" required>
+    </p>
+
+    <p>
+        <label>Distance (KM)</label><br>
+        <input type="number" step="0.01" name="distance_km" value="0">
+    </p>
+
+    <p>
+        <label>Vehicle</label><br>
+
+        <select name="vehicle">
+
+            <option value="">Select Vehicle</option>
+
+            {% for vehicle in vehicles %}
+
+                <option value="{{ vehicle.id }}">
+                    {{ vehicle.registration_number }}
+                    -
+                    {{ vehicle.vehicle_name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+        <label>Driver</label><br>
+
+        <select name="driver">
+
+            <option value="">Select Driver</option>
+
+            {% for teacher in teachers %}
+
+                <option value="{{ teacher.id }}">
+                    {{ teacher.first_name }}
+                    {{ teacher.last_name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label>
+
+            <input
+                type="checkbox"
+                name="active"
+                checked
+            >
+
+            Active Route
+
+        </label>
+
+    </p>
+
+    <button type="submit">
+        Save
+    </button>
+
+    <a href="{% url 'transport_route_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

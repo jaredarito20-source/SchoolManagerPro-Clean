@@ -343,4 +343,169 @@ path(
     name="print_class_results",
 ),
 
+path("payroll/salary-structure/", views.salary_structure_list, name="salary_structure_list"),
+path("payroll/salary-structure/add/", views.add_salary_structure, name="add_salary_structure"),
+path("payroll/salary-structure/edit/<int:id>/", views.edit_salary_structure, name="edit_salary_structure"),
+path("payroll/salary-structure/delete/<int:id>/", views.delete_salary_structure, name="delete_salary_structure"),
+
+path(
+    "payroll/salary-structure/",
+    views.salary_structure_list,
+    name="salary_structure_list",
+),
+
+path(
+    "payroll/salary-structure/add/",
+    views.add_salary_structure,
+    name="add_salary_structure",
+),
+
+path(
+    "payroll/generate/",
+    views.generate_payroll,
+    name="generate_payroll",
+),
+
+path(
+    "payroll/",
+    views.payroll_list,
+    name="payroll_list",
+),
+
+path(
+    "payroll/payslip/<int:id>/",
+    views.print_payslip,
+    name="print_payslip",
+),
+
+path(
+    "payroll/salary-structure/print/<int:id>/",
+    views.print_salary_structure,
+    name="print_salary_structure",
+),
+
+# Transport
+
+path(
+    "transport/vehicles/",
+    views.vehicle_list,
+    name="vehicle_list",
+),
+
+path(
+    "transport/vehicles/add/",
+    views.add_vehicle,
+    name="add_vehicle",
+),
+
+path(
+    "transport/vehicles/edit/<int:id>/",
+    views.edit_vehicle,
+    name="edit_vehicle",
+),
+
+path(
+    "transport/vehicles/delete/<int:id>/",
+    views.delete_vehicle,
+    name="delete_vehicle",
+),
+
+path(
+    "transport/vehicles/print/<int:id>/",
+    views.print_vehicle,
+    name="print_vehicle",
+),
+
+path(
+    "transport/routes/",
+    views.transport_route_list,
+    name="transport_route_list",
+),
+
+path(
+    "transport/routes/add/",
+    views.add_transport_route,
+    name="add_transport_route",
+),
+
+path(
+    "transport/routes/edit/<int:id>/",
+    views.edit_transport_route,
+    name="edit_transport_route",
+),
+
+path(
+    "transport/routes/delete/<int:id>/",
+    views.delete_transport_route,
+    name="delete_transport_route",
+),
+
+path(
+    "transport/students/",
+    views.student_transport_list,
+    name="student_transport_list",
+),
+
+path(
+    "transport/students/add/",
+    views.add_student_transport,
+    name="add_student_transport",
+),
+
+path(
+    "transport/students/edit/<int:id>/",
+    views.edit_student_transport,
+    name="edit_student_transport",
+),
+
+path(
+    "transport/students/delete/<int:id>/",
+    views.delete_student_transport,
+    name="delete_student_transport",
+),
+
+path(
+    "transport/students/print/<int:id>/",
+    views.print_student_transport,
+    name="print_student_transport",
+),
+
+path(
+    "transport/routes/print/<int:id>/",
+    views.print_transport_route,
+    name="print_transport_route",
+),
+
+# Driver Management
+path("drivers/", views.driver_list, name="driver_list"),
+path("drivers/add/", views.add_driver, name="add_driver"),
+path("drivers/edit/<int:id>/", views.edit_driver, name="edit_driver"),
+path("drivers/delete/<int:id>/", views.delete_driver, name="delete_driver"),
+path("drivers/print/<int:id>/", views.print_driver, name="print_driver"),
+
+path(
+    "transport/dashboard/",
+    views.transport_dashboard,
+    name="transport_dashboard",
+),
+
+# hostels
+
+# Hostel Management
+path("hostel/", views.hostel_dashboard, name="hostel_dashboard"),
+
+path("hostel/blocks/", views.hostel_block_list, name="hostel_block_list"),
+path("hostel/blocks/add/", views.add_hostel_block, name="add_hostel_block"),
+path("hostel/blocks/edit/<int:id>/", views.edit_hostel_block, name="edit_hostel_block"),
+path("hostel/blocks/delete/<int:id>/", views.delete_hostel_block, name="delete_hostel_block"),
+path("hostel/blocks/print/<int:id>/", views.print_hostel_block, name="print_hostel_block"),
+
+# Hostel Rooms
+path("hostel/rooms/", views.hostel_room_list, name="hostel_room_list"),
+path("hostel/rooms/add/", views.add_hostel_room, name="add_hostel_room"),
+path("hostel/rooms/edit/<int:id>/", views.edit_hostel_room, name="edit_hostel_room"),
+path("hostel/rooms/delete/<int:id>/", views.delete_hostel_room, name="delete_hostel_room"),
+path("hostel/rooms/print/<int:id>/", views.print_hostel_room, name="print_hostel_room"),
+
+
 ]

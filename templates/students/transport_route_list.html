@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Transport Routes</h2>
+
+<p>
+    <a href="{% url 'add_transport_route' %}">
+        <button type="button">➕ Add Route</button>
+    </a>
+</p>
+
+{% if routes %}
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+
+    <thead>
+
+        <tr>
+            <th>Route</th>
+            <th>Start Point</th>
+            <th>End Point</th>
+            <th>Distance (KM)</th>
+            <th>Vehicle</th>
+            <th>Driver</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+    {% for route in routes %}
+
+        <tr>
+
+            <td>{{ route.route_name }}</td>
+
+            <td>{{ route.start_point }}</td>
+
+            <td>{{ route.end_point }}</td>
+
+            <td>{{ route.distance_km }}</td>
+
+            <td>
+
+                {% if route.vehicle %}
+                    {{ route.vehicle.registration_number }}
+                {% else %}
+                    -
+                {% endif %}
+
+            </td>
+
+            <td>
+
+                {% if route.driver %}
+                    {{ route.driver.first_name }}
+                    {{ route.driver.last_name }}
+                {% else %}
+                    -
+                {% endif %}
+
+            </td>
+
+            <td>
+
+                {% if route.active %}
+                    Active
+                {% else %}
+                    Inactive
+                {% endif %}
+
+            </td>
+
+            <td>
+
+                <a href="{% url 'edit_transport_route' route.id %}">
+                    ✏ Edit
+                </a>
+
+                |
+
+                <a href="{% url 'delete_transport_route' route.id %}">
+                    🗑 Delete
+                </a>
+
+                |
+
+                <a href="{% url 'print_transport_route' route.id %}">
+                    🖨 Print
+                </a>
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% else %}
+
+<p>No transport routes found.</p>
+
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Vehicle</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+        <label>Registration Number</label><br>
+        <input type="text" name="registration_number" required>
+    </p>
+
+    <p>
+        <label>Vehicle Name</label><br>
+        <input type="text" name="vehicle_name" required>
+    </p>
+
+    <p>
+        <label>Make / Model</label><br>
+        <input type="text" name="make">
+    </p>
+
+    <p>
+        <label>Capacity</label><br>
+        <input type="number" name="capacity" required>
+    </p>
+
+    <p>
+        <label>Driver</label><br>
+        <select name="driver">
+            <option value="">-- Select Driver --</option>
+
+            {% for driver in drivers %}
+                <option value="{{ driver.id }}">
+                    {{ driver.first_name }} {{ driver.last_name }}
+                </option>
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label>Status</label><br>
+
+        <select name="status">
+
+            <option value="Active">Active</option>
+
+            <option value="Maintenance">
+                Maintenance
+            </option>
+
+        </select>
+
+    </p>
+
+    <button type="submit">
+        Save Vehicle
+    </button>
+
+    <a href="{% url 'vehicle_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

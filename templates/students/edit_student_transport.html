@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Student Transport</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+        <label>Student</label><br>
+
+        <select name="student" required>
+
+            {% for student in students %}
+
+            <option
+                value="{{ student.id }}"
+                {% if transport.student.id == student.id %}selected{% endif %}
+            >
+                {{ student.first_name }}
+                {{ student.last_name }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+        <label>Route</label><br>
+
+        <select name="route" required>
+
+            {% for route in routes %}
+
+            <option
+                value="{{ route.id }}"
+                {% if transport.route.id == route.id %}selected{% endif %}
+            >
+                {{ route.route_name }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+        <label>Pickup Point</label><br>
+
+        <input
+            type="text"
+            name="pickup_point"
+            value="{{ transport.pickup_point }}"
+        >
+
+    </p>
+
+    <p>
+        <label>Dropoff Point</label><br>
+
+        <input
+            type="text"
+            name="dropoff_point"
+            value="{{ transport.dropoff_point }}"
+        >
+
+    </p>
+
+    <p>
+
+        <label>
+
+            <input
+                type="checkbox"
+                name="active"
+                {% if transport.active %}checked{% endif %}
+            >
+
+            Active
+
+        </label>
+
+    </p>
+
+    <button type="submit">
+        Update
+    </button>
+
+    <a href="{% url 'student_transport_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete Hostel Room</h2>
+
+<p>
+
+Are you sure you want to delete
+
+<strong>
+
+Room {{ room.room_number }}
+
+</strong>
+
+from
+
+<strong>
+
+{{ room.block.name }}
+
+</strong>?
+
+</p>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<button type="submit">
+
+Yes, Delete
+
+</button>
+
+<a href="{% url 'hostel_room_list' %}">
+<button type="button">
+
+Cancel
+
+</button>
+</a>
+
+</form>
+
+{% endblock %}

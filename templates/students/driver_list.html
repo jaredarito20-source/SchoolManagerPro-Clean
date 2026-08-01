@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Drivers</h2>
+
+<p>
+    <a href="{% url 'add_driver' %}">
+        <button>Add Driver</button>
+    </a>
+</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+
+    <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>National ID</th>
+        <th>License No.</th>
+        <th>Expiry</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for driver in drivers %}
+
+    <tr>
+
+        <td>
+            {{ driver.first_name }}
+            {{ driver.last_name }}
+        </td>
+
+        <td>{{ driver.phone }}</td>
+
+        <td>{{ driver.national_id }}</td>
+
+        <td>{{ driver.license_number }}</td>
+
+        <td>{{ driver.license_expiry }}</td>
+
+        <td>
+            {% if driver.active %}
+                Active
+            {% else %}
+                Inactive
+            {% endif %}
+        </td>
+
+        <td>
+
+            <a href="{% url 'edit_driver' driver.id %}">
+                ✏ Edit
+            </a>
+
+            |
+
+            <a href="{% url 'delete_driver' driver.id %}">
+                🗑 Delete
+            </a>
+
+            |
+
+            <a href="{% url 'print_driver' driver.id %}">
+                🖨 Print
+            </a>
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+        <td colspan="7" align="center">
+            No drivers found.
+        </td>
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+{% endblock %}

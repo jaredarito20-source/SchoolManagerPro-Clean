@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from .models import *
+from .models import TransportRoute
+
 
 
 from .models import (
@@ -16,6 +18,8 @@ from .models import (
     Attendance,
     Timetable,
     ExamTimetable,
+    SalaryStructure,
+    Payroll
 
 )
 
@@ -32,6 +36,11 @@ admin.site.register(Attendance)
 admin.site.register(Timetable)
 admin.site.register(ExamTimetable)
 
+admin.site.register(TransportRoute)
+admin.site.register(StudentTransport)
+
+
+
 admin.site.register(InventoryCategory)
 admin.site.register(InventoryItem)
 
@@ -40,6 +49,7 @@ admin.site.site_title = "School Admin"
 admin.site.index_title = "Welcome to School Management"
 
 @admin.register(SchoolProfile)
+
 class SchoolProfileAdmin(admin.ModelAdmin):
     list_display = (
         "name",
@@ -85,3 +95,4 @@ class SchoolProfileAdmin(admin.ModelAdmin):
             },
         ),
     )
+

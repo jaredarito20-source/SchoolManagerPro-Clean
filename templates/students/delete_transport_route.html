@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete Transport Route</h2>
+
+<p>
+
+Are you sure you want to delete
+
+<strong>{{ route.route_name }}</strong>?
+
+</p>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <button type="submit">
+
+        Yes, Delete
+
+    </button>
+
+    <a href="{% url 'transport_route_list' %}">
+
+        <button type="button">
+
+            Cancel
+
+        </button>
+
+    </a>
+
+</form>
+
+{% endblock %}

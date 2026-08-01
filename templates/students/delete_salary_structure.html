@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete Salary Structure</h2>
+
+<div class="card">
+
+    <p>
+
+        Are you sure you want to delete the salary structure for
+
+        <strong>
+
+            {{ salary.teacher.first_name }}
+            {{ salary.teacher.last_name }}
+
+        </strong>?
+
+    </p>
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        <button class="btn btn-danger" type="submit">
+            🗑 Yes, Delete
+        </button>
+
+        <a href="{% url 'salary_structure_list' %}" class="btn">
+            Cancel
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

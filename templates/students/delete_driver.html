@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete Driver</h2>
+
+<p>
+
+Are you sure you want to delete
+
+<strong>
+
+{{ driver.first_name }}
+{{ driver.last_name }}
+
+</strong>?
+
+</p>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <button type="submit">
+        Yes, Delete
+    </button>
+
+    <a href="{% url 'driver_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

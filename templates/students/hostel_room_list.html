@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Hostel Rooms</h2>
+
+<p>
+
+<a href="{% url 'add_hostel_room' %}">
+    <button>Add Room</button>
+</a>
+
+</p>
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+
+<tr>
+
+    <th>Block</th>
+    <th>Room</th>
+    <th>Capacity</th>
+    <th>Occupied</th>
+    <th>Available</th>
+    <th>Actions</th>
+
+</tr>
+
+{% for room in rooms %}
+
+<tr>
+
+    <td>{{ room.block.name }}</td>
+
+    <td>{{ room.room_number }}</td>
+
+    <td>{{ room.capacity }}</td>
+
+    <td>{{ room.occupied }}</td>
+
+    <td>{{ room.available_beds }}</td>
+
+    <td>
+
+        <a href="{% url 'edit_hostel_room' room.id %}">
+            ✏ Edit
+        </a>
+
+        |
+
+        <a href="{% url 'delete_hostel_room' room.id %}">
+            🗑 Delete
+        </a>
+
+        |
+
+        <a href="{% url 'print_hostel_room' room.id %}">
+            🖨 Print
+        </a>
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="6" align="center">
+
+No hostel rooms found.
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}
+

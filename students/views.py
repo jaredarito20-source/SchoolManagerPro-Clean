@@ -1,14 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
-
 from django.db.models import Sum, Avg
-
 from reportlab.pdfgen import canvas
-
 from collections import defaultdict
-
-
-
-
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -22,7 +15,8 @@ from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.http import HttpResponse
 import uuid
-
+from io import BytesIO
+from django.shortcuts import get_object_or_404
 from reportlab.lib import colors
 from reportlab.platypus import (
     SimpleDocTemplate,
@@ -64,6 +58,12 @@ from .models import (
     StockTransaction,
     Book,
     BorrowBook,
+    SalaryStructure,
+    Payroll,
+    Vehicle,
+    TransportRoute,
+    StudentTransport,
+    Driver,
 )
 from .decorators import (
     admin_required,
@@ -1916,14 +1916,50 @@ def fee_balance_list(request):
 @login_required
 @admin_or_bursar
 def edit_payment(request, id):
-    return HttpResponse("Edit Payment - Coming Soon")
 
+    payment = FeePayment.objects.get(id=id)
+    students = Student.objects.all()
 
+    if request.method == "POST":
+
+        payment.student = Student.objects.get(
+            id=request.POST["student"]
+        )
+
+        payment.amount_paid = request.POST["amount_paid"]
+        payment.payment_date = request.POST["payment_date"]
+        payment.payment_method = request.POST["payment_method"]
+        payment.receipt_number = request.POST["receipt_number"]
+
+        payment.save()
+
+        return redirect("fee_payment_list")
+
+    return render(
+        request,
+        "students/edit_payment.html",
+        {
+            "payment": payment,
+            "students": students,
+        },
+    )
 @login_required
 @admin_or_bursar
 def delete_payment(request, id):
-    return HttpResponse("Delete Payment - Coming Soon")
 
+    payment = FeePayment.objects.get(id=id)
+
+    if request.method == "POST":
+        payment.delete()
+        return redirect("fee_payment_list")
+
+    return render(
+        request,
+        "students/delete_payment.html",
+        {
+            "payment": payment,
+        },
+    )
 
 @login_required
 @admin_or_bursar
@@ -1976,7 +2012,519 @@ def add_fee_payment(request):
     },
 )
 
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
+def salary_structure_list(request):
 
+    salaries = SalaryStructure.objects.select_related(
+        "teacher"
+    ).all()
+
+    return render(
+        request,
+        "students/salary_structure_list.html",
+        {
+            "salaries": salaries,
+        },
+    )
+@login_required
+@admin_or_bursar
+def add_salary_structure(request):
+
+    teachers = Teacher.objects.all()
+
+    if request.method == "POST":
+
+        SalaryStructure.objects.create(
+            teacher=Teacher.objects.get(id=request.POST["teacher"]),
+            basic_salary=request.POST["basic_salary"],
+            house_allowance=request.POST["house_allowance"],
+            medical_allowance=request.POST["medical_allowance"],
+            transport_allowance=request.POST["transport_allowance"],
+            other_allowance=request.POST["other_allowance"],
+            paye=request.POST["paye"],
+            sha=request.POST["sha"],
+            nssf=request.POST["nssf"],
+            other_deductions=request.POST.get("other_deductions", 0),
+            bank_name=request.POST.get("bank_name", ""),
+            account_number=request.POST.get("account_number", ""),
+        )
+        return redirect("salary_structure_list")
+
+    return render(
+        request,
+        "students/add_salary_structure.html",
+        {
+            "teachers": teachers,
+        },
+    )
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
+def edit_salary_structure(request, id):
+
+    salary = get_object_or_404(SalaryStructure, id=id)
+
+    if request.method == "POST":
+
+        salary.teacher = Teacher.objects.get(
+            id=request.POST["teacher"]
+        )
+
+        salary.basic_salary = request.POST["basic_salary"]
+        salary.house_allowance = request.POST["house_allowance"]
+        salary.transport_allowance = request.POST["transport_allowance"]
+        salary.medical_allowance = request.POST["medical_allowance"]
+        salary.other_allowance = request.POST["other_allowance"]
+
+        salary.nssf = request.POST["nssf"]
+        salary.sha = request.POST["sha"]
+        salary.paye = request.POST["paye"]
+        salary.other_deductions = request.POST["other_deductions"]
+
+        salary.save()
+
+        return redirect("salary_structure_list")
+
+    teachers = Teacher.objects.all()
+
+    return render(
+        request,
+        "students/edit_salary_structure.html",
+        {
+            "salary": salary,
+            "teachers": teachers,
+        },
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
+def delete_salary_structure(request, id):
+
+    salary = get_object_or_404(
+        SalaryStructure,
+        id=id,
+    )
+
+    if request.method == "POST":
+
+        salary.delete()
+
+        return redirect(
+            "salary_structure_list"
+        )
+
+    return render(
+        request,
+        "students/delete_salary_structure.html",
+        {
+            "salary": salary,
+        },
+    )
+
+@login_required
+@admin_or_bursar
+def generate_payroll(request):
+
+    if request.method == "POST":
+
+        month = request.POST["month"]
+        year = int(request.POST["year"])
+
+        salary_structures = SalaryStructure.objects.select_related(
+            "teacher"
+        )
+
+        for salary in salary_structures:
+
+            if Payroll.objects.filter(
+                teacher=salary.teacher,
+                month=month,
+                year=year,
+            ).exists():
+                continue
+
+            gross_salary = salary.gross_salary()
+
+            deductions = (
+                salary.paye
+                + salary.sha
+                + salary.nssf
+                + salary.other_deductions
+            )
+
+            net_salary = gross_salary - deductions
+
+            Payroll.objects.create(
+                teacher=salary.teacher,
+                month=month,
+                year=year,
+                basic_salary=salary.basic_salary,
+                gross_salary=gross_salary,
+                paye=salary.paye,
+                sha=salary.sha,
+                nssf=salary.nssf,
+                other_deductions=salary.other_deductions,
+                deductions=deductions,
+                net_salary=net_salary,
+            )
+
+        return redirect("payroll_list")
+
+    return render(
+        request,
+        "students/generate_payroll.html",
+    )
+
+@login_required
+@admin_or_bursar
+def payroll_list(request):
+
+    payrolls = Payroll.objects.select_related(
+        "teacher"
+    ).order_by(
+        "-year",
+        "-generated_on",
+        "teacher__first_name",
+    )
+
+    return render(
+        request,
+        "students/payroll_list.html",
+        {
+            "payrolls": payrolls,
+        },
+    )
+
+@login_required
+@admin_or_bursar
+def print_payslip(request, id):
+
+    payroll = get_object_or_404(Payroll, id=id)
+    school = SchoolProfile.objects.first()
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=20,
+        leftMargin=20,
+        topMargin=20,
+        bottomMargin=20,
+    )
+
+    styles = getSampleStyleSheet()
+    story = []
+
+    # School Header
+    if school:
+
+        story.append(
+            Paragraph(
+                f"<font size='18'><b>{school.name}</b></font>",
+                styles["Title"],
+            )
+        )
+
+        story.append(
+            Paragraph(
+                f"{school.address}<br/>"
+                f"Tel: {school.phone}<br/>"
+                f"Email: {school.email}",
+                styles["Normal"],
+            )
+        )
+
+    story.append(Spacer(1, 0.2 * inch))
+
+    story.append(
+        Paragraph(
+            "<b>EMPLOYEE PAYSLIP</b>",
+            styles["Heading1"],
+        )
+    )
+
+    story.append(Spacer(1, 0.15 * inch))
+
+    # Employee Details
+
+    teacher = payroll.teacher
+
+    employee_table = Table(
+        [
+            ["Employee", str(teacher)],
+            ["Month", payroll.month],
+            ["Year", payroll.year],
+            ["Date Generated", payroll.generated_on],
+        ],
+        colWidths=[2.2 * inch, 4.2 * inch],
+    )
+
+    employee_table.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
+
+    story.append(employee_table)
+
+    story.append(Spacer(1, 0.2 * inch))
+
+    # Salary Breakdown
+
+    salary_table = Table(
+        [
+            ["Description", "Amount (KSh)"],
+
+            ["Basic Salary", payroll.basic_salary],
+            ["Gross Salary", payroll.gross_salary],
+
+            ["PAYE", payroll.paye],
+            ["SHA", payroll.sha],
+            ["NSSF", payroll.nssf],
+            ["Other Deductions", payroll.other_deductions],
+
+            ["Total Deductions", payroll.deductions],
+
+            ["NET SALARY", payroll.net_salary],
+        ],
+        colWidths=[4.5 * inch, 2 * inch],
+    )
+
+    salary_table.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0,0), (-1,-1), 1, colors.black),
+                ("BACKGROUND", (0,0), (-1,0), colors.darkblue),
+                ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+
+                ("BACKGROUND", (0,-1), (-1,-1), colors.lightgreen),
+
+                ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+                ("FONTNAME", (0,-1), (-1,-1), "Helvetica-Bold"),
+
+                ("ALIGN", (1,1), (-1,-1), "RIGHT"),
+            ]
+        )
+    )
+
+    story.append(salary_table)
+
+    story.append(Spacer(1, 0.4 * inch))
+
+    # Signature Section
+
+    signature_table = Table(
+        [
+            [
+                "_______________________",
+                "_______________________",
+            ],
+            [
+                "Employee Signature",
+                "Bursar / Principal",
+            ],
+        ],
+        colWidths=[3.3 * inch, 3.3 * inch],
+    )
+
+    signature_table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0,0), (-1,-1), "CENTER"),
+                ("TOPPADDING", (0,0), (-1,-1), 10),
+            ]
+        )
+    )
+
+    story.append(signature_table)
+
+    doc.build(story)
+
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=False,
+        filename=f"{teacher}_Payslip.pdf",
+    )
+
+@login_required
+@admin_or_bursar
+def print_salary_structure(request, id):
+
+    salary = get_object_or_404(SalaryStructure, id=id)
+    school = SchoolProfile.objects.first()
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=20,
+        leftMargin=20,
+        topMargin=20,
+        bottomMargin=20,
+    )
+
+    styles = getSampleStyleSheet()
+    story = []
+
+    # School Header
+    if school:
+
+        story.append(
+            Paragraph(
+                f"<font size='18'><b>{school.name}</b></font>",
+                styles["Title"],
+            )
+        )
+
+        story.append(
+            Paragraph(
+                f"{school.address}<br/>"
+                f"Tel: {school.phone}<br/>"
+                f"Email: {school.email}",
+                styles["Normal"],
+            )
+        )
+
+    story.append(Spacer(1, 0.2 * inch))
+
+    story.append(
+        Paragraph(
+            "<b>SALARY STRUCTURE</b>",
+            styles["Heading1"],
+        )
+    )
+
+    story.append(Spacer(1, 0.15 * inch))
+
+    # Teacher Details
+
+    teacher_table = Table(
+        [
+            ["Teacher", str(salary.teacher)],
+            ["Bank", salary.bank_name or "-"],
+            ["Account Number", salary.account_number or "-"],
+        ],
+        colWidths=[2.2 * inch, 4.2 * inch],
+    )
+
+    teacher_table.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
+
+    story.append(teacher_table)
+
+    story.append(Spacer(1, 0.2 * inch))
+
+    # Salary Breakdown
+
+    salary_table = Table(
+        [
+            ["Description", "Amount (KSh)"],
+
+            ["Basic Salary", salary.basic_salary],
+            ["House Allowance", salary.house_allowance],
+            ["Transport Allowance", salary.transport_allowance],
+            ["Medical Allowance", salary.medical_allowance],
+            ["Other Allowance", salary.other_allowance],
+
+            ["Gross Salary", salary.gross_salary()],
+
+            ["PAYE", salary.paye],
+            ["SHA", salary.sha],
+            ["NSSF", salary.nssf],
+            ["Other Deductions", salary.other_deductions],
+
+            ["Total Deductions", salary.total_deductions()],
+
+            ["NET SALARY", salary.net_salary()],
+        ],
+        colWidths=[4.5 * inch, 2 * inch],
+    )
+
+    salary_table.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+
+                ("BACKGROUND", (0, -1), (-1, -1), colors.lightgreen),
+
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+
+                ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+            ]
+        )
+    )
+
+    story.append(salary_table)
+
+    story.append(Spacer(1, 0.35 * inch))
+
+    # Signature Section
+
+    signature_table = Table(
+        [
+            [
+                "______________________",
+                "______________________",
+            ],
+            [
+                "Teacher",
+                school.principal_name if school else "Principal",
+            ],
+            [
+                "",
+                "Principal",
+            ],
+        ],
+        colWidths=[3.3 * inch, 3.3 * inch],
+    )
+
+    signature_table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
+
+    story.append(signature_table)
+
+    doc.build(story)
+
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=False,
+        filename=f"{salary.teacher}_Salary_Structure.pdf",
+    )
 
 @login_required
 @in_group(
@@ -2937,7 +3485,7 @@ def print_exam_timetable(request):
 
     return FileResponse(
         buffer,
-        as_attachment=True,
+        as_attachment=False,
         filename="School_Exam_Timetable.pdf",
     )
 
@@ -4106,3 +4654,1171 @@ def print_class_results(request):
             "results": results,
         },
     )
+
+# Transport
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+)
+def vehicle_list(request):
+
+    vehicles = Vehicle.objects.select_related(
+        "driver"
+    ).order_by(
+        "registration_number"
+    )
+
+    return render(
+        request,
+        "students/vehicle_list.html",
+        {
+            "vehicles": vehicles,
+        },
+    )
+
+@login_required
+@admin_or_bursar
+def add_vehicle(request):
+
+    drivers = Driver.objects.filter(active=True)
+
+    if request.method == "POST":
+
+        driver = None
+
+        if request.POST.get("driver"):
+            driver = Driver.objects.get(id=request.POST["driver"])
+
+        Vehicle.objects.create(
+            registration_number=request.POST["registration_number"],
+            vehicle_name=request.POST["vehicle_name"],
+            make=request.POST["make"],
+            capacity=request.POST["capacity"],
+            driver=driver,
+            status=request.POST["status"],
+        )
+
+        return redirect("vehicle_list")
+
+    return render(
+        request,
+        "students/add_vehicle.html",
+        {
+            "drivers": drivers,
+        },
+    )
+
+@login_required
+@admin_or_bursar
+def edit_vehicle(request, id):
+
+    vehicle = get_object_or_404(
+        Vehicle,
+        id=id,
+    )
+
+    drivers = Teacher.objects.all()
+
+    if request.method == "POST":
+
+        vehicle.registration_number = request.POST["registration_number"]
+        vehicle.vehicle_name = request.POST["vehicle_name"]
+        vehicle.make = request.POST["make"]
+        vehicle.capacity = request.POST["capacity"]
+        vehicle.status = request.POST["status"]
+
+        if request.POST.get("driver"):
+            vehicle.driver = Teacher.objects.get(
+                id=request.POST["driver"]
+            )
+        else:
+            vehicle.driver = None
+
+        vehicle.save()
+
+        return redirect("vehicle_list")
+
+    return render(
+        request,
+        "students/edit_vehicle.html",
+        {
+            "vehicle": vehicle,
+            "drivers": drivers,
+        },
+    )
+
+@login_required
+@admin_or_bursar
+def delete_vehicle(request, id):
+
+    vehicle = get_object_or_404(
+        Vehicle,
+        id=id,
+    )
+
+    if request.method == "POST":
+        vehicle.delete()
+        return redirect("vehicle_list")
+
+    return render(
+        request,
+        "students/delete_vehicle.html",
+        {
+            "vehicle": vehicle,
+        },
+    )
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+)
+def print_vehicle(request, id):
+
+    school = SchoolProfile.objects.first()
+
+    vehicle = get_object_or_404(
+        Vehicle,
+        id=id,
+    )
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+    )
+
+    styles = getSampleStyleSheet()
+
+    story = []
+
+    # School Header
+
+    if school:
+
+        story.append(
+            Paragraph(
+                f"<font size='18'><b>{school.name}</b></font>",
+                styles["Title"],
+            )
+        )
+
+        story.append(
+            Paragraph(
+                school.address,
+                styles["Normal"],
+            )
+        )
+
+        story.append(
+            Paragraph(
+                f"Tel: {school.phone}",
+                styles["Normal"],
+            )
+        )
+
+        story.append(
+            Paragraph(
+                f"Email: {school.email}",
+                styles["Normal"],
+            )
+        )
+
+    story.append(Spacer(1, 0.25 * inch))
+
+    story.append(
+        Paragraph(
+            "<b>VEHICLE DETAILS</b>",
+            styles["Heading1"],
+        )
+    )
+
+    story.append(Spacer(1, 0.15 * inch))
+
+    driver = "-"
+
+    if vehicle.driver:
+        driver = (
+            f"{vehicle.driver.first_name} "
+            f"{vehicle.driver.last_name}"
+        )
+
+    data = [
+
+        ["Registration Number", vehicle.registration_number],
+
+        ["Vehicle Name", vehicle.vehicle_name],
+
+        ["Make / Model", vehicle.make],
+
+        ["Capacity", str(vehicle.capacity)],
+
+        ["Assigned Driver", driver],
+
+        ["Status", vehicle.status],
+
+    ]
+
+    table = Table(
+        data,
+        colWidths=[2.6 * inch, 3.8 * inch],
+    )
+
+    table.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+
+                ("BACKGROUND", (0, 0), (0, -1), HexColor("#d9edf7")),
+
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
+    )
+
+    story.append(table)
+
+    story.append(Spacer(1, 0.5 * inch))
+
+    signature_table = Table(
+        [
+            [
+                "_______________________",
+                "_______________________",
+            ],
+
+            [
+                "Transport Officer",
+                school.principal_name if school else "Principal",
+            ],
+
+            [
+                "",
+                "Principal",
+            ],
+        ],
+        colWidths=[3 * inch, 3 * inch],
+    )
+
+    signature_table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
+
+    story.append(signature_table)
+
+    doc.build(story)
+
+    buffer.seek(0)
+
+    return FileResponse(
+        buffer,
+        as_attachment=False,
+        filename=f"{vehicle.registration_number}.pdf",
+    )
+
+@login_required
+@admin_or_bursar
+def transport_route_list(request):
+
+    routes = TransportRoute.objects.select_related(
+        "vehicle",
+        "driver",
+    ).all()
+
+    return render(
+        request,
+        "students/transport_route_list.html",
+        {
+            "routes": routes,
+        },
+    )
+
+
+@login_required
+@admin_or_bursar
+def add_transport_route(request):
+
+    vehicles = Vehicle.objects.all()
+    teachers = Teacher.objects.all()
+
+    if request.method == "POST":
+
+        TransportRoute.objects.create(
+            route_name=request.POST["route_name"],
+            start_point=request.POST["start_point"],
+            end_point=request.POST["end_point"],
+            distance_km=request.POST["distance_km"],
+            vehicle=Vehicle.objects.get(id=request.POST["vehicle"])
+            if request.POST["vehicle"] else None,
+            driver=Teacher.objects.get(id=request.POST["driver"])
+            if request.POST["driver"] else None,
+            active="active" in request.POST,
+        )
+
+        return redirect("transport_route_list")
+
+    return render(
+        request,
+        "students/add_transport_route.html",
+        {
+            "vehicles": vehicles,
+            "teachers": teachers,
+        },
+    )
+
+@login_required
+@admin_or_bursar
+def edit_transport_route(request, id):
+
+    route = get_object_or_404(TransportRoute, id=id)
+
+    vehicles = Vehicle.objects.all()
+    teachers = Teacher.objects.all()
+
+    if request.method == "POST":
+
+        route.route_name = request.POST["route_name"]
+        route.start_point = request.POST["start_point"]
+        route.end_point = request.POST["end_point"]
+        route.distance_km = request.POST["distance_km"]
+
+        if request.POST["vehicle"]:
+            route.vehicle = Vehicle.objects.get(
+                id=request.POST["vehicle"]
+            )
+        else:
+            route.vehicle = None
+
+        if request.POST["driver"]:
+            route.driver = Teacher.objects.get(
+                id=request.POST["driver"]
+            )
+        else:
+            route.driver = None
+
+        route.active = "active" in request.POST
+
+        route.save()
+
+        return redirect("transport_route_list")
+
+    return render(
+        request,
+        "students/edit_transport_route.html",
+        {
+            "route": route,
+            "vehicles": vehicles,
+            "teachers": teachers,
+        },
+    )
+
+
+@login_required
+@admin_or_bursar
+def delete_transport_route(request, id):
+
+    route = get_object_or_404(
+        TransportRoute,
+        id=id,
+    )
+
+    if request.method == "POST":
+
+        route.delete()
+
+        return redirect("transport_route_list")
+
+    return render(
+        request,
+        "students/delete_transport_route.html",
+        {
+            "route": route,
+        },
+    )
+
+@login_required
+@admin_or_bursar
+def student_transport_list(request):
+
+    transports = StudentTransport.objects.select_related(
+        "student",
+        "route",
+    ).all()
+
+    return render(
+        request,
+        "students/student_transport_list.html",
+        {
+            "transports": transports,
+        },
+    )
+
+@login_required
+@admin_or_bursar
+def add_student_transport(request):
+
+    classes = SchoolClass.objects.all().order_by("name")
+
+    class_id = request.GET.get("class")
+
+    students = Student.objects.none()
+
+    if class_id:
+        students = Student.objects.filter(
+            school_class_id=class_id
+        ).order_by("first_name")
+
+    routes = TransportRoute.objects.filter(active=True)
+
+    if request.method == "POST":
+
+        student = Student.objects.get(
+            id=request.POST["student"]
+        )
+
+        route = TransportRoute.objects.get(
+            id=request.POST["route"]
+        )
+
+        StudentTransport.objects.create(
+
+            student=student,
+
+            route=route,
+
+            pickup_point=request.POST["pickup_point"],
+
+            dropoff_point=request.POST["dropoff_point"],
+
+            active="active" in request.POST,
+
+        )
+
+        return redirect("student_transport_list")
+
+    return render(
+        request,
+        "students/add_student_transport.html",
+        {
+            "classes": classes,
+            "students": students,
+            "routes": routes,
+            "selected_class": class_id,
+        },
+    )
+@login_required
+@admin_or_bursar
+def edit_student_transport(request, id):
+
+    transport = get_object_or_404(
+        StudentTransport,
+        id=id,
+    )
+
+    students = Student.objects.all()
+
+    routes = TransportRoute.objects.filter(
+        active=True,
+    )
+
+    if request.method == "POST":
+
+        transport.student = Student.objects.get(
+            id=request.POST["student"]
+        )
+
+        transport.route = TransportRoute.objects.get(
+            id=request.POST["route"]
+        )
+
+        transport.pickup_point = request.POST["pickup_point"]
+
+        transport.dropoff_point = request.POST["dropoff_point"]
+
+        transport.active = "active" in request.POST
+
+        transport.save()
+
+        return redirect("student_transport_list")
+
+    return render(
+        request,
+        "students/edit_student_transport.html",
+        {
+            "transport": transport,
+            "students": students,
+            "routes": routes,
+        },
+    )
+
+
+@login_required
+@admin_or_bursar
+def delete_student_transport(request, id):
+
+    transport = get_object_or_404(
+        StudentTransport,
+        id=id,
+    )
+
+    if request.method == "POST":
+
+        transport.delete()
+
+        return redirect("student_transport_list")
+
+    return render(
+        request,
+        "students/delete_student_transport.html",
+        {
+            "transport": transport,
+        },
+    )
+
+@login_required
+@admin_or_bursar
+def print_student_transport(request, id):
+
+    transport = get_object_or_404(
+        StudentTransport,
+        id=id,
+    )
+
+    response = HttpResponse(
+        content_type="application/pdf"
+    )
+
+    response["Content-Disposition"] = (
+        f'inline; filename="Transport_{transport.student.admission_number}.pdf"'
+    )
+
+    p = canvas.Canvas(response)
+
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(180, 800, "Student Transport Details")
+
+    y = 760
+
+    p.setFont("Helvetica", 12)
+
+    p.drawString(
+        50,
+        y,
+        f"Student: {transport.student.first_name} {transport.student.last_name}"
+    )
+
+    y -= 25
+
+    p.drawString(
+        50,
+        y,
+        f"Admission No: {transport.student.admission_number}"
+    )
+
+    y -= 25
+
+    p.drawString(
+        50,
+        y,
+        f"Route: {transport.route.route_name}"
+    )
+
+    y -= 25
+
+    if transport.route.vehicle:
+
+        p.drawString(
+            50,
+            y,
+            f"Vehicle: {transport.route.vehicle.registration_number}"
+        )
+
+    else:
+
+        p.drawString(
+            50,
+            y,
+            "Vehicle: None"
+        )
+
+    y -= 25
+
+    if transport.route.driver:
+
+        p.drawString(
+            50,
+            y,
+            f"Driver: {transport.route.driver.first_name} {transport.route.driver.last_name}"
+        )
+
+    else:
+
+        p.drawString(
+            50,
+            y,
+            "Driver: None"
+        )
+
+    y -= 25
+
+    p.drawString(
+        50,
+        y,
+        f"Pickup Point: {transport.pickup_point}"
+    )
+
+    y -= 25
+
+    p.drawString(
+        50,
+        y,
+        f"Dropoff Point: {transport.dropoff_point}"
+    )
+
+    y -= 25
+
+    p.drawString(
+        50,
+        y,
+        f"Assigned Date: {transport.assigned_date}"
+    )
+
+    y -= 25
+
+    p.drawString(
+        50,
+        y,
+        f"Status: {'Active' if transport.active else 'Inactive'}"
+    )
+
+    p.showPage()
+    p.save()
+
+    return response
+
+from reportlab.pdfgen import canvas
+
+@login_required
+@admin_or_bursar
+def print_transport_route(request, id):
+
+    route = get_object_or_404(TransportRoute, id=id)
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'inline; filename="Route_{route.route_name}.pdf"'
+    )
+
+    p = canvas.Canvas(response)
+
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(180, 800, "Transport Route Details")
+
+    y = 760
+
+    p.setFont("Helvetica", 12)
+
+    p.drawString(50, y, f"Route: {route.route_name}")
+    y -= 25
+
+    p.drawString(50, y, f"Start Point: {route.start_point}")
+    y -= 25
+
+    p.drawString(50, y, f"End Point: {route.end_point}")
+    y -= 25
+
+    if route.vehicle:
+        p.drawString(
+            50,
+            y,
+            f"Vehicle: {route.vehicle.registration_number}"
+        )
+    else:
+        p.drawString(50, y, "Vehicle: None")
+
+    y -= 25
+
+    if route.driver:
+        p.drawString(
+            50,
+            y,
+            f"Driver: {route.driver.first_name} {route.driver.last_name}"
+        )
+    else:
+        p.drawString(50, y, "Driver: None")
+
+    y -= 25
+
+    p.drawString(
+        50,
+        y,
+        f"Status: {'Active' if route.active else 'Inactive'}"
+    )
+
+    p.save()
+
+    return response
+
+from reportlab.pdfgen import canvas
+
+
+@login_required
+@admin_or_bursar
+def driver_list(request):
+
+    drivers = Driver.objects.all().order_by("first_name")
+
+    return render(
+        request,
+        "students/driver_list.html",
+        {"drivers": drivers},
+    )
+
+
+@login_required
+@admin_or_bursar
+def add_driver(request):
+
+    if request.method == "POST":
+
+        Driver.objects.create(
+            first_name=request.POST["first_name"],
+            last_name=request.POST["last_name"],
+            phone=request.POST["phone"],
+            national_id=request.POST["national_id"],
+            license_number=request.POST["license_number"],
+            license_expiry=request.POST["license_expiry"],
+            active="active" in request.POST,
+        )
+
+        return redirect("driver_list")
+
+    return render(request, "students/add_driver.html")
+
+
+@login_required
+@admin_or_bursar
+def edit_driver(request, id):
+
+    driver = get_object_or_404(Driver, id=id)
+
+    if request.method == "POST":
+
+        driver.first_name = request.POST["first_name"]
+        driver.last_name = request.POST["last_name"]
+        driver.phone = request.POST["phone"]
+        driver.national_id = request.POST["national_id"]
+        driver.license_number = request.POST["license_number"]
+        driver.license_expiry = request.POST["license_expiry"]
+        driver.active = "active" in request.POST
+
+        driver.save()
+
+        return redirect("driver_list")
+
+    return render(
+        request,
+        "students/edit_driver.html",
+        {"driver": driver},
+    )
+
+
+@login_required
+@admin_or_bursar
+def delete_driver(request, id):
+
+    driver = get_object_or_404(Driver, id=id)
+
+    if request.method == "POST":
+        driver.delete()
+        return redirect("driver_list")
+
+    return render(
+        request,
+        "students/delete_driver.html",
+        {"driver": driver},
+    )
+
+
+@login_required
+@admin_or_bursar
+def print_driver(request, id):
+
+    driver = get_object_or_404(Driver, id=id)
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'inline; filename="Driver_{driver.id}.pdf"'
+    )
+
+    p = canvas.Canvas(response)
+
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(200, 800, "Driver Details")
+
+    y = 760
+
+    p.setFont("Helvetica", 12)
+
+    p.drawString(50, y, f"Name: {driver.first_name} {driver.last_name}")
+    y -= 25
+
+    p.drawString(50, y, f"Phone: {driver.phone}")
+    y -= 25
+
+    p.drawString(50, y, f"National ID: {driver.national_id}")
+    y -= 25
+
+    p.drawString(50, y, f"License No: {driver.license_number}")
+    y -= 25
+
+    p.drawString(50, y, f"License Expiry: {driver.license_expiry}")
+    y -= 25
+
+    p.drawString(
+        50,
+        y,
+        f"Status: {'Active' if driver.active else 'Inactive'}"
+    )
+
+    p.showPage()
+    p.save()
+
+    return response
+
+@login_required
+@admin_or_bursar
+def transport_dashboard(request):
+
+    total_vehicles = Vehicle.objects.count()
+
+    available_vehicles = Vehicle.objects.filter(
+        status="Available"
+    ).count()
+
+    total_drivers = Driver.objects.count()
+
+    total_routes = TransportRoute.objects.count()
+
+    total_students = StudentTransport.objects.count()
+
+    recent_assignments = StudentTransport.objects.select_related(
+        "student",
+        "route",
+    ).order_by("-id")[:10]
+
+    context = {
+
+        "total_vehicles": total_vehicles,
+
+        "available_vehicles": available_vehicles,
+
+        "total_drivers": total_drivers,
+
+        "total_routes": total_routes,
+
+        "total_students": total_students,
+
+        "recent_assignments": recent_assignments,
+
+    }
+
+    return render(
+        request,
+        "students/transport_dashboard.html",
+        context,
+    )
+
+@login_required
+@admin_or_bursar
+def hostel_dashboard(request):
+
+    total_blocks = HostelBlock.objects.count()
+
+    total_rooms = HostelRoom.objects.count()
+
+    total_students = StudentHostel.objects.filter(
+        active=True
+    ).count()
+
+    recent_allocations = StudentHostel.objects.select_related(
+        "student",
+        "room",
+        "room__block"
+    ).order_by("-id")[:10]
+
+    context = {
+
+        "total_blocks": total_blocks,
+
+        "total_rooms": total_rooms,
+
+        "total_students": total_students,
+
+        "recent_allocations": recent_allocations,
+
+    }
+
+    return render(
+        request,
+        "students/hostel_dashboard.html",
+        context,
+    )
+
+@login_required
+@admin_or_bursar
+def hostel_block_list(request):
+
+    blocks = HostelBlock.objects.all()
+
+    return render(
+        request,
+        "students/hostel_block_list.html",
+        {"blocks": blocks},
+    )
+
+
+@login_required
+@admin_or_bursar
+def add_hostel_block(request):
+
+    if request.method == "POST":
+
+        HostelBlock.objects.create(
+
+            name=request.POST["name"],
+
+            description=request.POST["description"],
+
+            active="active" in request.POST,
+
+        )
+
+        return redirect("hostel_block_list")
+
+    return render(
+        request,
+        "students/add_hostel_block.html")
+
+
+@login_required
+@admin_or_bursar
+def edit_hostel_block(request, id):
+
+    block = get_object_or_404(
+        HostelBlock,
+        id=id,
+    )
+
+    if request.method == "POST":
+
+        block.name = request.POST["name"]
+
+        block.description = request.POST["description"]
+
+        block.active = "active" in request.POST
+
+        block.save()
+
+        return redirect("hostel_block_list")
+
+    return render(
+        request,
+        "students/edit_hostel_block.html",
+        {"block": block},
+    )
+
+
+@login_required
+@admin_or_bursar
+def delete_hostel_block(request, id):
+
+    block = get_object_or_404(
+        HostelBlock,
+        id=id,
+    )
+
+    if request.method == "POST":
+
+        block.delete()
+
+        return redirect("hostel_block_list")
+
+    return render(
+        request,
+        "students/delete_hostel_block.html",
+        {"block": block},
+    )
+
+from reportlab.pdfgen import canvas
+
+@login_required
+@admin_or_bursar
+def print_hostel_block(request, id):
+
+    block = get_object_or_404(HostelBlock, id=id)
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'inline; filename="Hostel_Block_{block.name}.pdf"'
+    )
+
+    p = canvas.Canvas(response)
+
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(180, 800, "Hostel Block Details")
+
+    y = 760
+
+    p.setFont("Helvetica", 12)
+
+    p.drawString(50, y, f"Block Name: {block.name}")
+    y -= 30
+
+    p.drawString(50, y, f"Description: {block.description}")
+    y -= 30
+
+    p.drawString(
+        50,
+        y,
+        f"Status: {'Active' if block.active else 'Inactive'}"
+    )
+
+    p.showPage()
+    p.save()
+
+    return response
+
+@login_required
+@admin_or_bursar
+def hostel_room_list(request):
+
+    rooms = HostelRoom.objects.select_related("block").all()
+
+    return render(
+        request,
+        "students/hostel_room_list.html",
+        {"rooms": rooms},
+    )
+
+
+@login_required
+@admin_or_bursar
+def add_hostel_room(request):
+
+    blocks = HostelBlock.objects.filter(active=True)
+
+    if request.method == "POST":
+
+        block = HostelBlock.objects.get(id=request.POST["block"])
+
+        HostelRoom.objects.create(
+            block=block,
+            room_number=request.POST["room_number"],
+            capacity=request.POST["capacity"],
+        )
+
+        return redirect("hostel_room_list")
+
+    return render(
+        request,
+        "students/add_hostel_room.html",
+        {"blocks": blocks},
+    )
+
+
+@login_required
+@admin_or_bursar
+def edit_hostel_room(request, id):
+
+    room = get_object_or_404(HostelRoom, id=id)
+
+    blocks = HostelBlock.objects.filter(active=True)
+
+    if request.method == "POST":
+
+        room.block = HostelBlock.objects.get(id=request.POST["block"])
+        room.room_number = request.POST["room_number"]
+        room.capacity = request.POST["capacity"]
+
+        room.save()
+
+        return redirect("hostel_room_list")
+
+    return render(
+        request,
+        "students/edit_hostel_room.html",
+        {
+            "room": room,
+            "blocks": blocks,
+        },
+    )
+
+
+@login_required
+@admin_or_bursar
+def delete_hostel_room(request, id):
+
+    room = get_object_or_404(HostelRoom, id=id)
+
+    if request.method == "POST":
+
+        room.delete()
+
+        return redirect("hostel_room_list")
+
+    return render(
+        request,
+        "students/delete_hostel_room.html",
+        {"room": room},
+    )
+
+@login_required
+@admin_or_bursar
+def print_hostel_room(request, id):
+
+    room = get_object_or_404(HostelRoom, id=id)
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'inline; filename="Room_{room.room_number}.pdf"'
+    )
+
+    p = canvas.Canvas(response)
+
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(180, 800, "Hostel Room Details")
+
+    y = 760
+
+    p.setFont("Helvetica", 12)
+
+    p.drawString(50, y, f"Block: {room.block.name}")
+    y -= 30
+
+    p.drawString(50, y, f"Room: {room.room_number}")
+    y -= 30
+
+    p.drawString(50, y, f"Capacity: {room.capacity}")
+    y -= 30
+
+    p.drawString(50, y, f"Occupied: {room.occupied}")
+
+    p.showPage()
+    p.save()
+
+    return response

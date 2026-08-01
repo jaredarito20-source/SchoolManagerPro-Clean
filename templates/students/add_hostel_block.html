@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Hostel Block</h2>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<p>
+
+<label>Block Name</label><br>
+
+<input type="text" name="name" required>
+
+</p>
+
+<p>
+
+<label>Description</label><br>
+
+<textarea name="description"></textarea>
+
+</p>
+
+<p>
+
+<label>
+
+<input type="checkbox" name="active" checked>
+
+Active
+
+</label>
+
+</p>
+
+<button type="submit">
+
+Save
+
+</button>
+
+<a href="{% url 'hostel_block_list' %}">
+<button type="button">
+
+Cancel
+
+</button>
+</a>
+
+</form>
+
+{% endblock %}

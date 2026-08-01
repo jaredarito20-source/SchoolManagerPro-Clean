@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Hostel Room</h2>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<p>
+
+<label>Hostel Block</label><br>
+
+<select name="block" required>
+
+{% for block in blocks %}
+
+<option
+value="{{ block.id }}"
+{% if room.block.id == block.id %}
+selected
+{% endif %}>
+
+{{ block.name }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</p>
+
+<p>
+
+<label>Room Number</label><br>
+
+<input
+type="text"
+name="room_number"
+value="{{ room.room_number }}"
+required>
+
+</p>
+
+<p>
+
+<label>Capacity</label><br>
+
+<input
+type="number"
+name="capacity"
+value="{{ room.capacity }}"
+required>
+
+</p>
+
+<button type="submit">
+
+Update
+
+</button>
+
+<a href="{% url 'hostel_room_list' %}">
+<button type="button">
+
+Cancel
+
+</button>
+</a>
+
+</form>
+
+{% endblock %}

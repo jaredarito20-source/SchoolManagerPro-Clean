@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Assign Student to Transport</h2>
+
+<!-- Select Class -->
+<form method="GET">
+
+    <p>
+        <label>Class</label><br>
+
+        <select name="class" onchange="this.form.submit()">
+
+            <option value="">
+                Select Class
+            </option>
+
+            {% for class in classes %}
+
+                <option
+                    value="{{ class.id }}"
+                    {% if selected_class == class.id|stringformat:"s" %}
+                        selected
+                    {% endif %}
+                >
+                    {{ class.name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+</form>
+
+<hr>
+
+<!-- Assign Transport -->
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+
+        <label>Student</label><br>
+
+        <select name="student" required>
+
+            <option value="">
+                Select Student
+            </option>
+
+            {% for student in students %}
+
+                <option value="{{ student.id }}">
+
+                    {{ student.first_name }}
+                    {{ student.last_name }}
+                    ({{ student.admission_number }})
+
+                </option>
+
+            {% empty %}
+
+                <option disabled>
+
+                    No students found.
+                    Please select a class first.
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label>Transport Route</label><br>
+
+        <select name="route" required>
+
+            <option value="">
+                Select Route
+            </option>
+
+            {% for route in routes %}
+
+                <option value="{{ route.id }}">
+
+                    {{ route.route_name }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label>Pickup Point</label><br>
+
+        <input
+            type="text"
+            name="pickup_point"
+            placeholder="Enter Pickup Point"
+        >
+
+    </p>
+
+    <p>
+
+        <label>Dropoff Point</label><br>
+
+        <input
+            type="text"
+            name="dropoff_point"
+            placeholder="Enter Dropoff Point"
+        >
+
+    </p>
+
+    <p>
+
+        <label>
+
+            <input
+                type="checkbox"
+                name="active"
+                checked
+            >
+
+            Active
+
+        </label>
+
+    </p>
+
+    <button type="submit">
+
+        Save Assignment
+
+    </button>
+
+    <a href="{% url 'student_transport_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

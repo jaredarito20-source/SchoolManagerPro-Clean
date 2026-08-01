@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete Fee Payment</h2>
+
+<p>
+    Are you sure you want to delete this payment?
+</p>
+
+<table border="1" cellpadding="8">
+
+    <tr>
+        <th>Student</th>
+        <td>
+            {{ payment.student.first_name }}
+            {{ payment.student.last_name }}
+        </td>
+    </tr>
+
+    <tr>
+        <th>Amount</th>
+        <td>{{ payment.amount_paid }}</td>
+    </tr>
+
+    <tr>
+        <th>Date</th>
+        <td>{{ payment.payment_date }}</td>
+    </tr>
+
+    <tr>
+        <th>Receipt</th>
+        <td>{{ payment.receipt_number }}</td>
+    </tr>
+
+</table>
+
+<br>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <button type="submit">
+        Yes, Delete
+    </button>
+
+    <a href="{% url 'fee_payment_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

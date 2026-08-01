@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Generate Monthly Payroll</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+        <label>Month</label><br>
+
+        <select name="month" required>
+
+            <option>January</option>
+            <option>February</option>
+            <option>March</option>
+            <option>April</option>
+            <option>May</option>
+            <option>June</option>
+            <option>July</option>
+            <option>August</option>
+            <option>September</option>
+            <option>October</option>
+            <option>November</option>
+            <option>December</option>
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label>Year</label><br>
+
+        <input
+            type="number"
+            name="year"
+            value="2026"
+            required
+        >
+
+    </p>
+
+    <button type="submit">
+
+        Generate Payroll
+
+    </button>
+
+</form>
+
+{% endblock %}
