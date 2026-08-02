@@ -1017,3 +1017,210 @@ class HostelTransfer(models.Model):
     def __str__(self):
         return f"{self.student} ({self.from_room} → {self.to_room})"
 
+class DisciplineCategory(models.Model):
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    def __str__(self):
+        return self.name
+
+
+class DisciplineCase(models.Model):
+
+    STATUS_CHOICES = [
+        ("Open", "Open"),
+        ("Closed", "Closed"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="discipline_cases",
+    )
+
+    category = models.ForeignKey(
+        DisciplineCategory,
+        on_delete=models.PROTECT,
+    )
+
+    reported_by = models.ForeignKey(
+        Teacher,
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
+    incident_date = models.DateField()
+
+    description = models.TextField()
+
+    action_taken = models.TextField(
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="Open",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    def __str__(self):
+        return f"{self.student} - {self.category}"
+
+class Medication(models.Model):
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=0,
+    )
+
+    expiry_date = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return self.name
+
+
+class MedicalVisit(models.Model):
+
+    STATUS_CHOICES = [
+        ("Under Treatment", "Under Treatment"),
+        ("Recovered", "Recovered"),
+        ("Referred", "Referred"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="medical_visits",
+    )
+
+    attended_by = models.ForeignKey(
+        Teacher,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="medical_cases",
+    )
+
+    visit_date = models.DateField()
+
+    complaint = models.CharField(
+        max_length=200,
+    )
+
+    diagnosis = models.TextField(
+        blank=True,
+    )
+
+    treatment = models.TextField(
+        blank=True,
+    )
+
+    temperature = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default="Under Treatment",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    def __str__(self):
+        return f"{self.student} - {self.visit_date}"
+
+
+
+
+class HospitalReferral(models.Model):
+
+    visit = models.OneToOneField(
+        MedicalVisit,
+        on_delete=models.CASCADE,
+        related_name="referral",
+    )
+
+    hospital_name = models.CharField(
+        max_length=150,
+    )
+
+    referral_reason = models.TextField()
+
+    parent_notified = models.BooleanField(
+        default=False,
+    )
+
+    referral_date = models.DateField()
+
+    def __str__(self):
+        return f"{self.visit.student} - {self.hospital_name}"
+
+class Prescription(models.Model):
+
+    medical_visit = models.ForeignKey(
+        MedicalVisit,
+        on_delete=models.CASCADE,
+        related_name="prescriptions",
+    )
+
+    medication = models.ForeignKey(
+        Medication,
+        on_delete=models.PROTECT,
+    )
+
+    dosage = models.CharField(
+        max_length=100,
+    )
+
+    frequency = models.CharField(
+        max_length=100,
+        help_text="Example: Twice Daily",
+    )
+
+    duration = models.CharField(
+        max_length=100,
+        help_text="Example: 5 Days",
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=1,
+    )
+
+    instructions = models.TextField(
+        blank=True,
+    )
+
+    def __str__(self):
+        return (
+            f"{self.medical_visit.student} - "
+            f"{self.medication.name}"
+        )
+

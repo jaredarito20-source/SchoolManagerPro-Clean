@@ -51,7 +51,6 @@
         <a href="{% url 'promotion_list' %}">🎓 Student Promotion</a>
         
 
-
     </div>
 
     <!-- Examination -->
@@ -192,6 +191,99 @@
         <a href="{% url 'hostel_bed_list' %}">
             🛏 Hostel Beds
         </a>
+
+        <a href="{% url 'hostel_dashboard' %}">
+            🏠 Hostel Dashboard
+        </a>
+        <a href="{% url 'print_hostel_dashboard' %}">
+            🖨 Print Hostel Dashboard
+        </a>
+
+
+</div>
+
+<!-- Discipline -->
+
+<button class="dropdown-btn">
+    ⚖ Discipline ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'discipline_dashboard' %}">
+        📊 Discipline Dashboard
+    </a>
+
+    <a href="{% url 'discipline_case_list' %}">
+        ⚖ Discipline Cases
+    </a>
+
+    <a href="{% url 'add_discipline_case' %}">
+        ➕ Record New Case
+    </a>
+
+    <a href="{% url 'discipline_category_list' %}">
+        📂 Discipline Categories
+    </a>
+
+    <a href="{% url 'add_discipline_category' %}">
+        ➕ Add Category
+    </a>
+
+    <a href="{% url 'print_discipline_dashboard' %}">
+        🖨 Print Dashboard
+    </a>
+
+</div>
+
+<!-- Medical -->
+
+<button class="dropdown-btn">
+    🏥 Medical ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'medical_visit_list' %}">
+        🤒 Sick Bay Visits
+    </a>
+
+    <a href="{% url 'add_medical_visit' %}">
+        ➕ New Medical Visit
+    </a>
+
+    <a href="{% url 'prescription_list' %}">
+        💉 Prescriptions
+    </a>
+
+    <a href="{% url 'medication_list' %}">
+        💊 Medications
+    </a>
+
+    <a href="{% url 'add_medication' %}">
+        ➕ Add Medication
+    </a>
+
+    <a href="{% url 'prescription_list' %}">
+        💉 Prescriptions
+    </a>
+
+    <a href="{% url 'add_prescription' %}">
+        ➕ New Prescription
+    </a>
+    <a href="{% url 'print_prescription_register' %}">
+        🖨 Print Prescription Register
+    </a>
+
+    <a href="{% url 'print_medical_dashboard' %}">
+        🖨 Print Medical Dashboard
+    </a>
+
+    <a href="{% url 'medical_reports' %}">
+        📈 Medical Reports
+    </a>
+
+    
 
 
 </div>

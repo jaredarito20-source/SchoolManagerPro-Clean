@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>🗑 Delete Medication</h2>
+
+<p>
+
+Are you sure you want to delete the medication:
+
+<strong>
+
+{{ medication.name }}
+
+</strong>?
+
+</p>
+
+<form method="post">
+
+{% csrf_token %}
+
+<button
+    type="submit"
+    style="background:red;color:white;"
+>
+
+Delete
+
+</button>
+
+<a href="{% url 'medication_list' %}">
+
+<button type="button">
+
+Cancel
+
+</button>
+
+</a>
+
+</form>
+
+{% endblock %}

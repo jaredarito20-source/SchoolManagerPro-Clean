@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Discipline Categories</h2>
+
+<p>
+    <a href="{% url 'add_discipline_category' %}">
+        <button>➕ Add Category</button>
+    </a>
+</p>
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+
+    <tr>
+
+        <th>#</th>
+        <th>Category</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Actions</th>
+
+    </tr>
+
+    {% for category in categories %}
+
+    <tr>
+
+        <td>{{ forloop.counter }}</td>
+
+        <td>{{ category.name }}</td>
+
+        <td>{{ category.description }}</td>
+
+        <td>
+
+            {% if category.active %}
+                Active
+            {% else %}
+                Inactive
+            {% endif %}
+
+        </td>
+
+        <td>
+
+            <a href="{% url 'edit_discipline_category' category.id %}">
+                ✏ Edit
+            </a>
+
+            |
+
+            <a href="{% url 'delete_discipline_category' category.id %}">
+                🗑 Delete
+            </a>
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+
+        <td colspan="5" align="center">
+
+            No discipline categories found.
+
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+{% endblock %}

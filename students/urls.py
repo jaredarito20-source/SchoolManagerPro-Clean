@@ -603,4 +603,204 @@ path(
     name="available_beds",
 ),
 
+path(
+    "hostel/dashboard/",
+    views.hostel_dashboard,
+    name="hostel_dashboard",
+),
+
+path(
+    "hostel/dashboard/print/",
+    views.print_hostel_dashboard,
+    name="print_hostel_dashboard",
+),
+
+path(
+    "discipline/",
+    views.discipline_case_list,
+    name="discipline_case_list",
+),
+
+path(
+    "discipline/add/",
+    views.add_discipline_case,
+    name="add_discipline_case",
+),
+
+path(
+    "discipline/edit/<int:id>/",
+    views.edit_discipline_case,
+    name="edit_discipline_case",
+),
+
+path(
+    "discipline/delete/<int:id>/",
+    views.delete_discipline_case,
+    name="delete_discipline_case",
+),
+
+path(
+    "discipline/print/<int:id>/",
+    views.print_discipline_case,
+    name="print_discipline_case",
+),
+
+path(
+    "discipline/categories/",
+    views.discipline_category_list,
+    name="discipline_category_list",
+),
+
+path(
+    "discipline/categories/add/",
+    views.add_discipline_category,
+    name="add_discipline_category",
+),
+
+path(
+    "discipline/categories/edit/<int:id>/",
+    views.edit_discipline_category,
+    name="edit_discipline_category",
+),
+
+path(
+    "discipline/categories/delete/<int:id>/",
+    views.delete_discipline_category,
+    name="delete_discipline_category",
+),
+
+path(
+    "discipline/dashboard/",
+    views.discipline_dashboard,
+    name="discipline_dashboard",
+),
+
+path(
+    "discipline/dashboard/print/",
+    views.print_discipline_dashboard,
+    name="print_discipline_dashboard",
+),
+
+# Medication
+path(
+    "medical/medications/",
+    views.medication_list,
+    name="medication_list",
+),
+
+path(
+    "medical/medications/add/",
+    views.add_medication,
+    name="add_medication",
+),
+
+path(
+    "medical/medications/edit/<int:pk>/",
+    views.edit_medication,
+    name="edit_medication",
+),
+
+path(
+    "medical/medications/delete/<int:pk>/",
+    views.delete_medication,
+    name="delete_medication",
+),
+
+path(
+    "medical/medications/print/",
+    views.print_medication_list,
+    name="print_medication_list",
+),
+
+# Medical Visits
+path(
+    "medical/visits/",
+    views.medical_visit_list,
+    name="medical_visit_list",
+),
+
+path(
+    "medical/visits/add/",
+    views.add_medical_visit,
+    name="add_medical_visit",
+),
+
+path(
+    "medical/visits/edit/<int:pk>/",
+    views.edit_medical_visit,
+    name="edit_medical_visit",
+),
+
+path(
+    "medical/visits/delete/<int:pk>/",
+    views.delete_medical_visit,
+    name="delete_medical_visit",
+),
+
+path(
+    "medical/visits/print/<int:pk>/",
+    views.print_medical_visit,
+    name="print_medical_visit",
+),
+
+path(
+    "medical/dashboard/",
+    views.medical_dashboard,
+    name="medical_dashboard",
+),
+
+path(
+    "medical/dashboard/print/",
+    views.print_medical_dashboard,
+    name="print_medical_dashboard",
+),
+
+path(
+    "medical/reports/",
+    views.medical_reports,
+    name="medical_reports",
+),
+
+path(
+    "medical/reports/print/",
+    views.print_medical_reports,
+    name="print_medical_reports",
+),
+
+path(
+    "prescriptions/",
+    views.prescription_list,
+    name="prescription_list",
+),
+
+path(
+    "prescriptions/add/",
+    views.add_prescription,
+    name="add_prescription",
+),
+
+path(
+    "prescriptions/<int:pk>/edit/",
+    views.edit_prescription,
+    name="edit_prescription",
+),
+
+path(
+    "prescriptions/<int:pk>/delete/",
+    views.delete_prescription,
+    name="delete_prescription",
+),
+
+path(
+    "prescriptions/<int:pk>/print/",
+    views.print_prescription,
+    name="print_prescription",
+),
+
+path(
+    "prescriptions/print/",
+    views.print_prescription_register,
+    name="print_prescription_register",
+),
+
 ]

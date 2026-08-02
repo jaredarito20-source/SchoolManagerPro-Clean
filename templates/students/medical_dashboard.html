@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>🏥 Medical Dashboard</h2>
+
+<p>
+
+<a href="{% url 'print_medical_dashboard' %}">
+    <button>🖨 Print Dashboard</button>
+</a>
+
+</p>
+
+<br>
+
+<table border="1" cellpadding="10" cellspacing="0" width="100%">
+
+<tr bgcolor="#f2f2f2">
+
+    <th>Total Visits</th>
+    <th>Under Treatment</th>
+    <th>Recovered</th>
+    <th>Referred</th>
+    <th>Medications</th>
+
+</tr>
+
+<tr align="center">
+
+    <td>{{ total_visits }}</td>
+    <td>{{ under_treatment }}</td>
+    <td>{{ recovered }}</td>
+    <td>{{ referred }}</td>
+    <td>{{ total_medications }}</td>
+
+</tr>
+
+</table>
+
+<br><br>
+
+<h3>🤒 Most Common Illnesses</h3>
+
+<table border="1" cellpadding="8" cellspacing="0" width="70%">
+
+<tr bgcolor="#f2f2f2">
+
+    <th>No</th>
+    <th>Complaint</th>
+    <th>Total Cases</th>
+
+</tr>
+
+{% for illness in common_illnesses %}
+
+<tr>
+
+    <td>{{ forloop.counter }}</td>
+
+    <td>{{ illness.complaint }}</td>
+
+    <td align="center">
+
+        {{ illness.total }}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td colspan="3" align="center">
+
+        No medical records available.
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<br><br>
+
+<h3>🏫 Medical Cases by Class</h3>
+
+<table border="1" cellpadding="8" cellspacing="0" width="70%">
+
+<tr bgcolor="#f2f2f2">
+
+    <th>No</th>
+    <th>Class</th>
+    <th>Total Cases</th>
+
+</tr>
+
+{% for school_class in class_summary %}
+
+<tr>
+
+    <td>{{ forloop.counter }}</td>
+
+    <td>{{ school_class.name }}</td>
+
+    <td align="center">
+
+        {{ school_class.total_cases }}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td colspan="3" align="center">
+
+        No class statistics available.
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<br><br>
+
+<h3>⚡ Quick Actions</h3>
+
+<p>
+
+<a href="{% url 'medical_visit_list' %}">
+    📋 Medical Visits
+</a>
+
+|
+
+<a href="{% url 'add_medical_visit' %}">
+    ➕ New Medical Visit
+</a>
+
+|
+
+<a href="{% url 'medication_list' %}">
+    💊 Medications
+</a>
+
+|
+
+<a href="{% url 'medical_dashboard' %}">
+    📊 Refresh Dashboard
+</a>
+
+</p>
+
+{% endblock %}

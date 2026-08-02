@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>➕ Add Medication</h2>
+
+<form method="post">
+
+{% csrf_token %}
+
+<p>
+
+<label>Medication Name</label><br>
+
+<input
+    type="text"
+    name="name"
+    required
+>
+
+</p>
+
+<p>
+
+<label>Description</label><br>
+
+<textarea
+    name="description"
+    rows="4"
+></textarea>
+
+</p>
+
+<p>
+
+<label>Quantity</label><br>
+
+<input
+    type="number"
+    name="quantity"
+    min="0"
+    required
+>
+
+</p>
+
+<p>
+
+<label>Expiry Date</label><br>
+
+<input
+    type="date"
+    name="expiry_date"
+>
+
+</p>
+
+<button type="submit">
+
+    💾 Save Medication
+
+</button>
+
+<a href="{% url 'medication_list' %}">
+
+    <button type="button">
+
+        Cancel
+
+    </button>
+
+</a>
+
+</form>
+
+{% endblock %}

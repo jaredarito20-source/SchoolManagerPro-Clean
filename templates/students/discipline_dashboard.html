@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>
+    ⚖ Discipline Dashboard</h2>
+<p>
+
+<a href="{% url 'print_discipline_dashboard' %}">
+
+    <button>
+        🖨 Print Dashboard
+    </button>
+
+</a>
+
+</p>
+
+<br>
+
+<table border="1" cellpadding="10" cellspacing="0" width="100%">
+
+    <tr bgcolor="#f2f2f2">
+
+        <th>Total Discipline Cases</th>
+        <th>Open Cases</th>
+        <th>Closed Cases</th>
+        <th>Categories</th>
+        <th>Total Students</th>
+
+    </tr>
+
+    <tr align="center">
+
+        <td>{{ total_cases }}</td>
+        <td>{{ open_cases }}</td>
+        <td>{{ closed_cases }}</td>
+        <td>{{ total_categories }}</td>
+        <td>{{ total_students }}</td>
+
+    </tr>
+
+</table>
+
+<br><br>
+
+<h3>📂 Cases by Category</h3>
+
+<table border="1" cellpadding="8" cellspacing="0" width="70%">
+
+    <tr bgcolor="#f2f2f2">
+
+        <th>No</th>
+        <th>Category</th>
+        <th>Total Cases</th>
+
+    </tr>
+
+    {% for category in category_summary %}
+
+    <tr>
+
+        <td>{{ forloop.counter }}</td>
+
+        <td>{{ category.name }}</td>
+
+        <td align="center">
+
+            {{ category.total_cases }}
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+
+        <td colspan="3" align="center">
+
+            No discipline cases found.
+
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+<br><br>
+
+<h3>🏫 Cases by Class</h3>
+
+<table border="1" cellpadding="8" cellspacing="0" width="60%">
+
+    <tr bgcolor="#f2f2f2">
+
+        <th>No</th>
+
+        <th>Class</th>
+
+        <th>Total Cases</th>
+
+    </tr>
+
+    {% for school_class in class_summary %}
+
+    <tr>
+
+        <td>{{ forloop.counter }}</td>
+
+        <td>{{ school_class.name }}</td>
+
+        <td align="center">
+
+            {{ school_class.total_cases }}
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+
+        <td colspan="3" align="center">
+
+            No discipline cases found.
+
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+<br><br>
+
+<h3>⚡ Quick Actions</h3>
+
+<p>
+
+<a href="{% url 'discipline_dashboard' %}">
+    <button>📊 Refresh Dashboard</button>
+</a>
+
+<a href="{% url 'discipline_case_list' %}">
+    <button>📋 View Discipline Cases</button>
+</a>
+
+<a href="{% url 'add_discipline_case' %}">
+    <button>➕ Record New Case</button>
+</a>
+
+<a href="{% url 'discipline_category_list' %}">
+    <button>📂 Manage Categories</button>
+</a>
+
+</p>
+
+{% endblock %}

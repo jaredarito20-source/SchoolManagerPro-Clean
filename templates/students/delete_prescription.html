@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>🗑 Delete Prescription</h2>
+
+<p>
+
+Are you sure you want to delete this prescription?
+
+</p>
+
+<table border="1" cellpadding="8">
+
+<tr>
+
+    <th>Student</th>
+
+    <td>
+
+        {{ prescription.medical_visit.student.first_name }}
+        {{ prescription.medical_visit.student.last_name }}
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <th>Medication</th>
+
+    <td>
+
+        {{ prescription.medication.name }}
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <th>Dosage</th>
+
+    <td>
+
+        {{ prescription.dosage }}
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <th>Frequency</th>
+
+    <td>
+
+        {{ prescription.frequency }}
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <th>Duration</th>
+
+    <td>
+
+        {{ prescription.duration }}
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <th>Quantity</th>
+
+    <td>
+
+        {{ prescription.quantity }}
+
+    </td>
+
+</tr>
+
+</table>
+
+<br>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <button
+        type="submit"
+        style="background:red;color:white;"
+    >
+
+        🗑 Yes, Delete Prescription
+
+    </button>
+
+    <a href="{% url 'prescription_list' %}">
+
+        <button type="button">
+
+            Cancel
+
+        </button>
+
+    </a>
+
+</form>
+
+{% endblock %}

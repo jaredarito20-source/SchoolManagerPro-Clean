@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Discipline Category</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <table>
+
+        <tr>
+
+            <td><strong>Category Name</strong></td>
+
+            <td>
+
+                <input
+                    type="text"
+                    name="name"
+                    value="{{ category.name }}"
+                    required
+                    style="width:300px;"
+                >
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Description</strong></td>
+
+            <td>
+
+                <textarea
+                    name="description"
+                    rows="5"
+                    cols="50"
+                >{{ category.description }}</textarea>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Active</strong></td>
+
+            <td>
+
+                <input
+                    type="checkbox"
+                    name="active"
+                    {% if category.active %}
+                    checked
+                    {% endif %}
+                >
+
+            </td>
+
+        </tr>
+
+    </table>
+
+    <br>
+
+    <button type="submit">
+        💾 Update Category
+    </button>
+
+    <a href="{% url 'discipline_category_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

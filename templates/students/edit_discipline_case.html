@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Discipline Case</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <table>
+
+        <tr>
+
+            <td><strong>Student</strong></td>
+
+            <td>
+
+                <select name="student" required>
+
+                    {% for student in students %}
+
+                    <option
+                        value="{{ student.id }}"
+                        {% if student.id == case.student.id %}
+                        selected
+                        {% endif %}
+                    >
+
+                        {{ student.admission_number }}
+                        -
+                        {{ student.first_name }}
+                        {{ student.last_name }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Category</strong></td>
+
+            <td>
+
+                <select name="category" required>
+
+                    {% for category in categories %}
+
+                    <option
+                        value="{{ category.id }}"
+                        {% if category.id == case.category.id %}
+                        selected
+                        {% endif %}
+                    >
+
+                        {{ category.name }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Reported By</strong></td>
+
+            <td>
+
+                <select name="reported_by" required>
+
+                    {% for teacher in teachers %}
+
+                    <option
+                        value="{{ teacher.id }}"
+                        {% if teacher.id == case.reported_by.id %}
+                        selected
+                        {% endif %}
+                    >
+
+                        {{ teacher.first_name }}
+                        {{ teacher.last_name }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Incident Date</strong></td>
+
+            <td>
+
+                <input
+                    type="date"
+                    name="incident_date"
+                    value="{{ case.incident_date|date:'Y-m-d' }}"
+                    required
+                >
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Description</strong></td>
+
+            <td>
+
+                <textarea
+                    name="description"
+                    rows="5"
+                    cols="60"
+                    required
+                >{{ case.description }}</textarea>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Action Taken</strong></td>
+
+            <td>
+
+                <textarea
+                    name="action_taken"
+                    rows="4"
+                    cols="60"
+                >{{ case.action_taken }}</textarea>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Status</strong></td>
+
+            <td>
+
+                <select name="status">
+
+                    <option
+                        value="Open"
+                        {% if case.status == "Open" %}
+                        selected
+                        {% endif %}
+                    >
+                        Open
+                    </option>
+
+                    <option
+                        value="Closed"
+                        {% if case.status == "Closed" %}
+                        selected
+                        {% endif %}
+                    >
+                        Closed
+                    </option>
+
+                </select>
+
+            </td>
+
+        </tr>
+
+    </table>
+
+    <br>
+
+    <button type="submit">
+        💾 Update Discipline Case
+    </button>
+
+    <a href="{% url 'discipline_case_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

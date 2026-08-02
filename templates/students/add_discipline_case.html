@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Discipline Case</h2>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<table>
+
+<tr>
+
+<td>Student</td>
+
+<td>
+
+<select name="student" required>
+
+{% for student in students %}
+
+<option value="{{ student.id }}">
+
+{{ student.admission_number }}
+
+-
+
+{{ student.first_name }}
+
+{{ student.last_name }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Category</td>
+
+<td>
+
+<select name="category" required>
+
+{% for category in categories %}
+
+<option value="{{ category.id }}">
+
+{{ category.name }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Reported By</td>
+
+<td>
+
+<select name="reported_by" required>
+
+{% for teacher in teachers %}
+
+<option value="{{ teacher.id }}">
+
+{{ teacher.first_name }}
+
+{{ teacher.last_name }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Date</td>
+
+<td>
+
+<input
+type="date"
+name="incident_date"
+required>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Description</td>
+
+<td>
+
+<textarea
+name="description"
+rows="5"
+cols="50"
+required></textarea>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Action Taken</td>
+
+<td>
+
+<textarea
+name="action_taken"
+rows="4"
+cols="50"></textarea>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Status</td>
+
+<td>
+
+<select name="status">
+
+<option value="Open">Open</option>
+
+<option value="Closed">Closed</option>
+
+</select>
+
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<button type="submit">
+
+💾 Save
+
+</button>
+
+<a href="{% url 'discipline_case_list' %}">
+
+<button type="button">
+
+Cancel
+
+</button>
+
+</a>
+
+</form>
+
+{% endblock %}

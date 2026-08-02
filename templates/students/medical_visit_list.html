@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>🏥 Medical Visits</h2>
+
+<p>
+
+<a href="{% url 'add_medical_visit' %}">
+    <button>➕ New Medical Visit</button>
+</a>
+
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+
+<tr bgcolor="#f2f2f2">
+
+    <th>No</th>
+    <th>Admission No</th>
+    <th>Student</th>
+    <th>Date</th>
+    <th>Complaint</th>
+    <th>Temperature</th>
+    <th>Status</th>
+    <th>Actions</th>
+
+</tr>
+
+{% for visit in visits %}
+
+<tr>
+
+<td>{{ forloop.counter }}</td>
+
+<td>{{ visit.student.admission_number }}</td>
+
+<td>{{ visit.student.first_name }} {{ visit.student.last_name }}</td>
+
+<td>{{ visit.visit_date }}</td>
+
+<td>{{ visit.complaint }}</td>
+
+<td>{{ visit.temperature }}</td>
+
+<td>{{ visit.status }}</td>
+
+<td>
+
+<a href="{% url 'edit_medical_visit' visit.id %}">
+✏ Edit
+</a>
+
+|
+
+<a href="{% url 'delete_medical_visit' visit.id %}">
+🗑 Delete
+</a>
+
+|
+
+<a href="{% url 'print_medical_visit' visit.id %}">
+🖨 Print
+</a>
+
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="8" align="center">
+
+No medical visits recorded.
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

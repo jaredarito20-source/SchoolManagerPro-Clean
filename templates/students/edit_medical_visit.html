@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>✏ Edit Medical Visit</h2>
+
+<form method="post">
+
+{% csrf_token %}
+
+<p>
+
+<label>Student</label><br>
+
+<select name="student">
+
+{% for student in students %}
+
+<option value="{{ student.id }}"
+
+{% if student.id == visit.student.id %}
+
+selected
+
+{% endif %}>
+
+{{ student.admission_number }}
+-
+{{ student.first_name }}
+{{ student.last_name }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</p>
+
+<p>
+
+<label>Attended By</label><br>
+
+<select name="attended_by">
+
+{% for teacher in teachers %}
+
+<option value="{{ teacher.id }}"
+
+{% if visit.attended_by and teacher.id == visit.attended_by.id %}
+
+selected
+
+{% endif %}>
+
+{{ teacher.first_name }}
+{{ teacher.last_name }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</p>
+
+<p>
+
+<label>Visit Date</label><br>
+
+<input
+type="date"
+name="visit_date"
+value="{{ visit.visit_date|date:'Y-m-d' }}">
+
+</p>
+
+<p>
+
+<label>Complaint</label><br>
+
+<input
+type="text"
+name="complaint"
+value="{{ visit.complaint }}">
+
+</p>
+
+<p>
+
+<label>Diagnosis</label><br>
+
+<textarea name="diagnosis">{{ visit.diagnosis }}</textarea>
+
+</p>
+
+<p>
+
+<label>Treatment</label><br>
+
+<textarea name="treatment">{{ visit.treatment }}</textarea>
+
+</p>
+
+<p>
+
+<label>Temperature</label><br>
+
+<input
+type="number"
+step="0.1"
+name="temperature"
+value="{{ visit.temperature }}">
+
+</p>
+
+<p>
+
+<label>Status</label><br>
+
+<select name="status">
+
+<option value="Under Treatment"
+{% if visit.status == "Under Treatment" %}selected{% endif %}>
+Under Treatment
+</option>
+
+<option value="Recovered"
+{% if visit.status == "Recovered" %}selected{% endif %}>
+Recovered
+</option>
+
+<option value="Referred"
+{% if visit.status == "Referred" %}selected{% endif %}>
+Referred
+</option>
+
+</select>
+
+</p>
+
+<button type="submit">
+
+💾 Update Visit
+
+</button>
+
+<a href="{% url 'medical_visit_list' %}">
+
+<button type="button">
+
+Cancel
+
+</button>
+
+</a>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Discipline Category</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <table>
+
+        <tr>
+
+            <td><strong>Category Name</strong></td>
+
+            <td>
+
+                <input
+                    type="text"
+                    name="name"
+                    required
+                    style="width:300px;"
+                >
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Description</strong></td>
+
+            <td>
+
+                <textarea
+                    name="description"
+                    rows="5"
+                    cols="50"
+                ></textarea>
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td><strong>Active</strong></td>
+
+            <td>
+
+                <input
+                    type="checkbox"
+                    name="active"
+                    checked
+                >
+
+            </td>
+
+        </tr>
+
+    </table>
+
+    <br>
+
+    <button type="submit">
+        💾 Save Category
+    </button>
+
+    <a href="{% url 'discipline_category_list' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

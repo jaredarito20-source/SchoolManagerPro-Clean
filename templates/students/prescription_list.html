@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>💉 Prescription Register</h2>
+
+<br>
+
+<table border="1" cellpadding="10" cellspacing="0" width="100%">
+
+    <tr bgcolor="#f2f2f2">
+
+        <th>Total Prescriptions</th>
+        <th>Total Medication Issued</th>
+
+    </tr>
+
+    <tr align="center">
+
+        <td>{{ total_prescriptions }}</td>
+        <td>{{ total_quantity }}</td>
+
+    </tr>
+
+</table>
+
+<br>
+
+<form method="get">
+
+<table cellpadding="8">
+
+<tr>
+
+    <td>
+
+        <input
+            type="text"
+            name="student"
+            placeholder="Search Student..."
+            value="{{ request.GET.student }}"
+        >
+
+    </td>
+
+    <td>
+
+        <select name="class">
+
+            <option value="">All Classes</option>
+
+            {% for class in classes %}
+
+            <option
+                value="{{ class.id }}"
+                {% if request.GET.class == class.id|stringformat:"s" %}
+                selected
+                {% endif %}
+            >
+
+                {{ class.name }}
+
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </td>
+
+    <td>
+
+        <select name="medication">
+
+            <option value="">All Medications</option>
+
+            {% for medication in medications %}
+
+            <option
+                value="{{ medication.id }}"
+                {% if request.GET.medication == medication.id|stringformat:"s" %}
+                selected
+                {% endif %}
+            >
+
+                {{ medication.name }}
+
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </td>
+
+    <td>
+
+        <button type="submit">
+            🔍 Search
+        </button>
+
+    </td>
+
+    <td>
+
+        <a href="{% url 'prescription_list' %}">
+            <button type="button">
+                🔄 Reset
+            </button>
+        </a>
+
+    </td>
+
+</tr>
+
+</table>
+
+</form>
+
+<br>
+
+<p>
+
+<a href="{% url 'add_prescription' %}">
+    ➕ New Prescription
+</a>
+
+&nbsp;&nbsp;
+
+<a href="{% url 'print_prescription_register' %}">
+    🖨 Print Register
+</a>
+
+&nbsp;&nbsp;
+
+<a href="{% url 'medical_dashboard' %}">
+    🏥 Medical Dashboard
+</a>
+
+&nbsp;&nbsp;
+
+<a href="{% url 'medication_list' %}">
+    💊 Medications
+</a>
+
+</p>
+
+<br>
+
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+
+<tr bgcolor="#f2f2f2">
+
+    <th>No</th>
+    <th>Date</th>
+    <th>Admission No.</th>
+    <th>Student</th>
+    <th>Class</th>
+    <th>Medication</th>
+    <th>Quantity</th>
+    <th>Dosage</th>
+    <th>Frequency</th>
+    <th>Duration</th>
+    <th>Actions</th>
+
+</tr>
+
+{% for prescription in prescriptions %}
+
+<tr>
+
+    <td align="center">
+        {{ forloop.counter }}
+    </td>
+
+    <td>
+        {{ prescription.medical_visit.visit_date }}
+    </td>
+
+    <td>
+        {{ prescription.medical_visit.student.admission_number }}
+    </td>
+
+    <td>
+        {{ prescription.medical_visit.student.first_name }}
+        {{ prescription.medical_visit.student.last_name }}
+    </td>
+
+    <td>
+        {{ prescription.medical_visit.student.school_class }}
+    </td>
+
+    <td>
+        {{ prescription.medication.name }}
+    </td>
+
+    <td align="center">
+        {{ prescription.quantity }}
+    </td>
+
+    <td>
+        {{ prescription.dosage }}
+    </td>
+
+    <td>
+        {{ prescription.frequency }}
+    </td>
+
+    <td>
+        {{ prescription.duration }}
+    </td>
+
+    <td>
+
+        <a href="{% url 'view_prescription' prescription.id %}">
+            👁 View
+        </a>
+
+        |
+
+        <a href="{% url 'edit_prescription' prescription.id %}">
+            ✏ Edit
+        </a>
+
+        |
+
+        <a href="{% url 'print_prescription' prescription.id %}">
+            🖨 Print
+        </a>
+
+        |
+
+        <a
+            href="{% url 'delete_prescription' prescription.id %}"
+            onclick="return confirm('Are you sure you want to delete this prescription?');"
+        >
+            🗑 Delete
+        </a>
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td colspan="11" align="center">
+
+        No prescriptions found.
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

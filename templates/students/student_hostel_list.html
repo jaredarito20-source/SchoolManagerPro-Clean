@@ -5,75 +5,80 @@
 <h2>Student Hostel Allocation</h2>
 
 <p>
-<a href="{% url 'add_student_hostel' %}">
-    <button>Assign Student</button>
-</a>
+    <a href="{% url 'add_student_hostel' %}">
+        <button>Assign Student</button>
+    </a>
 </p>
 
 <table border="1" cellpadding="6" cellspacing="0" width="100%">
 
-<tr>
+    <tr>
+        <th>Admission No.</th>
+        <th>Student</th>
+        <th>Class</th>
+        <th>Block</th>
+        <th>Room</th>
+        <th>Bed</th>
+        <th>Assigned Date</th>
+        <th>Actions</th>
+    </tr>
 
-    <th>Student</th>
-    <th>Class</th>
-    <th>Block</th>
-    <th>Room</th>
-    <th>Bed</th>
-    <th>Actions</th>
+    {% for allocation in allocations %}
 
-</tr>
+    <tr>
 
-{% for allocation in allocations %}
+        <td>{{ allocation.student.admission_number }}</td>
 
-<tr>
+        <td>
+            {{ allocation.student.first_name }}
+            {{ allocation.student.last_name }}
+        </td>
 
-<td>{{ allocation.student.admission_number }}</td>
+        <td>{{ allocation.student.school_class }}</td>
 
-<td>{{ allocation.student.first_name }} {{ allocation.student.last_name }}</td>
+        <td>{{ allocation.room.block.name }}</td>
 
-<td>{{ allocation.room.block.name }}</td>
+        <td>{{ allocation.room.room_number }}</td>
 
-<td>{{ allocation.room.room_number }}</td>
+        <td>{{ allocation.bed.bed_number }}</td>
 
-<td>{{ allocation.bed.bed_number }}</td>
+        <td>{{ allocation.assigned_date }}</td>
 
-<td>{{ allocation.assigned_date }}</td>
+        <td>
 
-<td>
+            <a href="{% url 'edit_student_hostel' allocation.id %}">
+                ✏ Edit
+            </a>
 
-<a href="{% url 'edit_student_hostel' allocation.id %}">
-✏ Edit
-</a>
+            |
 
-|
+            <a href="{% url 'delete_student_hostel' allocation.id %}">
+                🗑 Delete
+            </a>
 
-<a href="{% url 'delete_student_hostel' allocation.id %}">
-🗑 Delete
-</a>
+            |
 
-|
+            <a href="{% url 'print_student_hostel' allocation.id %}">
+                🖨 Print
+            </a>
 
-<a href="{% url 'print_student_hostel' allocation.id %}">
-🖨 Print
-</a>
+        </td>
 
-</td>
+    </tr>
 
-</tr>
+    {% empty %}
 
-{% endfor %}
+    <tr>
 
-<tr>
+        <td colspan="8" align="center">
 
-<td colspan="6" align="center">
+            No students allocated.
 
-No students allocated.
+        </td>
 
-</td>
+    </tr>
 
-</tr>
-
-{% endfor %}
+    {% endfor %}
 
 </table>
 

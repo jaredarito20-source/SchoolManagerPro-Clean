@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>🏥 Medical Reports</h2>
+
+<form method="get"
+      action="{% url 'print_medical_reports' %}">
+
+<table>
+
+<tr>
+
+<td><strong>From Date</strong></td>
+
+<td>
+
+<input
+type="date"
+name="from_date"
+required>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td><strong>To Date</strong></td>
+
+<td>
+
+<input
+type="date"
+name="to_date"
+required>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td></td>
+
+<td>
+
+<button type="submit">
+
+🖨 Generate Medical Report
+
+</button>
+
+</td>
+
+</tr>
+
+</table>
+
+</form>
+
+{% endblock %}

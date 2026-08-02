@@ -2,26 +2,49 @@
 
 {% block content %}
 
-<h2>Hostel Dashboard</h2>
+<h2>🏠 Hostel Occupancy Dashboard</h2>
+
+<br>
 
 <table border="1" cellpadding="10" cellspacing="0" width="100%">
 
-<tr>
+<tr bgcolor="#d9edf7">
 
-    <td align="center">
-        <h3>{{ total_blocks }}</h3>
-        <strong>Hostel Blocks</strong>
-    </td>
+<th>Total Rooms</th>
+<th>Total Beds</th>
+<th>Occupied Beds</th>
+<th>Available Beds</th>
+<th>Occupancy Rate</th>
 
-    <td align="center">
-        <h3>{{ total_rooms }}</h3>
-        <strong>Rooms</strong>
-    </td>
+</tr>
 
-    <td align="center">
-        <h3>{{ total_students }}</h3>
-        <strong>Students in Hostel</strong>
-    </td>
+<tr align="center">
+
+<td>{{ total_rooms }}</td>
+
+<td>{{ total_beds }}</td>
+
+<td>{{ occupied_beds }}</td>
+
+<td>{{ available_beds }}</td>
+
+<td>
+
+{% if overall >= 100 %}
+
+🔴 {{ overall }}%
+
+{% elif overall >= 80 %}
+
+🟡 {{ overall }}%
+
+{% else %}
+
+🟢 {{ overall }}%
+
+{% endif %}
+
+</td>
 
 </tr>
 
@@ -29,44 +52,98 @@
 
 <br>
 
-<h3>Recent Room Allocations</h3>
+<h3>Hostel Blocks</h3>
 
-<table border="1" cellpadding="6" cellspacing="0" width="100%">
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
 
-<tr>
+<tr bgcolor="#eeeeee">
 
-    <th>Student</th>
-    <th>Block</th>
-    <th>Room</th>
-    <th>Bed</th>
-    <th>Date Assigned</th>
+<th>Hostel Block</th>
+<th>Wardens</th>
+<th>Rooms</th>
+<th>Total Beds</th>
+<th>Occupied</th>
+<th>Available</th>
+<th>Occupancy</th>
+<th>Status</th>
 
 </tr>
 
-{% for allocation in recent_allocations %}
+{% for item in dashboard %}
 
 <tr>
 
-    <td>
-        {{ allocation.student.first_name }}
-        {{ allocation.student.last_name }}
-    </td>
+<td>
 
-    <td>
-        {{ allocation.room.block.name }}
-    </td>
+<strong>{{ item.block.name }}</strong>
 
-    <td>
-        {{ allocation.room.room_number }}
-    </td>
+</td>
 
-    <td>
-        {{ allocation.bed_number }}
-    </td>
+<td>
 
-    <td>
-        {{ allocation.assigned_date }}
-    </td>
+{% for warden in item.block.wardens.all %}
+
+{{ warden.full_name }}<br>
+
+{% empty %}
+
+<font color="red">
+
+No Warden Assigned
+
+</font>
+
+{% endfor %}
+
+</td>
+
+<td align="center">
+
+{{ item.rooms }}
+
+</td>
+
+<td align="center">
+
+{{ item.beds }}
+
+</td>
+
+<td align="center">
+
+{{ item.occupied }}
+
+</td>
+
+<td align="center">
+
+{{ item.available }}
+
+</td>
+
+<td align="center">
+
+{{ item.percentage }}%
+
+</td>
+
+<td align="center">
+
+{% if item.percentage == 100 %}
+
+🔴 FULL
+
+{% elif item.percentage >= 80 %}
+
+🟡 NEARLY FULL
+
+{% else %}
+
+🟢 AVAILABLE
+
+{% endif %}
+
+</td>
 
 </tr>
 
@@ -74,16 +151,28 @@
 
 <tr>
 
-    <td colspan="5" align="center">
+<td colspan="8" align="center">
 
-        No hostel allocations found.
+No Hostel Blocks Found
 
-    </td>
+</td>
 
 </tr>
 
 {% endfor %}
 
 </table>
+
+<br>
+
+<a href="{% url 'print_hostel_dashboard' %}">
+
+<button>
+
+🖨 Print Dashboard
+
+</button>
+
+</a>
 
 {% endblock %}

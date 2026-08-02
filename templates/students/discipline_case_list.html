@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Discipline Cases</h2>
+
+<p>
+
+<a href="{% url 'add_discipline_case' %}">
+    <button>➕ Add Discipline Case</button>
+</a>
+
+</p>
+
+<table border="1" cellpadding="6" cellspacing="0" width="100%">
+
+<tr>
+
+    <th>Date</th>
+    <th>Student</th>
+    <th>Class</th>
+    <th>Category</th>
+    <th>Reported By</th>
+    <th>Status</th>
+    <th>Actions</th>
+
+</tr>
+
+{% for case in cases %}
+
+<tr>
+
+<td>{{ case.incident_date }}</td>
+
+<td>
+
+{{ case.student.admission_number }}
+
+-
+
+{{ case.student.first_name }}
+
+{{ case.student.last_name }}
+
+</td>
+
+<td>{{ case.student.school_class }}</td>
+
+<td>{{ case.category }}</td>
+
+<td>{{ case.reported_by }}</td>
+
+<td>{{ case.status }}</td>
+
+<td>
+
+<a href="{% url 'edit_discipline_case' case.id %}">
+✏ Edit
+</a>
+
+|
+
+<a href="{% url 'delete_discipline_case' case.id %}">
+🗑 Delete
+</a>
+
+|
+
+<a href="{% url 'print_discipline_case' case.id %}">
+🖨 Print
+</a>
+
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="7" align="center">
+
+No discipline cases found.
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

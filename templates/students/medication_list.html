@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>💊 Medication List</h2>
+
+<p>
+
+<a href="{% url 'add_medication' %}">
+    <button>➕ Add Medication</button>
+</a>
+
+<a href="{% url 'print_medication_list' %}">
+    <button>🖨 Print List</button>
+</a>
+
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+
+<tr bgcolor="#f2f2f2">
+
+    <th>No</th>
+    <th>Medication</th>
+    <th>Description</th>
+    <th>Quantity</th>
+    <th>Expiry Date</th>
+    <th>Actions</th>
+
+</tr>
+
+{% for medication in medications %}
+
+<tr>
+
+    <td>{{ forloop.counter }}</td>
+
+    <td>{{ medication.name }}</td>
+
+    <td>{{ medication.description }}</td>
+
+    <td align="center">{{ medication.quantity }}</td>
+
+    <td>{{ medication.expiry_date }}</td>
+
+    <td>
+
+        <a href="{% url 'edit_medication' medication.id %}">
+            ✏ Edit
+        </a>
+
+        |
+
+        <a href="{% url 'delete_medication' medication.id %}">
+            🗑 Delete
+        </a>
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td colspan="6" align="center">
+
+        No medications found.
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

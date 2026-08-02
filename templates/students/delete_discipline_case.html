@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete Discipline Case</h2>
+
+<p style="color:red; font-weight:bold;">
+
+Are you sure you want to delete this discipline case?
+
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0">
+
+    <tr>
+
+        <th>Student</th>
+
+        <td>
+
+            {{ case.student.admission_number }}
+
+            -
+
+            {{ case.student.first_name }}
+
+            {{ case.student.last_name }}
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <th>Class</th>
+
+        <td>
+
+            {{ case.student.school_class }}
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <th>Category</th>
+
+        <td>
+
+            {{ case.category }}
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <th>Reported By</th>
+
+        <td>
+
+            {{ case.reported_by }}
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <th>Incident Date</th>
+
+        <td>
+
+            {{ case.incident_date }}
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <th>Status</th>
+
+        <td>
+
+            {{ case.status }}
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <th>Description</th>
+
+        <td>
+
+            {{ case.description }}
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <th>Action Taken</th>
+
+        <td>
+
+            {{ case.action_taken|default:"None" }}
+
+        </td>
+
+    </tr>
+
+</table>
+
+<br>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <button
+        type="submit"
+        style="background:red; color:white;"
+    >
+        🗑 Yes, Delete
+    </button>
+
+    <a href="{% url 'discipline_case_list' %}">
+
+        <button type="button">
+
+            Cancel
+
+        </button>
+
+    </a>
+
+</form>
+
+{% endblock %}

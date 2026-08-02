@@ -40,6 +40,10 @@ admin.site.register(TransportRoute)
 admin.site.register(StudentTransport)
 
 
+admin.site.register(DisciplineCategory)
+admin.site.register(DisciplineCase)
+
+
 
 admin.site.register(InventoryCategory)
 admin.site.register(InventoryItem)
