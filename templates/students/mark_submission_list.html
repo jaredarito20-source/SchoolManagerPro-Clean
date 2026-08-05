@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Mark Submissions</h2>
+
+<p>
+    <a href="{% url 'add_mark' %}" class="btn btn-primary">
+        ➕ Enter Marks
+    </a>
+</p>
+
+<table class="table table-bordered table-striped">
+
+    <thead>
+
+        <tr>
+
+            <th>Class</th>
+
+            <th>Subject</th>
+
+            <th>Exam</th>
+
+            <th>Teacher</th>
+
+            <th>Status</th>
+
+            <th>Students</th>
+
+            <th>Action</th>
+
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+    {% for submission in submissions %}
+
+        <tr>
+
+            <td>{{ submission.school_class }}</td>
+
+            <td>{{ submission.subject }}</td>
+
+            <td>{{ submission.exam }}</td>
+
+            <td>{{ submission.teacher }}</td>
+
+            <td>
+
+                {% if submission.status == "DRAFT" %}
+                    🟡 Draft
+
+                {% elif submission.status == "SUBMITTED" %}
+                    🔵 Submitted
+
+                {% elif submission.status == "APPROVED" %}
+                    🟢 Approved
+
+                {% else %}
+                    🔴 Rejected
+                {% endif %}
+
+            </td>
+
+            <td>
+
+                {{ submission.marks.count }}
+
+            </td>
+
+            <td>
+
+                {% if submission.status == "DRAFT" %}
+
+                    <a
+                        href="{% url 'submit_mark_submission' submission.id %}"
+                        class="btn btn-success btn-sm">
+
+                        📤 Submit
+
+                    </a>
+
+                {% else %}
+
+                    <span class="text-muted">
+
+                        Waiting
+
+                    </span>
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+    {% empty %}
+
+        <tr>
+
+            <td colspan="7">
+
+                No submissions found.
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% endblock %}

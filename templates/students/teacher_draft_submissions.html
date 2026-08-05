@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>My Draft Submissions</h2>
+
+<table class="table table-bordered table-striped">
+
+<thead>
+
+<tr>
+
+<th>Class</th>
+
+<th>Subject</th>
+
+<th>Exam</th>
+
+<th>Saved</th>
+
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for submission in submissions %}
+
+<tr>
+
+<td>{{ submission.school_class }}</td>
+
+<td>{{ submission.subject }}</td>
+
+<td>{{ submission.exam }}</td>
+
+<td>{{ submission.submitted_at }}</td>
+
+<td>
+
+<a
+href="{% url 'continue_mark_entry' submission.id %}"
+class="btn btn-warning">
+
+✏ Continue
+
+</a>
+
+<a
+href="{% url 'submit_mark_submission' submission.id %}"
+class="btn btn-success">
+
+📤 Submit
+
+</a>
+
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="5">
+
+No draft submissions.
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

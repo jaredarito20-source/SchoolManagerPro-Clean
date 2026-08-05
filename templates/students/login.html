@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+
+<h2>School Management System Login</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <p>
+        Username<br>
+        <input type="text" name="username" required>
+    </p>
+
+    <p>
+        Password<br>
+        <input type="password" name="password" required>
+    </p>
+
+    <button type="submit">Login</button>
+</form>
+
+{% if messages %}
+    {% for message in messages %}
+        <p style="color:red;">{{ message }}</p>
+    {% endfor %}
+{% endif %}
+
+</body>
+</html>

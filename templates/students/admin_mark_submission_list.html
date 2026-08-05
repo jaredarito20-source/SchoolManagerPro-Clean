@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Submitted Marks</h2>
+
+<table class="table table-bordered">
+
+<thead>
+
+<tr>
+
+<th>Class</th>
+
+<th>Subject</th>
+
+<th>Exam</th>
+
+<th>Teacher</th>
+
+<th>Students</th>
+
+<th>Submitted</th>
+
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for submission in submissions %}
+
+<tr>
+
+<td>{{ submission.school_class }}</td>
+
+<td>{{ submission.subject }}</td>
+
+<td>{{ submission.exam }}</td>
+
+<td>{{ submission.teacher }}</td>
+
+<td>{{ submission.marks.count }}</td>
+
+<td>{{ submission.submitted_at }}</td>
+
+<td>
+
+<a
+href="{% url 'view_mark_submission' submission.id %}"
+class="btn btn-info btn-sm">
+
+👁 View
+
+</a>
+
+<a
+href="{% url 'approve_mark_submission' submission.id %}"
+class="btn btn-success btn-sm">
+
+Approve
+
+</a>
+
+<a
+href="{% url 'reject_mark_submission' submission.id %}"
+class="btn btn-danger btn-sm">
+
+Reject
+
+</a>
+
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="7">
+
+No submitted marks.
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

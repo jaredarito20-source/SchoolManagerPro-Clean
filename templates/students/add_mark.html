@@ -1,93 +1,183 @@
-{% extends "base.html" %}
+{% extends "students/base.html" %}
 
 {% block content %}
 
-<h2>Add Marks</h2>
+<h2>Enter Class Marks</h2>
 
-
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
 
 {% if error %}
-<p style="color:red; font-weight:bold; background:#ffe6e6; padding:10px; border:1px solid red;">
+<div class="alert alert-danger">
     {{ error }}
-</p>
+</div>
 {% endif %}
 
 <form method="POST">
+
     {% csrf_token %}
-    <p>
-    <label>Class</label><br>
 
-    <select name="school_class" onchange="this.form.submit()">
+    <table class="table">
 
-        <option value="">-- Select Class --</option>
+        <tr>
+            <td><strong>Class</strong></td>
+            <td>
+                <select
+                    name="school_class"
+                    class="form-control"
+                    onchange="this.form.submit()"
+                    required>
 
-        {% for class in classes %}
+                    <option value="">Select Class</option>
 
-        <option value="{{ class.id }}"
-            {% if selected_class.id == class.id %}selected{% endif %}>
+                    {% for class in classes %}
 
-            {{ class.name }}
+                    <option
+                        value="{{ class.id }}"
+                        {% if selected_class and selected_class.id == class.id %}
+                            selected
+                        {% endif %}>
 
-        </option>
+                        {{ class.name }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+            </td>
+        </tr>
+
+        <tr>
+            <td><strong>Subject</strong></td>
+            <td>
+
+                <select
+                    name="subject"
+                    class="form-control"
+                    required>
+
+                    <option value="">
+                        Select Subject
+                    </option>
+
+                    {% for subject in subjects %}
+
+                    <option value="{{ subject.id }}">
+                        {{ subject.name }}
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td><strong>Exam</strong></td>
+            <td>
+
+                <select
+                    name="exam"
+                    class="form-control"
+                    required>
+
+                    <option value="">
+                        Select Exam
+                    </option>
+
+                    {% for exam in exams %}
+
+                    <option value="{{ exam.id }}">
+                        {{ exam.name }}
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+        </tr>
+
+    </table>
+
+    {% if students %}
+
+    <hr>
+
+    <h4>Students</h4>
+
+    <table class="table table-bordered table-striped">
+
+        <thead>
+
+            <tr>
+
+                <th>Admission No</th>
+
+                <th>Student Name</th>
+
+                <th>Marks</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        {% for student in students %}
+
+            <tr>
+
+                <td>
+
+                    {{ student.admission_number }}
+
+                </td>
+
+                <td>
+
+                    {{ student.first_name }}
+                    {{ student.last_name }}
+
+                </td>
+
+                <td>
+
+                    <input
+                        type="number"
+                        name="marks_{{ student.id }}"
+                        class="form-control"
+                        min="0"
+                        max="100"
+                        step="0.01">
+
+                </td>
+
+            </tr>
 
         {% endfor %}
 
-    </select>
+        </tbody>
 
-</p>
+    </table>
 
-    <p>
-        <label>Student</label><br>
-        <select name="student" required>
-            <option value="">-- Select Student --</option>
-            {% for student in students %}
-                <option value="{{ student.id }}">
-                    {{ student.first_name }} {{ student.last_name }}
-                </option>
-            {% endfor %}
-        </select>
-    </p>
+    <button
+        type="submit"
+        name="save_marks"
+        class="btn btn-success">
 
-    <p>
-        <label>Subject</label><br>
-        <select name="subject" required>
-            <option value="">-- Select Subject --</option>
-            {% for subject in subjects %}
-                <option value="{{ subject.id }}">
-                    {{ subject.name }}
-                </option>
-            {% endfor %}
-        </select>
-    </p>
+        💾 Save All Marks
 
-    <p>
-        <label>Exam</label><br>
-        <select name="exam" required>
-            <option value="">-- Select Exam --</option>
+    </button>
 
-            {% for exam in exams %}
-                <option value="{{ exam.id }}">
-                    {{ exam }}
-                </option>
-            {% endfor %}
-        </select>
-    </p>
-
-    <p>
-        <label>Marks</label><br>
-        <input type="number"
-               name="marks"
-               min="0"
-               max="100"
-               step="0.01"
-               required>
-    </p>
-
-    <button type="submit">Save Marks</button>
-
-    <a href="{% url 'mark_list' %}">
-        <button type="button">Cancel</button>
-    </a>
+    {% endif %}
 
 </form>
 

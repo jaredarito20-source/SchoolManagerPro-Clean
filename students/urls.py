@@ -170,6 +170,61 @@ urlpatterns = [
 ),
 
     path(
+        "exam/<int:id>/toggle/",
+        views.toggle_exam_status,
+        name="toggle_exam_status",
+    ),
+
+        path(
+        "marks/<int:id>/submit/",
+        views.submit_mark,
+        name="submit_mark",
+    ),
+
+    path("mark-submissions/", 
+         views.mark_submission_list, 
+         name="mark_submission_list"),
+    path("mark-submissions/<int:id>/submit/",
+        views.submit_mark_submission, 
+        name="submit_mark_submission"),
+
+    path(
+    "admin/mark-submissions/",
+    views.admin_mark_submission_list,
+    name="admin_mark_submission_list",
+),
+    path(
+    "admin/mark-submissions/<int:id>/view/",
+    views.view_mark_submission,
+    name="view_mark_submission",
+),
+    path(
+    "teacher/drafts/",
+    views.teacher_draft_submissions,
+    name="teacher_draft_submissions",
+),
+
+    path(
+    "marks/draft/<int:id>/",
+    views.continue_mark_entry,
+    name="continue_mark_entry",
+),
+
+    path(
+        "admin/mark-submissions/<int:id>/approve/",
+        views.approve_mark_submission,
+        name="approve_mark_submission",
+    ),
+
+    path(
+        "admin/mark-submissions/<int:id>/reject/",
+        views.reject_mark_submission,
+        name="reject_mark_submission",
+    ),
+
+
+
+    path(
         "timetable/print/",
         views.print_timetable,
         name="print_timetable",
@@ -802,5 +857,10 @@ path(
     views.print_prescription_register,
     name="print_prescription_register",
 ),
+
+path("login/", views.login_view, name="login"),
+path("logout/", views.logout_view, name="logout"),
+path("change-password/", views.change_password, name="change_password"),
+path("profile/", views.profile, name="profile"),
 
 ]

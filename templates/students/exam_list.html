@@ -4,35 +4,110 @@
 
 <h2>Examinations</h2>
 
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% if request.user.is_superuser %}
 <p>
     <a href="{% url 'add_exam' %}">
         <button>Add Exam</button>
     </a>
 </p>
+{% endif %}
 
-<table border="1" width="100%" cellpadding="8">
-    <tr>
-        <th>Name</th>
-        <th>Term</th>
-        <th>Year</th>
-        <th>Actions</th>
-    </tr>
+<table border="1" width="100%" cellpadding="8" cellspacing="0">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Term</th>
+            <th>Year</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
 
     {% for exam in exams %}
-    <tr>
-        <td>{{ exam.name }}</td>
-        <td>{{ exam.term }}</td>
-        <td>{{ exam.year }}</td>
-        <td>
-            <a href="{% url 'edit_exam' exam.id %}">✏ Edit</a> |
-            <a href="{% url 'delete_exam' exam.id %}">🗑 Delete</a>
-        </td>
-    </tr>
+        <tr>
+
+            <td>{{ exam.name }}</td>
+
+            <td>{{ exam.term }}</td>
+
+            <td>{{ exam.year }}</td>
+
+            <td>
+                {% if exam.status == "OPEN" %}
+                    <span style="color:green;font-weight:bold;">
+                        🟢 OPEN
+                    </span>
+                {% else %}
+                    <span style="color:red;font-weight:bold;">
+                        🔴 CLOSED
+                    </span>
+                {% endif %}
+            </td>
+
+            <td>
+
+                {% if request.user.is_superuser %}
+
+                    <a href="{% url 'edit_exam' exam.id %}">
+                        ✏ Edit
+                    </a>
+
+                    |
+
+                    <a href="{% url 'delete_exam' exam.id %}">
+                        🗑 Delete
+                    </a>
+
+                    |
+
+                    {% if exam.status == "OPEN" %}
+
+                        <a href="{% url 'toggle_exam_status' exam.id %}">
+                            🔒 Close Exam
+                        </a>
+
+                    {% else %}
+
+                        <a href="{% url 'toggle_exam_status' exam.id %}">
+                            🔓 Reopen Exam
+                        </a>
+
+                    {% endif %}
+
+                {% else %}
+
+                    <span style="color:gray;">
+                        View Only
+                    </span>
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+
     {% empty %}
-    <tr>
-        <td colspan="4">No exams added.</td>
-    </tr>
+
+        <tr>
+            <td colspan="5" style="text-align:center;">
+                No examinations found.
+            </td>
+        </tr>
+
     {% endfor %}
+
+    </tbody>
+
 </table>
 
 {% endblock %}

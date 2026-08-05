@@ -5,18 +5,23 @@ from django.contrib.auth.models import User
 
 
 class Teacher(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="teacher_profile",
+    )
+
     employee_number = models.CharField(max_length=20, unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     gender = models.CharField(max_length=10)
     phone = models.CharField(max_length=20)
     email = models.EmailField(blank=True)
-    subject = models.CharField(max_length=100)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
-
-
 class SchoolClass(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
@@ -100,6 +105,14 @@ class Subject(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20, unique=True)
 
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE,
+        related_name="subjects",
+        null=True,
+        blank=True,
+    )
+
     teacher = models.ForeignKey(
         Teacher,
         on_delete=models.SET_NULL,
@@ -109,24 +122,132 @@ class Subject(models.Model):
     )
 
     def __str__(self):
+        if self.school_class:
+            return f"{self.name} - {self.school_class.name}"
         return self.name
 
-
 class Exam(models.Model):
-    name = models.CharField(max_length=50)
-    term = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
+    term = models.CharField(max_length=50)
     year = models.IntegerField()
 
+    STATUS_CHOICES = [
+        ("OPEN", "Open"),
+        ("CLOSED", "Closed"),
+    ]
+
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="OPEN",
+    )
+
     def __str__(self):
-        return f"{self.name} - Term {self.term} ({self.year})"
+        return f"{self.name} - {self.term} {self.year}"
 
+class MarkSubmission(models.Model):
+
+    STATUS_CHOICES = [
+        ("DRAFT", "Draft"),
+        ("SUBMITTED", "Submitted"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]
+
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+    )
+
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE,
+    )
+
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE,
+    )
+
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="DRAFT",
+    )
+
+    submitted_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    approved_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_mark_batches",
+    )
+
+    class Meta:
+        unique_together = (
+            "school_class",
+            "subject",
+            "exam",
+        )
+
+    def __str__(self):
+        return f"{self.school_class} - {self.subject} - {self.exam}"
+    
 class Mark(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+    )
 
-    marks = models.DecimalField(max_digits=5, decimal_places=2)
-    grade = models.CharField(max_length=2, blank=True)
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE,
+    )
+
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+    )
+
+    submission = models.ForeignKey(
+        MarkSubmission,
+        on_delete=models.CASCADE,
+        related_name="marks",
+        null=True,
+        blank=True,
+    )
+
+    marks = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+    )
+
+    grade = models.CharField(
+        max_length=2,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     class Meta:
         constraints = [
@@ -135,9 +256,17 @@ class Mark(models.Model):
                 name="unique_student_subject_exam",
             )
         ]
+        ordering = [
+            "student__school_class",
+            "student__admission_number",
+        ]
 
     def __str__(self):
-        return f"{self.student} - {self.subject} - {self.exam}"
+        return (
+            f"{self.student} - "
+            f"{self.subject} - "
+            f"{self.exam}"
+        )
 
 
 class SchoolProfile(models.Model):
