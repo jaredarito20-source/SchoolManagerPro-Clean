@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>✅ Mark Homework</h2>
+
+<table class="table">
+
+<tr>
+    <th>Student</th>
+    <td>{{ submission.student }}</td>
+</tr>
+
+<tr>
+    <th>Homework</th>
+    <td>{{ submission.homework.title }}</td>
+</tr>
+
+<tr>
+    <th>Submission</th>
+    <td>
+
+        <a href="{{ submission.submission_file.url }}">
+            📥 Download Submission
+        </a>
+
+    </td>
+</tr>
+
+</table>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<p>
+
+<label>Marks</label>
+
+<input
+    type="number"
+    name="marks"
+    value="{{ submission.marks }}"
+    step="0.01"
+    min="0"
+    max="100"
+    required>
+
+</p>
+
+<p>
+
+<label>Teacher Comment</label>
+
+<textarea
+    name="teacher_comment"
+    rows="6">{{ submission.teacher_comment }}</textarea>
+
+</p>
+
+<button type="submit">
+
+💾 Save Marks
+
+</button>
+
+<a href="{% url 'homework_submissions' submission.homework.id %}">
+
+Cancel
+
+</a>
+
+</form>
+
+{% endblock %}

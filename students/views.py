@@ -10,29 +10,11 @@ from .view_modules.inventory import *
 from .view_modules.payroll import *
 from .view_modules.administration import *
 from .view_modules.authentication import *
+from .view_modules.parent import *
 
+from .view_modules.academic import add_student
 
-def is_admin(user):
-    return (
-        user.is_superuser or
-        user.groups.filter(name="Administrators").exists()
-    )
-
-
-def is_teacher(user):
-    return user.groups.filter(name="Teachers").exists()
-
-
-def is_bursar(user):
-    return user.groups.filter(name="Bursars").exists()
-
-
-def is_secretary(user):
-    return user.groups.filter(name="Secretaries").exists()
-
-
-
-
+from .view_modules.timetable import *
 
 
 

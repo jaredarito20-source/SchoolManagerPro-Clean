@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📚 Homework Submissions</h2>
+
+<h3>{{ homework.title }}</h3>
+
+<table class="table">
+
+<tr>
+
+    <th>Admission</th>
+
+    <th>Student</th>
+
+    <th>Submitted</th>
+
+    <th>File</th>
+
+    <th>Marks</th>
+
+    <th>Comment</th>
+
+    <th>Action</th>
+
+</tr>
+
+{% for submission in submissions %}
+
+<tr>
+
+    <td>{{ submission.student.admission_number }}</td>
+
+    <td>{{ submission.student }}</td>
+
+    <td>{{ submission.submitted_at }}</td>
+
+    <td>
+
+        <a href="{{ submission.submission_file.url }}">
+
+            📥 Download
+
+        </a>
+
+    </td>
+
+    <td>{{ submission.marks }}</td>
+
+    <td>{{ submission.teacher_comment }}</td>
+
+    <td>
+
+        <a href="{% url 'mark_homework' submission.id %}">
+
+            ✅ Mark
+
+        </a>
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+<td colspan="7">
+
+No submissions yet.
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

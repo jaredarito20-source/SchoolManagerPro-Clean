@@ -6,6 +6,8 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.db.models import Count, Sum
 
+
+
 import os
 import shutil
 
@@ -46,6 +48,17 @@ from students.utils import (
     draw_school_footer,
 )
 
+
+
+from students.models import (
+    SchoolClass,
+    SubjectRequirement,
+    TeacherAvailability,
+    SchoolDay,
+    Period,
+    Timetable,
+)
+
 @login_required
 @in_group(
     "Administrators",
@@ -54,39 +67,59 @@ from students.utils import (
     "Bursar",
     "Secretaries",
 )
-def home(request):
-    school = SchoolProfile.objects.first()
 
-    total_students = Student.objects.count()
-    total_teachers = Teacher.objects.count()
-    total_classes = SchoolClass.objects.count()
-    total_subjects = Subject.objects.count()
 
-    total_payments = FeePayment.objects.aggregate(
-        total=Sum("amount")
-    )["total"] or 0
-
-    total_balance = sum(
-        student.balance() for student in Student.objects.all()
+def is_admin(user):
+    return (
+        user.is_superuser or
+        user.groups.filter(name="Administrators").exists()
     )
 
-    recent_students = Student.objects.order_by("-id")[:5]
-    recent_payments = FeePayment.objects.order_by("-payment_date")[:5]
 
-    context = {
-        "school": school,
-        "total_students": total_students,
-        "total_teachers": total_teachers,
-        "total_classes": total_classes,
-        "total_subjects": total_subjects,
-        "total_payments": total_payments,
-        "total_balance": total_balance,
-        "recent_students": recent_students,
-        "recent_payments": recent_payments,
-    }
+def is_teacher(user):
+    return user.groups.filter(name="Teachers").exists()
 
-    return render(request, "students/home.html", context)
 
+def is_bursar(user):
+    return user.groups.filter(name="Bursars").exists()
+
+
+def is_secretary(user):
+    return user.groups.filter(name="Secretaries").exists()
+
+
+
+
+
+
+
+
+
+
+@login_required
+def home(request):
+    user = request.user
+
+    if user.is_superuser or user.groups.filter(name="Administrators").exists():
+        return render(request, "students/home.html")
+
+    elif user.groups.filter(name="Teachers").exists():
+        return render(request, "students/home.html")
+
+    elif user.groups.filter(name="Bursar").exists():
+        return render(request, "students/home.html")
+
+    elif user.groups.filter(name="Parents").exists():
+        return redirect("parent_dashboard")
+
+    elif user.groups.filter(name="Head Teacher").exists():
+        return render(request, "home.html")
+
+    elif user.groups.filter(name="Secretaries").exists():
+        return render(request, "home.html")
+
+    # Default for authenticated users
+    return render(request, "students/home.html")
 @login_required
 @admin_or_bursar
 def school_profile(request):

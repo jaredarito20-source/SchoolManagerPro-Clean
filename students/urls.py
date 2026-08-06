@@ -229,6 +229,90 @@ urlpatterns = [
         views.print_timetable,
         name="print_timetable",
 ),
+    path(
+    "parents/dashboard/",
+    views.parent_dashboard,
+    name="parent_dashboard",
+),
+    path(
+        "parents/students/",
+        views.parent_students,
+        name="parent_students",
+    ),
+
+    path(
+        "parents/student/<int:student_id>/",
+        views.parent_student_profile,
+        name="parent_student_profile",
+    ),
+
+    path(
+        "parents/attendance/",
+        views.parent_attendance,
+        name="parent_attendance",
+    ),
+
+    path(
+        "parents/results/<int:student_id>/",
+        views.parent_results,
+        name="parent_results",
+    ),
+
+    path(
+        "parents/fee-statement/<int:student_id>/",
+        views.parent_fee_statement,
+        name="parent_fee_statement",
+    ),
+
+    path(
+        "parents/fee-statement/<int:student_id>/print/",
+        views.print_fee_statement,
+        name="print_fee_statement",
+    ),
+
+
+    path(
+        "parents/fee-balance/",
+        views.parent_fee_balance,
+        name="parent_fee_balance",
+    ),
+
+    path(
+        "parents/attendance/",
+        views.parent_attendance,
+        name="parent_attendance",
+    ),
+
+    # homework
+
+    path("homework/", views.homework_list, name="homework_list"),
+    path("homework/add/", views.add_homework, name="add_homework"),
+    path("homework/edit/<int:pk>/", views.edit_homework, name="edit_homework"),
+    path("homework/delete/<int:pk>/", views.delete_homework, name="delete_homework"),
+
+    path(
+        "parents/homework/",
+        views.parent_homework,
+        name="parent_homework",
+    ),
+
+    path(
+        "student/homework/submit/<int:homework_id>/",
+        views.submit_homework,
+        name="submit_homework",
+    ),
+
+    path(
+        "homework/<int:homework_id>/submissions/",
+        views.homework_submissions,
+        name="homework_submissions",
+    ),
+
+    path(
+        "homework/submission/<int:submission_id>/mark/",
+        views.mark_homework,
+        name="mark_homework",
+    ),
 
 # attendance register
     path(
@@ -864,3 +948,11 @@ path("change-password/", views.change_password, name="change_password"),
 path("profile/", views.profile, name="profile"),
 
 ]
+
+# Timetable generator
+
+path(
+    "timetable/generate/",
+    views.generate_timetable,
+    name="generate_timetable",
+),

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>👨‍🎓 My Children</h2>
+
+<table class="table">
+
+    <tr>
+        <th>Photo</th>
+        <th>Admission</th>
+        <th>Name</th>
+        <th>Class</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for child in children %}
+
+    <tr>
+
+        <td>
+
+            {% if child.photo %}
+                <img src="{{ child.photo.url }}"
+                     width="60"
+                     height="70">
+            {% else %}
+                No Photo
+            {% endif %}
+
+        </td>
+
+        <td>{{ child.admission_number }}</td>
+
+        <td>{{ child.first_name }} {{ child.last_name }}</td>
+
+        <td>{{ child.school_class }}</td>
+
+        <td>
+
+            <a href="{% url 'parent_student_profile' child.id %}">
+                👤 Profile
+            </a>
+
+            |
+
+            <a href="{% url 'parent_results' child.id %}">
+                📊 Results
+            </a>
+
+            <a href="{% url 'parent_fee_statement' child.id %}">
+                💰 Fee Statement
+            </a>
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+
+        <td colspan="5">
+
+            No children linked to your account.
+
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+{% endblock %}

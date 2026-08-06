@@ -336,6 +336,80 @@
 
 {% endif %}
 
+{% elif user|has_group:"Bursar" %}
+
+<!-- Finance -->
+
+<button class="dropdown-btn">
+    💰 Finance ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'finance_dashboard' %}">
+        📊 Dashboard
+    </a>
+
+    <a href="{% url 'fee_structure_list' %}">
+        💰 Fee Structure
+    </a>
+
+    <a href="{% url 'fee_payment_list' %}">
+        💵 Fee Payments
+    </a>
+
+    <a href="{% url 'fee_balance_list' %}">
+        📋 Fee Balances
+    </a>
+
+</div>
+
+<!-- Payroll -->
+
+<button class="dropdown-btn">
+    💼 Payroll ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'salary_structure_list' %}">
+        💰 Salary Structure
+    </a>
+
+    <a href="{% url 'payroll_list' %}">
+        🧾 Payroll Records
+    </a>
+
+</div>
+
+<!-- Reports -->
+
+<button class="dropdown-btn">
+    📊 Reports ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'daily_collection_report' %}">
+        📅 Daily Collections
+    </a>
+
+    <a href="{% url 'monthly_collection_report' %}">
+        📆 Monthly Collections
+    </a>
+
+    <a href="{% url 'fee_balance_list' %}">
+        📋 Outstanding Balances
+    </a>
+
+    <a href="{% url 'student_fee_statement' %}">
+        👨‍🎓 Student Statements
+    </a>
+
+</div>
+
+
+
 <hr>
 
 <a href="{% url 'logout' %}">
@@ -388,5 +462,8 @@ document.querySelectorAll(".dropdown-btn").forEach(function(button){
 </script>
 
 </body>
+
 </html>
+
+
 

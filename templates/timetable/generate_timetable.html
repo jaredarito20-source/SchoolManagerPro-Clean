@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>⚡ Automatic Timetable Generator</h2>
+
+<hr>
+
+<p>
+
+This tool will automatically generate the weekly timetable for the entire school.
+
+</p>
+
+<ul>
+
+<li>✔ Teacher availability</li>
+
+<li>✔ Subject requirements</li>
+
+<li>✔ School days</li>
+
+<li>✔ Periods</li>
+
+<li>✔ Conflict detection</li>
+
+<li>✔ Double lessons</li>
+
+</ul>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<button type="submit" class="btn btn-success">
+
+⚡ Generate Timetable
+
+</button>
+
+</form>
+
+{% endblock %}

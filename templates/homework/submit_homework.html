@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📤 Submit Homework</h2>
+
+<table class="table">
+
+<tr>
+    <th>Title</th>
+    <td>{{ homework.title }}</td>
+</tr>
+
+<tr>
+    <th>Subject</th>
+    <td>{{ homework.subject }}</td>
+</tr>
+
+<tr>
+    <th>Class</th>
+    <td>{{ homework.school_class }}</td>
+</tr>
+
+<tr>
+    <th>Due Date</th>
+    <td>{{ homework.due_date }}</td>
+</tr>
+
+</table>
+
+<form method="POST" enctype="multipart/form-data">
+
+{% csrf_token %}
+
+<label>Upload Assignment</label>
+
+<br><br>
+
+<input
+    type="file"
+    name="submission_file"
+    required>
+
+<br><br>
+
+<button type="submit">
+
+📤 Submit Homework
+
+</button>
+
+<a href="{% url 'student_homework' %}">
+
+Cancel
+
+</a>
+
+</form>
+
+{% if submission %}
+
+<hr>
+
+<h3>Current Submission</h3>
+
+<a href="{{ submission.submission_file.url }}">
+
+📎 Download Submitted File
+
+</a>
+
+{% endif %}
+
+{% endblock %}

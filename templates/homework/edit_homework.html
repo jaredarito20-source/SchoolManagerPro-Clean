@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>✏ Edit Homework</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+{% csrf_token %}
+
+<table>
+
+<tr>
+
+<td>Subject</td>
+
+<td>
+
+<select name="subject">
+
+{% for subject in subjects %}
+
+<option value="{{ subject.id }}"
+{% if homework.subject.id == subject.id %}selected{% endif %}>
+{{ subject }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Class</td>
+
+<td>
+
+<select name="school_class">
+
+{% for class in classes %}
+
+<option value="{{ class.id }}"
+{% if homework.school_class.id == class.id %}selected{% endif %}>
+{{ class }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Teacher</td>
+
+<td>
+
+<select name="teacher">
+
+{% for teacher in teachers %}
+
+<option value="{{ teacher.id }}"
+{% if homework.teacher.id == teacher.id %}selected{% endif %}>
+{{ teacher }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Title</td>
+
+<td>
+
+<input
+type="text"
+name="title"
+value="{{ homework.title }}"
+required>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Description</td>
+
+<td>
+
+<textarea
+name="description"
+rows="6"
+required>{{ homework.description }}</textarea>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Due Date</td>
+
+<td>
+
+<input
+type="date"
+name="due_date"
+value="{{ homework.due_date|date:'Y-m-d' }}"
+required>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Current Attachment</td>
+
+<td>
+
+{% if homework.attachment %}
+
+<a href="{{ homework.attachment.url }}">
+Download Current File
+</a>
+
+{% else %}
+
+No attachment uploaded.
+
+{% endif %}
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>Replace Attachment</td>
+
+<td>
+
+<input
+type="file"
+name="attachment">
+
+</td>
+
+</tr>
+
+<tr>
+
+<td></td>
+
+<td>
+
+<button type="submit">
+💾 Update Homework
+</button>
+
+<a href="{% url 'homework_list' %}">
+Cancel
+</a>
+
+</td>
+
+</tr>
+
+</table>
+
+</form>
+
+{% endblock %}

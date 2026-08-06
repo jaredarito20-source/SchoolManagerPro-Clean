@@ -4,6 +4,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count
+
+
+
+from students.models import Student, SchoolClass
+
+from django.contrib.auth.models import User, Group
+
+
+
 from django.db.models import Avg
 from students.decorators import (
     admin_or_bursar,
@@ -20,35 +29,119 @@ from students.decorators import (
 
 from students.models import *
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+
+
 @login_required
-@admin_or_bursar
-def add_student(request):
+@admin_required
+def add_teacher(request):
+
     if request.method == "POST":
-        school_class = None
-        school_class_id = request.POST.get("school_class")
 
-        if school_class_id:
-            school_class = SchoolClass.objects.get(id=school_class_id)
+        employee_number = request.POST["employee_number"]
+        first_name = request.POST["first_name"]
+        last_name = request.POST["last_name"]
+        gender = request.POST["gender"]
+        phone = request.POST["phone"]
+        email = request.POST["email"]
 
-        Student.objects.create(
-            admission_number=request.POST["admission_number"],
-            first_name=request.POST["first_name"],
-            last_name=request.POST["last_name"],
-            gender=request.POST["gender"],
-            date_of_birth=request.POST["date_of_birth"],
-            school_class=school_class,
-            parent_name=request.POST["parent_name"],
-            phone=request.POST["phone"],
-            photo=request.FILES.get("photo"),
+        username = request.POST["username"]
+        password = request.POST["password"]
+        confirm_password = request.POST["confirm_password"]
+
+        # Check passwords
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return redirect("add_teacher")
+
+        # Check username
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Username already exists.")
+            return redirect("add_teacher")
+
+        # Check employee number
+        if Teacher.objects.filter(employee_number=employee_number).exists():
+            messages.error(request, "Employee number already exists.")
+            return redirect("add_teacher")
+
+        # Create login account
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
         )
 
-        return redirect("student_list")
+        # Add user to Teachers group
+        teacher_group, created = Group.objects.get_or_create(name="Teachers")
+        user.groups.add(teacher_group)
 
+        # Create Teacher profile
+        Teacher.objects.create(
+            user=user,
+            employee_number=employee_number,
+            first_name=first_name,
+            last_name=last_name,
+            gender=gender,
+            phone=phone,
+            email=email,
+        )
+
+        messages.success(
+            request,
+            f"Teacher '{first_name} {last_name}' created successfully."
+        )
+
+        return redirect("teacher_list")
+
+    return render(
+        request,
+        "teachers/add_teacher.html",
+    )
+
+
+
+def add_student(request):
     classes = SchoolClass.objects.all()
 
-    return render(request, "students/add_student.html", {
-        "classes": classes
-    })
+    if request.method == "POST":
+        admission_number = request.POST.get("admission_number")
+        first_name = request.POST.get("first_name")
+        last_name = request.POST.get("last_name")
+        gender = request.POST.get("gender")
+        date_of_birth = request.POST.get("date_of_birth")
+        school_class_id = request.POST.get("school_class")
+        parent_name = request.POST.get("parent_name")
+        phone = request.POST.get("phone")
+
+        school_class = SchoolClass.objects.get(id=school_class_id)
+
+        Student.objects.create(
+            admission_number=admission_number,
+            first_name=first_name,
+            last_name=last_name,
+            gender=gender,
+            date_of_birth=date_of_birth,
+            school_class=school_class,
+            parent_name=parent_name,
+            phone=phone,
+        )
+
+        messages.success(request, "Student added successfully!")
+        return redirect("student_list")
+
+    return render(
+        request,
+        "students/add_student.html",
+        {"classes": classes}
+    )
+
+
+
+
+
 
 @login_required
 @admin_or_bursar
@@ -58,39 +151,56 @@ def student_list(request):
         "students": students
     })
 
+
+
 @login_required
-@admin_or_bursar
-def edit_student(request, id):
-    student = get_object_or_404(Student, id=id)
+def edit_student(request, pk):
+
+    student = get_object_or_404(Student, pk=pk)
+
+    classes = SchoolClass.objects.all().order_by("name")
+    parents = User.objects.filter(groups__name="Parents").order_by("username")
 
     if request.method == "POST":
-        school_class = None
-        school_class_id = request.POST.get("school_class")
 
-        if school_class_id:
-            school_class = SchoolClass.objects.get(id=school_class_id)
+        student.admission_number = request.POST.get("admission_number")
+        student.first_name = request.POST.get("first_name")
+        student.last_name = request.POST.get("last_name")
+        student.gender = request.POST.get("gender")
+        student.date_of_birth = request.POST.get("date_of_birth")
 
-        student.admission_number = request.POST["admission_number"]
-        student.first_name = request.POST["first_name"]
-        student.last_name = request.POST["last_name"]
-        student.gender = request.POST["gender"]
-        student.date_of_birth = request.POST["date_of_birth"]
-        student.school_class = school_class
-        student.parent_name = request.POST["parent_name"]
-        student.phone = request.POST["phone"]
+        class_id = request.POST.get("school_class")
+        if class_id:
+            student.school_class = SchoolClass.objects.get(id=class_id)
+
+        student.parent_name = request.POST.get("parent_name")
+        student.phone = request.POST.get("phone")
+
+        parent_user_id = request.POST.get("parent_user")
+
+        if parent_user_id:
+            student.parent_user = User.objects.get(id=parent_user_id)
+        else:
+            student.parent_user = None
+
+        if request.FILES.get("photo"):
+            student.photo = request.FILES["photo"]
 
         student.save()
 
+        messages.success(request, "Student updated successfully.")
+
         return redirect("student_list")
 
-    classes = SchoolClass.objects.all()
-
-    return render(request, "students/edit_student.html", {
-        "student": student,
-        "classes": classes,
-    })
-
-
+    return render(
+        request,
+        "students/edit_student.html",
+        {
+            "student": student,
+            "classes": classes,
+            "parents": parents,
+        },
+    )
 
 @login_required
 @in_group(
@@ -177,29 +287,81 @@ def teacher_list(request):
     })
 
 
+from django.contrib.auth.models import User, Group
+from django.contrib import messages
+
 @login_required
-@in_group(
-    "Administrators",
-    "Head Teacher",
-    "Senior Teacher",
-)
+@admin_required
 def add_teacher(request):
+
     if request.method == "POST":
+
+        employee_number = request.POST["employee_number"]
+        first_name = request.POST["first_name"]
+        last_name = request.POST["last_name"]
+        gender = request.POST["gender"]
+        phone = request.POST["phone"]
+        email = request.POST["email"]
+
+        username = request.POST["username"]
+        password = request.POST["password"]
+        confirm_password = request.POST["confirm_password"]
+
+        if password != confirm_password:
+
+            messages.error(
+                request,
+                "Passwords do not match."
+            )
+
+            return redirect("add_teacher")
+
+        if User.objects.filter(username=username).exists():
+
+            messages.error(
+                request,
+                "Username already exists."
+            )
+
+            return redirect("add_teacher")
+
+        user = User.objects.create_user(
+
+            username=username,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+
+        )
+
+        teacher_group = Group.objects.get(name="Teachers")
+
+        user.groups.add(teacher_group)
+
         Teacher.objects.create(
-            employee_number=request.POST["employee_number"],
-            first_name=request.POST["first_name"],
-            last_name=request.POST["last_name"],
-            gender=request.POST["gender"],
-            phone=request.POST["phone"],
-            email=request.POST["email"],
-            subject=request.POST["subject"],
+
+            user=user,
+            employee_number=employee_number,
+            first_name=first_name,
+            last_name=last_name,
+            gender=gender,
+            phone=phone,
+            email=email,
+
+        )
+
+        messages.success(
+            request,
+            "Teacher created successfully."
         )
 
         return redirect("teacher_list")
 
-    return render(request, "students/add_teacher.html")
-
-
+    return render(
+        request,
+        "teachers/add_teacher.html",
+    )
 @login_required
 @in_group(
     "Administrators",

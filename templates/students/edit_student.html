@@ -107,6 +107,29 @@
                 >
             </td>
         </tr>
+        <tr>
+            <td>Parent Account</td>
+            <td>
+
+                <select name="parent_user">
+
+                    <option value="">---------</option>
+
+                    {% for parent in parents %}
+
+                    <option value="{{ parent.id }}"
+                        {% if student.parent_user == parent %}selected{% endif %}>
+
+                        {{ parent.get_full_name|default:parent.username }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </td>
+        </tr>
 
         <tr>
             <td>Phone Number</td>

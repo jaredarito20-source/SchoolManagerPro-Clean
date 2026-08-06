@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>👨‍👩‍👧 Parent Dashboard</h2>
+
+<p>
+Welcome
+<strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+</p>
+
+<form method="get">
+
+<label>
+
+Select Child
+
+</label>
+
+<select name="child">
+
+{% for child in children %}
+
+<option
+value="{{ child.id }}"
+{% if selected_child.id == child.id %}selected{% endif %}
+>
+
+{{ child.first_name }} {{ child.last_name }}
+
+({{ child.school_class }})
+
+</option>
+
+{% endfor %}
+
+</select>
+
+<button type="submit">
+
+View
+
+</button>
+
+</form>
+
+<hr>
+
+{% if selected_child %}
+
+<h3>
+
+👨‍🎓
+
+{{ selected_child.first_name }}
+
+{{ selected_child.last_name }}
+
+</h3>
+
+<table class="table">
+
+<tr>
+
+<th>Admission</th>
+
+<td>{{ selected_child.admission_number }}</td>
+
+</tr>
+
+<tr>
+
+<th>Class</th>
+
+<td>{{ selected_child.school_class }}</td>
+
+</tr>
+
+<tr>
+
+<th>Fee Balance</th>
+
+<td>KES {{ selected_child.balance }}</td>
+
+</tr>
+
+<tr>
+
+<th>Status</th>
+
+<td>{{ selected_child.payment_status }}</td>
+
+</tr>
+
+</table>
+
+{% endif %}
+
+{% endblock %}

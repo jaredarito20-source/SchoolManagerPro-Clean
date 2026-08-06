@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📅 Attendance Record</h2>
+
+{% if student %}
+
+<div class="card">
+
+    <h3>
+        👨‍🎓 {{ student.first_name }} {{ student.last_name }}
+    </h3>
+
+    <p>
+        <strong>Admission No:</strong>
+        {{ student.admission_number }}
+    </p>
+
+    <p>
+        <strong>Class:</strong>
+        {{ student.school_class }}
+    </p>
+
+</div>
+
+<br>
+
+<table class="table">
+
+    <thead>
+
+        <tr>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Remarks</th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+    {% for record in attendance %}
+
+        <tr>
+
+            <td>{{ record.date }}</td>
+
+            <td>
+
+                {% if record.status == "Present" %}
+                    <span style="color:green;font-weight:bold;">
+                        ✅ Present
+                    </span>
+
+                {% elif record.status == "Absent" %}
+                    <span style="color:red;font-weight:bold;">
+                        ❌ Absent
+                    </span>
+
+                {% elif record.status == "Late" %}
+                    <span style="color:orange;font-weight:bold;">
+                        ⏰ Late
+                    </span>
+
+                {% else %}
+                    <span style="color:blue;font-weight:bold;">
+                        📝 Excused
+                    </span>
+
+                {% endif %}
+
+            </td>
+
+            <td>{{ record.remarks|default:"-" }}</td>
+
+        </tr>
+
+    {% empty %}
+
+        <tr>
+
+            <td colspan="3" style="text-align:center;">
+
+                No attendance records found.
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% else %}
+
+<div class="alert alert-warning">
+
+No child has been selected.
+
+</div>
+
+{% endif %}
+
+{% endblock %}

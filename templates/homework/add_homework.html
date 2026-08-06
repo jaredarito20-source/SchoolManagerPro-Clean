@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>➕ Add Homework</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+{% csrf_token %}
+
+<table>
+
+<tr>
+
+    <td>Subject</td>
+
+    <td>
+
+        <select name="subject" required>
+
+            {% for subject in subjects %}
+
+            <option value="{{ subject.id }}">
+                {{ subject }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>Class</td>
+
+    <td>
+
+        <select name="school_class" required>
+
+            {% for class in classes %}
+
+            <option value="{{ class.id }}">
+                {{ class }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>Teacher</td>
+
+    <td>
+
+        <select name="teacher" required>
+
+            {% for teacher in teachers %}
+
+            <option value="{{ teacher.id }}">
+                {{ teacher }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>Title</td>
+
+    <td>
+
+        <input
+            type="text"
+            name="title"
+            required
+        >
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>Description</td>
+
+    <td>
+
+        <textarea
+            name="description"
+            rows="6"
+            cols="50"
+            required></textarea>
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>Due Date</td>
+
+    <td>
+
+        <input
+            type="date"
+            name="due_date"
+            required
+        >
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>Attachment</td>
+
+    <td>
+
+        <input
+            type="file"
+            name="attachment"
+        >
+
+    </td>
+
+</tr>
+
+<tr>
+
+    <td></td>
+
+    <td>
+
+        <button type="submit">
+            💾 Save Homework
+        </button>
+
+        <a href="{% url 'homework_list' %}">
+            Cancel
+        </a>
+
+    </td>
+
+</tr>
+
+</table>
+
+</form>
+
+{% endblock %}

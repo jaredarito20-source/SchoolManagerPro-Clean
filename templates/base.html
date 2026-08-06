@@ -52,6 +52,20 @@
 
 </div>
 
+<!-- Timetable -->
+
+<button class="dropdown-btn">
+    🕒 Timetable ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'generate_timetable' %}">
+        ⚡ Generate Timetable
+    </a>
+
+</div>
+
 
    <!-- Examination -->
 
@@ -77,6 +91,24 @@
 
     <a href="{% url 'class_results' %}">
         📊 Class Results
+    </a>
+
+</div>
+
+<!-- Homework -->
+
+<button class="dropdown-btn">
+    📚 Homework ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'homework_list' %}">
+        📚 Homework List
+    </a>
+
+    <a href="{% url 'add_homework' %}">
+        ➕ Add Homework
     </a>
 
 </div>
@@ -330,6 +362,105 @@
 
     <a href="{% url 'timetable_list' %}">
         🕒 Timetable
+    </a>
+
+</div>
+<!-- Homework -->
+
+<button class="dropdown-btn">
+    📚 Homework ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'homework_list' %}">
+        📚 My Homework
+    </a>
+
+    <a href="{% url 'add_homework' %}">
+        ➕ Create Homework
+    </a>
+
+</div>
+
+{% endif %}
+
+{% if user|has_group:"Bursar" %}
+
+<!-- Bursar -->
+
+<button class="dropdown-btn">
+    💰 Bursar ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'finance_dashboard' %}">
+        📊 Finance Dashboard
+    </a>
+
+    <a href="{% url 'fee_structure_list' %}">
+        💰 Fee Structure
+    </a>
+
+    <a href="{% url 'fee_payment_list' %}">
+        💵 Fee Payments
+    </a>
+
+    <a href="{% url 'fee_balance_list' %}">
+        📋 Fee Balances
+    </a>
+
+    <a href="{% url 'salary_structure_list' %}">
+        💼 Salary Structure
+    </a>
+
+    <a href="{% url 'payroll_list' %}">
+        🧾 Payroll Records
+    </a>
+
+</div>
+
+{% endif %}
+{% if user|has_group:"Parents" %}
+
+<!-- Parent -->
+
+<button class="dropdown-btn">
+    👨‍👩‍👧 Parent ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'parent_dashboard' %}">
+        🏠 Dashboard
+    </a>
+    <a href="{% url 'parent_attendance' %}">
+        📅 Attendance
+    </a>
+
+    <a href="{% url 'parent_students' %}">
+        👨‍🎓 My Children
+    </a>
+
+    <a href="{% url 'student_results' %}">
+        📊 Results
+    </a>
+
+   
+    <a href="{% url 'parent_attendance' %}">
+        📅 Attendance
+    </a>
+    <a href="{% url 'student_fee_statement' %}">
+        💰 Fee Statement
+    </a>
+
+    <a href="{% url 'parent_fee_balance' %}">
+        💵 Fee Balance
+    </a>
+
+     <a href="{% url 'parent_homework' %}">
+        📚 Homework
     </a>
 
 </div>

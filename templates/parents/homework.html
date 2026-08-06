@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📚 Homework</h2>
+
+<table class="table">
+
+<tr>
+    <th>Class</th>
+    <th>Subject</th>
+    <th>Title</th>
+    <th>Due Date</th>
+    <th>Attachment</th>
+</tr>
+
+{% for work in homework %}
+
+<tr>
+
+    <td>{{ work.school_class }}</td>
+
+    <td>{{ work.subject }}</td>
+
+    <td>{{ work.title }}</td>
+
+    <td>{{ work.due_date }}</td>
+
+    <td>
+
+        {% if work.attachment %}
+            <a href="{{ work.attachment.url }}">
+                📎 Download
+            </a>
+        {% else %}
+            -
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+    <td colspan="5">
+        No homework available.
+    </td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

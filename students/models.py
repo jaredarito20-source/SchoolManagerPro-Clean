@@ -38,6 +38,14 @@ class SchoolClass(models.Model):
 
 
 class Student(models.Model):
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="student_profile",
+    )
     admission_number = models.CharField(max_length=20, unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -62,6 +70,14 @@ class Student(models.Model):
 
     parent_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
+
+    parent_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="children"
+    )
     photo = models.ImageField(
         upload_to="students/",
         blank=True,
@@ -307,6 +323,7 @@ class SchoolProfile(models.Model):
 
 
 class FeeStructure(models.Model):
+
     school_class = models.ForeignKey(
         SchoolClass,
         on_delete=models.CASCADE,
@@ -317,6 +334,7 @@ class FeeStructure(models.Model):
     exam_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     other_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
+    @property
     def total_fee(self):
         return (
             self.tuition_fee
@@ -327,8 +345,6 @@ class FeeStructure(models.Model):
 
     def __str__(self):
         return f"{self.school_class.name} Fee Structure"
-
-
 class FeePayment(models.Model):
 
     PAYMENT_METHODS = [
@@ -1353,3 +1369,208 @@ class Prescription(models.Model):
             f"{self.medication.name}"
         )
 
+
+class Homework(models.Model):
+
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE
+    )
+
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE
+    )
+
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE
+    )
+
+    title = models.CharField(
+        max_length=200
+    )
+
+    description = models.TextField()
+
+    date_given = models.DateField(auto_now_add=True)
+
+    due_date = models.DateField()
+
+    attachment = models.FileField(
+        upload_to="homework/",
+        blank=True,
+        null=True,
+    )
+
+    def __str__(self):
+        return f"{self.school_class} - {self.title}"
+
+
+class HomeworkSubmission(models.Model):
+
+    homework = models.ForeignKey(
+        Homework,
+        on_delete=models.CASCADE,
+    )
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+    )
+
+    submission_file = models.FileField(
+        upload_to="homework_submissions/",
+    )
+
+    submitted_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    marks = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    teacher_comment = models.TextField(
+        blank=True,
+    )
+
+    graded_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    graded_by = models.ForeignKey(
+        Teacher,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return f"{self.student} - {self.homework}"
+
+    # Timetable
+
+class Period(models.Model):
+    name = models.CharField(max_length=20)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    is_break = models.BooleanField(default=False)
+
+    order = models.PositiveIntegerField()
+
+    def __str__(self):
+        return self.name
+
+class SchoolDay(models.Model):
+
+    DAYS = [
+
+        ("Monday","Monday"),
+        ("Tuesday","Tuesday"),
+        ("Wednesday","Wednesday"),
+        ("Thursday","Thursday"),
+        ("Friday","Friday"),
+        ("Saturday","Saturday"),
+
+    ]
+
+    name = models.CharField(
+        max_length=20,
+        choices=DAYS,
+        unique=True,
+    )
+
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+class SubjectRequirement(models.Model):
+
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE,
+    )
+
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE,
+    )
+
+    lessons_per_week = models.PositiveIntegerField()
+
+    double_lessons = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+
+        return f"{self.school_class} - {self.subject}"
+
+class TeacherAvailability(models.Model):
+
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+    )
+
+    day = models.ForeignKey(
+        SchoolDay,
+        on_delete=models.CASCADE,
+    )
+
+    period = models.ForeignKey(
+        Period,
+        on_delete=models.CASCADE,
+    )
+
+    available = models.BooleanField(default=True)
+
+class Timetable(models.Model):
+
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE,
+    )
+
+    day = models.ForeignKey(
+        SchoolDay,
+        on_delete=models.CASCADE,
+    )
+
+    period = models.ForeignKey(
+        Period,
+        on_delete=models.CASCADE,
+    )
+
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE,
+    )
+
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+    )
+
+    locked = models.BooleanField(default=False)
+
+    class Meta:
+
+        constraints = [
+
+            models.UniqueConstraint(
+                fields=["school_class","day","period"],
+                name="unique_class_period",
+            ),
+
+            models.UniqueConstraint(
+                fields=["teacher","day","period"],
+                name="unique_teacher_period",
+            ),
+
+        ]
