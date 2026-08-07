@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Register New School</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <h3>School Information</h3>
+
+    <label>School Name</label><br>
+    <input type="text" name="school_name" required><br><br>
+
+    <label>Motto</label><br>
+    <input type="text" name="motto"><br><br>
+
+    <label>Address</label><br>
+    <input type="text" name="address" required><br><br>
+
+    <label>Phone</label><br>
+    <input type="text" name="phone" required><br><br>
+
+    <label>Email</label><br>
+    <input type="email" name="email"><br><br>
+
+    <label>Website</label><br>
+    <input type="text" name="website"><br><br>
+
+    <hr>
+
+    <h3>First Administrator</h3>
+
+    <label>First Name</label><br>
+    <input type="text" name="first_name" required><br><br>
+
+    <label>Last Name</label><br>
+    <input type="text" name="last_name" required><br><br>
+
+    <label>Username</label><br>
+    <input type="text" name="username" required><br><br>
+
+    <label>Email</label><br>
+    <input type="email" name="admin_email"><br><br>
+
+    <label>Password</label><br>
+    <input type="password" name="password" required><br><br>
+
+    <label>Confirm Password</label><br>
+    <input type="password" name="confirm_password" required><br><br>
+
+    <button type="submit">
+        Register School
+    </button>
+
+</form>
+
+{% endblock %}

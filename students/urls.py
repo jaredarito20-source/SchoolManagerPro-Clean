@@ -1,5 +1,8 @@
-from django.urls import path
+
 from . import views
+from students.view_modules.administration import register_school
+
+from django.urls import path
 
 
 urlpatterns = [
@@ -947,12 +950,28 @@ path("logout/", views.logout_view, name="logout"),
 path("change-password/", views.change_password, name="change_password"),
 path("profile/", views.profile, name="profile"),
 
-]
-
 # Timetable generator
+
+
 
 path(
     "timetable/generate/",
     views.generate_timetable,
     name="generate_timetable",
 ),
+
+
+
+
+# School Registration
+path(
+    "register-school/",
+    register_school,
+    name="register_school",
+),
+
+
+
+]
+
+

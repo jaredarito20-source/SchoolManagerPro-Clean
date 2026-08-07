@@ -81,7 +81,7 @@ def is_teacher(user):
 
 
 def is_bursar(user):
-    return user.groups.filter(name="Bursars").exists()
+    return user.groups.filter(name="Bursar").exists()
 
 
 def is_secretary(user):
@@ -566,4 +566,132 @@ def system_logs(request):
         {
             "logs": logs,
         },
+    )
+
+@login_required
+def register_school(request):
+
+    # Only the system superuser can register a new school
+    if not request.user.is_superuser:
+        messages.error(
+            request,
+            "Only the system administrator can register a new school."
+        )
+        return redirect("home")
+
+    if request.method == "POST":
+
+        # -----------------------------
+        # SCHOOL INFORMATION
+        # -----------------------------
+        school_name = request.POST.get("school_name", "").strip()
+        motto = request.POST.get("motto", "").strip()
+        address = request.POST.get("address", "").strip()
+        phone = request.POST.get("phone", "").strip()
+        email = request.POST.get("email", "").strip()
+        website = request.POST.get("website", "").strip()
+
+        # -----------------------------
+        # ADMINISTRATOR INFORMATION
+        # -----------------------------
+        first_name = request.POST.get("first_name", "").strip()
+        last_name = request.POST.get("last_name", "").strip()
+        username = request.POST.get("username", "").strip()
+        admin_email = request.POST.get("admin_email", "").strip()
+        password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+
+        # -----------------------------
+        # BASIC VALIDATION
+        # -----------------------------
+        if not school_name:
+            messages.error(request, "School name is required.")
+            return redirect("register_school")
+
+        if not first_name or not last_name:
+            messages.error(
+                request,
+                "Administrator first and last name are required."
+            )
+            return redirect("register_school")
+
+        if not username:
+            messages.error(
+                request,
+                "Administrator username is required."
+            )
+            return redirect("register_school")
+
+        if User.objects.filter(username=username).exists():
+            messages.error(
+                request,
+                "That username already exists."
+            )
+            return redirect("register_school")
+
+        if not password:
+            messages.error(
+                request,
+                "Administrator password is required."
+            )
+            return redirect("register_school")
+
+        if password != confirm_password:
+            messages.error(
+                request,
+                "Passwords do not match."
+            )
+            return redirect("register_school")
+
+        # -----------------------------
+        # CREATE SCHOOL
+        # -----------------------------
+        school = SchoolProfile.objects.create(
+            name=school_name,
+            motto=motto,
+            address=address,
+            phone=phone,
+            email=email,
+            website=website,
+        )
+
+        # -----------------------------
+        # CREATE ADMIN USER
+        # -----------------------------
+        user = User.objects.create_user(
+            username=username,
+            email=admin_email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+        )
+
+        # -----------------------------
+        # ADD ADMINISTRATOR ROLE
+        # -----------------------------
+        administrators_group, created = Group.objects.get_or_create(
+            name="Administrators"
+        )
+
+        user.groups.add(administrators_group)
+
+        # -----------------------------
+        # CONNECT USER TO SCHOOL
+        # -----------------------------
+        SchoolUser.objects.create(
+            user=user,
+            school=school,
+        )
+
+        messages.success(
+            request,
+            f"{school.name} has been registered successfully. "
+            f"Administrator account '{username}' was created."
+        )
+
+        return redirect("home")
+
+    return render(
+        request,
+        "students/register_school.html",
     )

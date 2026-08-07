@@ -322,6 +322,23 @@ class SchoolProfile(models.Model):
         return self.name
 
 
+class SchoolUser(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="school_user",
+    )
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="users",
+    )
+
+    def __str__(self):
+        return f"{self.user.username} - {self.school.name}"
+
+
 class FeeStructure(models.Model):
 
     school_class = models.ForeignKey(

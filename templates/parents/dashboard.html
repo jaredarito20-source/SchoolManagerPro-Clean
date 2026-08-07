@@ -1,3 +1,4 @@
+```django
 {% extends "base.html" %}
 
 {% block content %}
@@ -5,42 +6,35 @@
 <h2>👨‍👩‍👧 Parent Dashboard</h2>
 
 <p>
-Welcome
-<strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+    Welcome
+    <strong>
+        {{ request.user.get_full_name|default:request.user.username }}
+    </strong>
 </p>
 
 <form method="get">
 
-<label>
+    <label>Select Child</label>
 
-Select Child
+    <select name="child">
 
-</label>
+        {% for child in children %}
 
-<select name="child">
+        <option
+            value="{{ child.id }}"
+            {% if selected_child.id == child.id %}selected{% endif %}
+        >
+            {{ child.first_name }} {{ child.last_name }}
+            ({{ child.school_class }})
+        </option>
 
-{% for child in children %}
+        {% endfor %}
 
-<option
-value="{{ child.id }}"
-{% if selected_child.id == child.id %}selected{% endif %}
->
+    </select>
 
-{{ child.first_name }} {{ child.last_name }}
-
-({{ child.school_class }})
-
-</option>
-
-{% endfor %}
-
-</select>
-
-<button type="submit">
-
-View
-
-</button>
+    <button type="submit">
+        View
+    </button>
 
 </form>
 
@@ -48,52 +42,51 @@ View
 
 {% if selected_child %}
 
-<h3>
+    <h3>
+        👨‍🎓
+        {{ selected_child.first_name }}
+        {{ selected_child.last_name }}
+    </h3>
 
-👨‍🎓
+    <table class="table">
 
-{{ selected_child.first_name }}
+        <tr>
+            <th>Admission</th>
+            <td>{{ selected_child.admission_number }}</td>
+        </tr>
 
-{{ selected_child.last_name }}
+        <tr>
+            <th>Class</th>
+            <td>{{ selected_child.school_class }}</td>
+        </tr>
 
-</h3>
+        <tr>
+            <th>Fee Balance</th>
+            <td>KES {{ selected_child.balance }}</td>
+        </tr>
 
-<table class="table">
+        <tr>
+            <th>Status</th>
+            <td>{{ selected_child.payment_status }}</td>
+        </tr>
 
-<tr>
+    </table>
 
-<th>Admission</th>
+    <br>
 
-<td>{{ selected_child.admission_number }}</td>
+    <a href="{% url 'parent_results' selected_child.id %}">
+        View Results
+    </a>
 
-</tr>
+    <a href="{% url 'parent_student_profile' selected_child.id %}">
+        Student Profile
+    </a>
 
-<tr>
-
-<th>Class</th>
-
-<td>{{ selected_child.school_class }}</td>
-
-</tr>
-
-<tr>
-
-<th>Fee Balance</th>
-
-<td>KES {{ selected_child.balance }}</td>
-
-</tr>
-
-<tr>
-
-<th>Status</th>
-
-<td>{{ selected_child.payment_status }}</td>
-
-</tr>
-
-</table>
+    <a href="{% url 'parent_fee_statement' selected_child.id %}">
+        Fee Statement
+    </a>
 
 {% endif %}
 
 {% endblock %}
+```

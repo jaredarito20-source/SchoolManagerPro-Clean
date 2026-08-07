@@ -17,7 +17,7 @@ def teacher_required(view_func):
 
 def bursar_required(view_func):
     decorated_view = user_passes_test(
-        lambda u: u.is_superuser or u.groups.filter(name="Bursars").exists()
+        lambda u: u.is_superuser or u.groups.filter(name="Bursar").exists()
     )(view_func)
     return decorated_view
 
@@ -42,7 +42,7 @@ def admin_or_bursar(view_func):
     decorated_view = user_passes_test(
         lambda u: u.is_superuser or
         u.groups.filter(name="Administrators").exists() or
-        u.groups.filter(name="Bursars").exists()
+        u.groups.filter(name="Bursar").exists()
     )(view_func)
     return decorated_view
 

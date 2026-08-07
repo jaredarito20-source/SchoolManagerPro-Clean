@@ -443,17 +443,16 @@
         👨‍🎓 My Children
     </a>
 
-    <a href="{% url 'student_results' %}">
-        📊 Results
-    </a>
-
+    
    
     <a href="{% url 'parent_attendance' %}">
         📅 Attendance
     </a>
-    <a href="{% url 'student_fee_statement' %}">
+    {% if selected_child %}
+    <a href="{% url 'parent_fee_statement' selected_child.id %}">
         💰 Fee Statement
     </a>
+{% endif %}
 
     <a href="{% url 'parent_fee_balance' %}">
         💵 Fee Balance
