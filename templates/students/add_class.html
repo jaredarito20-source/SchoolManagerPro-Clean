@@ -2,29 +2,88 @@
 
 {% block content %}
 
-<h2>Add Class</h2>
+<div class="form-container">
 
-<form method="POST">
-    {% csrf_token %}
+    <h2>➕ Add Class</h2>
 
-    <label>Class Name</label><br>
-    <input type="text" name="name" required><br><br>
+    <form method="POST">
+        {% csrf_token %}
 
-    <label>Class Teacher</label><br>
-    <select name="class_teacher">
-        <option value="">-- Select Teacher --</option>
+        {% if user.is_superuser %}
 
-        {% for teacher in teachers %}
-        <option value="{{ teacher.id }}">
-            {{ teacher.employee_number }} - {{ teacher.first_name }} {{ teacher.last_name }}
-        </option>
-        {% endfor %}
-    </select>
+            <div class="form-group">
+                <label for="school">School</label>
 
-    <br><br>
+                <select name="school" id="school" required>
+                    <option value="">Select school</option>
 
-    <button type="submit">Save Class</button>
+                    {% for school in schools %}
+                        <option value="{{ school.id }}">
+                            {{ school.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-</form>
+        {% else %}
+
+            <div class="form-group">
+                <label>School</label>
+
+                <div class="readonly-field">
+                    {{ user.school_user.school.name }}
+                </div>
+            </div>
+
+        {% endif %}
+
+
+        <div class="form-group">
+            <label for="name">Class Name</label>
+
+            <input
+                type="text"
+                name="name"
+                id="name"
+                placeholder="e.g. Grade 1"
+                required
+            >
+        </div>
+
+
+        <div class="form-group">
+            <label for="class_teacher">Class Teacher</label>
+
+            <select name="class_teacher" id="class_teacher">
+
+                <option value="">
+                    Select class teacher
+                </option>
+
+                {% for teacher in teachers %}
+                    <option value="{{ teacher.id }}">
+                        {{ teacher.first_name }} {{ teacher.last_name }}
+                    </option>
+                {% endfor %}
+
+            </select>
+        </div>
+
+
+        <div class="form-actions">
+
+            <button type="submit" class="btn btn-primary">
+                💾 Save Class
+            </button>
+
+            <a href="{% url 'class_list' %}" class="btn btn-secondary">
+                Cancel
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
 
 {% endblock %}

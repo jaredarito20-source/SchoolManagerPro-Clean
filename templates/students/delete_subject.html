@@ -2,26 +2,56 @@
 
 {% block content %}
 
-<h2>Delete Subject</h2>
+<div class="page-container">
 
-<p>
-    Are you sure you want to delete
-    <strong>{{ subject.name }}</strong>?
-</p>
+    <h1>Delete Subject</h1>
 
-<form method="POST">
-    {% csrf_token %}
+    <p>
+        Are you sure you want to delete
+        <strong>{{ subject.name }}</strong>?
+    </p>
 
-    <button type="submit">
-        Yes, Delete
-    </button>
+    <div>
+        <p>
+            <strong>Code:</strong>
+            {{ subject.code }}
+        </p>
 
-    <a href="{% url 'subject_list' %}">
-        <button type="button">
-            Cancel
+        {% if subject.school %}
+        <p>
+            <strong>School:</strong>
+            {{ subject.school.name }}
+        </p>
+        {% endif %}
+
+        {% if subject.school_class %}
+        <p>
+            <strong>Class:</strong>
+            {{ subject.school_class.name }}
+        </p>
+        {% endif %}
+
+        {% if subject.teacher %}
+        <p>
+            <strong>Teacher:</strong>
+            {{ subject.teacher.first_name }}
+            {{ subject.teacher.last_name }}
+        </p>
+        {% endif %}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <button type="submit">
+            🗑 Yes, Delete Subject
         </button>
-    </a>
 
-</form>
+        <a href="{% url 'subject_list' %}">
+            Cancel
+        </a>
+    </form>
+
+</div>
 
 {% endblock %}

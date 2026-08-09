@@ -2,22 +2,37 @@
 
 {% block content %}
 
-<h2>Delete Examination</h2>
+<h1>Delete Exam</h1>
 
 <p>
     Are you sure you want to delete
     <strong>{{ exam.name }}</strong>?
 </p>
 
-<form method="POST">
+<p>
+    <strong>Term:</strong> {{ exam.term }}
+</p>
+
+<p>
+    <strong>Year:</strong> {{ exam.year }}
+</p>
+
+{% if exam.school %}
+<p>
+    <strong>School:</strong> {{ exam.school.name }}
+</p>
+{% endif %}
+
+<form method="post">
     {% csrf_token %}
 
-    <button type="submit">Yes, Delete</button>
+    <button type="submit">
+        🗑 Yes, Delete
+    </button>
 
     <a href="{% url 'exam_list' %}">
-        <button type="button">Cancel</button>
+        Cancel
     </a>
-
 </form>
 
 {% endblock %}

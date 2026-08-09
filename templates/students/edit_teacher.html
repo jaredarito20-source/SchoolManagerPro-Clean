@@ -2,53 +2,85 @@
 
 {% block content %}
 
-<h2>Edit Teacher</h2>
+<h1>Edit Teacher</h1>
 
-<form method="POST">
+<form method="post">
     {% csrf_token %}
+
     <p>
         <label>Employee Number</label><br>
         <input
             type="text"
             name="employee_number"
             value="{{ teacher.employee_number }}"
-            required>
+            required
+        >
     </p>
 
     <p>
         <label>First Name</label><br>
-        <input type="text" name="first_name" value="{{ teacher.first_name }}" required>
+        <input
+            type="text"
+            name="first_name"
+            value="{{ teacher.first_name }}"
+            required
+        >
     </p>
 
     <p>
         <label>Last Name</label><br>
-        <input type="text" name="last_name" value="{{ teacher.last_name }}" required>
+        <input
+            type="text"
+            name="last_name"
+            value="{{ teacher.last_name }}"
+            required
+        >
     </p>
 
     <p>
         <label>Gender</label><br>
-        <select name="gender">
-            <option value="Male" {% if teacher.gender == "Male" %}selected{% endif %}>Male</option>
-            <option value="Female" {% if teacher.gender == "Female" %}selected{% endif %}>Female</option>
+
+        <select name="gender" required>
+
+            <option value="Male"
+                {% if teacher.gender == "Male" %}selected{% endif %}>
+                Male
+            </option>
+
+            <option value="Female"
+                {% if teacher.gender == "Female" %}selected{% endif %}>
+                Female
+            </option>
+
         </select>
     </p>
 
     <p>
         <label>Phone</label><br>
-        <input type="text" name="phone" value="{{ teacher.phone }}" required>
+        <input
+            type="text"
+            name="phone"
+            value="{{ teacher.phone }}"
+            required
+        >
     </p>
 
     <p>
         <label>Email</label><br>
-        <input type="email" name="email" value="{{ teacher.email }}" required>
+        <input
+            type="email"
+            name="email"
+            value="{{ teacher.email }}"
+        >
     </p>
 
-    <p>
-        <label>Subject</label><br>
-        <input type="text" name="subject" value="{{ teacher.subject }}" required>
-    </p>
+    <button type="submit">
+        💾 Update Teacher
+    </button>
 
-    <button type="submit">Update Teacher</button>
+    <a href="{% url 'teacher_list' %}">
+        Cancel
+    </a>
 
 </form>
 

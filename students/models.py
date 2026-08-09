@@ -3,6 +3,41 @@ from django.db.models import Sum
 from django.contrib.auth.models import User
 
 
+class SchoolProfile(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+    motto = models.CharField(max_length=300, blank=True)
+    address = models.CharField(max_length=300)
+    phone = models.CharField(max_length=20)
+    email = models.EmailField(blank=True)
+    website = models.CharField(max_length=100, blank=True)
+    
+
+    current_term = models.CharField(max_length=20)
+    academic_year = models.CharField(max_length=20)
+    principal_name = models.CharField(max_length=100, blank=True)
+
+    principal_signature = models.ImageField(
+        upload_to="signatures/",
+        blank=True,
+        null=True,
+    )
+
+    logo = models.ImageField(
+        upload_to="school_logos/",
+        blank=True,
+        null=True,
+    )
+    closing_date = models.DateField(null=True, blank=True)
+    opening_date = models.DateField(null=True, blank=True)
+    school_stamp = models.ImageField(
+        upload_to="school/",
+        blank=True,
+        null=True,
+)
+    
+
+    def __str__(self):
+        return self.name
 
 class Teacher(models.Model):
     user = models.OneToOneField(
@@ -11,6 +46,14 @@ class Teacher(models.Model):
         null=True,
         blank=True,
         related_name="teacher_profile",
+    )
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="teachers",
     )
 
     employee_number = models.CharField(max_length=20, unique=True)
@@ -22,8 +65,15 @@ class Teacher(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
 class SchoolClass(models.Model):
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="classes",
+    )
 
     class_teacher = models.ForeignKey(
         Teacher,
@@ -33,9 +83,16 @@ class SchoolClass(models.Model):
         related_name="class_teacher_for",
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "name"],
+                name="unique_class_per_school",
+            )
+        ]
+
     def __str__(self):
         return self.name
-
 
 class Student(models.Model):
 
@@ -46,7 +103,15 @@ class Student(models.Model):
         blank=True,
         related_name="student_profile",
     )
-    admission_number = models.CharField(max_length=20, unique=True)
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="students",
+    )
+
+    admission_number = models.CharField(max_length=20)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
 
@@ -113,13 +178,29 @@ class Student(models.Model):
 
         return "Partial"
 
-    def __str__(self):
-        return f"{self.admission_number} - {self.first_name} {self.last_name}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "admission_number"],
+                name="unique_admission_number_per_school",
+            )
+        ]
 
 
+def __str__(self):
+    return f"{self.admission_number} - {self.first_name} {self.last_name}"
 class Subject(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20, unique=True)
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="subjects",
+    )
 
     school_class = models.ForeignKey(
         SchoolClass,
@@ -141,11 +222,20 @@ class Subject(models.Model):
         if self.school_class:
             return f"{self.name} - {self.school_class.name}"
         return self.name
-
 class Exam(models.Model):
     name = models.CharField(max_length=100)
+
     term = models.CharField(max_length=50)
+
     year = models.IntegerField()
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="exams",
+        null=True,
+        blank=True,
+    )
 
     STATUS_CHOICES = [
         ("OPEN", "Open"),
@@ -160,7 +250,6 @@ class Exam(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.term} {self.year}"
-
 class MarkSubmission(models.Model):
 
     STATUS_CHOICES = [
@@ -285,41 +374,6 @@ class Mark(models.Model):
         )
 
 
-class SchoolProfile(models.Model):
-    name = models.CharField(max_length=200)
-    motto = models.CharField(max_length=300, blank=True)
-    address = models.CharField(max_length=300)
-    phone = models.CharField(max_length=20)
-    email = models.EmailField(blank=True)
-    website = models.CharField(max_length=100, blank=True)
-    
-
-    current_term = models.CharField(max_length=20)
-    academic_year = models.CharField(max_length=20)
-    principal_name = models.CharField(max_length=100, blank=True)
-
-    principal_signature = models.ImageField(
-        upload_to="signatures/",
-        blank=True,
-        null=True,
-    )
-
-    logo = models.ImageField(
-        upload_to="school_logos/",
-        blank=True,
-        null=True,
-    )
-    closing_date = models.DateField(null=True, blank=True)
-    opening_date = models.DateField(null=True, blank=True)
-    school_stamp = models.ImageField(
-        upload_to="school/",
-        blank=True,
-        null=True,
-)
-    
-
-    def __str__(self):
-        return self.name
 
 
 class SchoolUser(models.Model):

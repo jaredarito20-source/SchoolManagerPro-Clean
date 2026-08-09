@@ -44,59 +44,263 @@ from students.models import *
 
 @login_required
 def exam_list(request):
-    exams = Exam.objects.all()
 
-    return render(request, "students/exam_list.html", {
-        "exams": exams
-    })
+    if request.user.is_superuser:
+
+        exams = Exam.objects.select_related(
+            "school",
+        ).all()
+
+    else:
+
+        school = request.user.school_user.school
+
+        exams = Exam.objects.select_related(
+            "school",
+        ).filter(
+            school=school
+        )
+
+    return render(
+        request,
+        "students/exam_list.html",
+        {
+            "exams": exams,
+        },
+    )
 
 
 @login_required
 @admin_or_bursar
 def add_exam(request):
+
+    # --------------------------------
+    # AVAILABLE SCHOOLS
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        schools = SchoolProfile.objects.all()
+
+    else:
+
+        school = request.user.school_user.school
+
+        schools = [school]
+
+    # --------------------------------
+    # POST
+    # --------------------------------
+
     if request.method == "POST":
+
+        name = request.POST.get(
+            "name",
+            ""
+        ).strip()
+
+        term = request.POST.get(
+            "term",
+            ""
+        ).strip()
+
+        year = request.POST.get(
+            "year",
+            ""
+        ).strip()
+
+        # --------------------------------
+        # DETERMINE SCHOOL
+        # --------------------------------
+
+        if request.user.is_superuser:
+
+            school_id = request.POST.get(
+                "school"
+            )
+
+            if not school_id:
+
+                messages.error(
+                    request,
+                    "Please select a school."
+                )
+
+                return redirect(
+                    "add_exam"
+                )
+
+            school = SchoolProfile.objects.filter(
+                id=school_id
+            ).first()
+
+            if not school:
+
+                messages.error(
+                    request,
+                    "Invalid school selected."
+                )
+
+                return redirect(
+                    "add_exam"
+                )
+
+        else:
+
+            school = request.user.school_user.school
+
+        # --------------------------------
+        # CREATE EXAM
+        # --------------------------------
+
         Exam.objects.create(
-            name=request.POST["name"],
-            term=request.POST["term"],
-            year=request.POST["year"],
+
+            name=name,
+            term=term,
+            year=year,
+
+            school=school,
+
             status="OPEN",
+        )
+
+        messages.success(
+            request,
+            "Exam created successfully."
+        )
+
+        return redirect(
+            "exam_list"
+        )
+
+    # --------------------------------
+    # FORM
+    # --------------------------------
+
+    return render(
+        request,
+        "students/add_exam.html",
+        {
+            "schools": schools,
+        },
+    )
+@login_required
+@admin_or_bursar
+def edit_exam(request, id):
+
+    # --------------------------------
+    # GET EXAM
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        exam = get_object_or_404(
+            Exam.objects.select_related("school"),
+            id=id,
+        )
+
+    else:
+
+        school = request.user.school_user.school
+
+        exam = get_object_or_404(
+            Exam.objects.select_related("school"),
+            id=id,
+            school=school,
+        )
+
+    # --------------------------------
+    # POST
+    # --------------------------------
+
+    if request.method == "POST":
+
+        exam.name = request.POST.get(
+            "name",
+            ""
+        ).strip()
+
+        exam.term = request.POST.get(
+            "term",
+            ""
+        ).strip()
+
+        exam.year = request.POST.get(
+            "year"
+        )
+
+        exam.save()
+
+        messages.success(
+            request,
+            "Exam updated successfully."
         )
 
         return redirect("exam_list")
 
-    return render(request, "students/add_exam.html")
+    # --------------------------------
+    # FORM
+    # --------------------------------
 
-
-@login_required
-@admin_or_bursar
-def edit_exam(request, id):
-    exam = get_object_or_404(Exam, id=id)
-
-    if request.method == "POST":
-        exam.name = request.POST["name"]
-        exam.term = request.POST["term"]
-        exam.year = request.POST["year"]
-        exam.save()
-
-        return redirect("exam_list")
-
-    return render(request, "students/edit_exam.html", {
-        "exam": exam
-    })
-
+    return render(
+        request,
+        "students/edit_exam.html",
+        {
+            "exam": exam,
+        },
+    )
 
 @login_required
 @admin_or_bursar
 def delete_exam(request, id):
-    exam = get_object_or_404(Exam, id=id)
+
+    # --------------------------------
+    # GET EXAM
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        exam = get_object_or_404(
+            Exam.objects.select_related("school"),
+            id=id,
+        )
+
+    else:
+
+        school = request.user.school_user.school
+
+        exam = get_object_or_404(
+            Exam.objects.select_related("school"),
+            id=id,
+            school=school,
+        )
+
+    # --------------------------------
+    # DELETE
+    # --------------------------------
 
     if request.method == "POST":
+
         exam.delete()
+
+        messages.success(
+            request,
+            "Exam deleted successfully."
+        )
+
         return redirect("exam_list")
 
-    return render(request, "students/delete_exam.html", {
-        "exam": exam
-    })
+    # --------------------------------
+    # CONFIRMATION PAGE
+    # --------------------------------
+
+    return render(
+        request,
+        "students/delete_exam.html",
+        {
+            "exam": exam,
+        },
+    )
 # ==========================
 # Marks
 # ==========================

@@ -4,10 +4,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count
+from students.utils import get_user_school
+from students.models import SchoolClass, SchoolProfile, Teacher,Student
 
 
 
-from students.models import Student, SchoolClass
 
 from django.contrib.auth.models import User, Group
 
@@ -103,20 +104,134 @@ def add_teacher(request):
 
 
 
+@login_required
+@admin_or_bursar
 def add_student(request):
-    classes = SchoolClass.objects.all()
+
+    # -----------------------------------
+    # Determine available schools/classes
+    # -----------------------------------
+
+    if request.user.is_superuser:
+        schools = SchoolProfile.objects.all().order_by("name")
+        classes = SchoolClass.objects.select_related(
+            "school"
+        ).order_by("school__name", "name")
+
+    else:
+        school = request.user.school_user.school
+
+        schools = [school]
+
+        classes = SchoolClass.objects.filter(
+            school=school
+        ).order_by("name")
+
+    # -----------------------------------
+    # POST
+    # -----------------------------------
 
     if request.method == "POST":
-        admission_number = request.POST.get("admission_number")
-        first_name = request.POST.get("first_name")
-        last_name = request.POST.get("last_name")
-        gender = request.POST.get("gender")
-        date_of_birth = request.POST.get("date_of_birth")
-        school_class_id = request.POST.get("school_class")
-        parent_name = request.POST.get("parent_name")
-        phone = request.POST.get("phone")
 
-        school_class = SchoolClass.objects.get(id=school_class_id)
+        admission_number = request.POST.get(
+            "admission_number", ""
+        ).strip()
+
+        first_name = request.POST.get(
+            "first_name", ""
+        ).strip()
+
+        last_name = request.POST.get(
+            "last_name", ""
+        ).strip()
+
+        gender = request.POST.get("gender")
+
+        date_of_birth = request.POST.get(
+            "date_of_birth"
+        )
+
+        school_class_id = request.POST.get(
+            "school_class"
+        )
+
+        parent_name = request.POST.get(
+            "parent_name", ""
+        ).strip()
+
+        phone = request.POST.get(
+            "phone", ""
+        ).strip()
+
+        # -----------------------------------
+        # Determine school
+        # -----------------------------------
+
+        if request.user.is_superuser:
+
+            school_id = request.POST.get("school")
+
+            if not school_id:
+                messages.error(
+                    request,
+                    "Please select a school."
+                )
+                return redirect("add_student")
+
+            school = SchoolProfile.objects.filter(
+                id=school_id
+            ).first()
+
+            if not school:
+                messages.error(
+                    request,
+                    "Invalid school."
+                )
+                return redirect("add_student")
+
+        else:
+
+            # Normal school users can NEVER
+            # choose another school.
+            school = request.user.school_user.school
+
+        # -----------------------------------
+        # Validate class belongs to school
+        # -----------------------------------
+
+        school_class = SchoolClass.objects.filter(
+            id=school_class_id,
+            school=school,
+        ).first()
+
+        if not school_class:
+            messages.error(
+                request,
+                "Invalid class selected for this school."
+            )
+            return redirect("add_student")
+
+        # -----------------------------------
+        # Prevent duplicate admission number
+        # within the same school
+        # -----------------------------------
+
+        if Student.objects.filter(
+            school=school,
+            admission_number=admission_number,
+        ).exists():
+
+            messages.error(
+                request,
+                f"Admission number {admission_number} "
+                f"already exists in {school.name}."
+            )
+
+            return redirect("add_student")
+
+        # -----------------------------------
+        # Create student
+        # -----------------------------------
 
         Student.objects.create(
             admission_number=admission_number,
@@ -124,62 +239,156 @@ def add_student(request):
             last_name=last_name,
             gender=gender,
             date_of_birth=date_of_birth,
+            school=school,
             school_class=school_class,
             parent_name=parent_name,
             phone=phone,
         )
 
-        messages.success(request, "Student added successfully!")
+        messages.success(
+            request,
+            f"{first_name} {last_name} has been "
+            f"added successfully."
+        )
+
         return redirect("student_list")
+
+    # -----------------------------------
+    # GET
+    # -----------------------------------
 
     return render(
         request,
         "students/add_student.html",
-        {"classes": classes}
+        {
+            "schools": schools,
+            "classes": classes,
+        },
     )
-
-
-
-
-
 
 @login_required
 @admin_or_bursar
 def student_list(request):
-    students = Student.objects.all()
-    return render(request, "students/student_list.html", {
-        "students": students
-    })
 
+    if request.user.is_superuser:
 
+        students = Student.objects.select_related(
+            "school",
+            "school_class",
+        ).all().order_by(
+            "school__name",
+            "school_class__name",
+            "first_name",
+        )
+
+    else:
+
+        school = request.user.school_user.school
+
+        students = Student.objects.select_related(
+            "school",
+            "school_class",
+        ).filter(
+            school=school
+        ).order_by(
+            "school_class__name",
+            "first_name",
+        )
+
+    return render(
+        request,
+        "students/student_list.html",
+        {
+            "students": students,
+        },
+    )
 
 @login_required
-def edit_student(request, pk):
+def edit_student(request, id):
 
-    student = get_object_or_404(Student, pk=pk)
+    if request.user.is_superuser:
 
-    classes = SchoolClass.objects.all().order_by("name")
-    parents = User.objects.filter(groups__name="Parents").order_by("username")
+        student = get_object_or_404(
+            Student,
+            id=id
+        )
+
+        schools = SchoolProfile.objects.all()
+
+        classes = SchoolClass.objects.select_related(
+            "school"
+        ).all().order_by("name")
+
+        parents = User.objects.filter(
+            groups__name="Parents"
+        ).order_by("username")
+
+    else:
+
+        school = request.user.school_user.school
+
+        student = get_object_or_404(
+            Student,
+            id=id,
+            school=school
+        )
+
+        schools = [school]
+
+        classes = SchoolClass.objects.filter(
+            school=school
+        ).order_by("name")
+
+        parents = User.objects.filter(
+            groups__name="Parents"
+        ).order_by("username")
 
     if request.method == "POST":
 
-        student.admission_number = request.POST.get("admission_number")
-        student.first_name = request.POST.get("first_name")
-        student.last_name = request.POST.get("last_name")
-        student.gender = request.POST.get("gender")
-        student.date_of_birth = request.POST.get("date_of_birth")
+        student.admission_number = request.POST.get(
+            "admission_number"
+        )
+        student.first_name = request.POST.get(
+            "first_name"
+        )
+        student.last_name = request.POST.get(
+            "last_name"
+        )
+        student.gender = request.POST.get(
+            "gender"
+        )
+        student.date_of_birth = request.POST.get(
+            "date_of_birth"
+        )
 
         class_id = request.POST.get("school_class")
+
         if class_id:
-            student.school_class = SchoolClass.objects.get(id=class_id)
+            student.school_class = get_object_or_404(
+                SchoolClass,
+                id=class_id,
+                school=student.school,
+            )
+        else:
+            student.school_class = None
 
-        student.parent_name = request.POST.get("parent_name")
-        student.phone = request.POST.get("phone")
+        student.parent_name = request.POST.get(
+            "parent_name"
+        )
+        student.phone = request.POST.get(
+            "phone"
+        )
 
-        parent_user_id = request.POST.get("parent_user")
+        parent_user_id = request.POST.get(
+            "parent_user"
+        )
 
         if parent_user_id:
-            student.parent_user = User.objects.get(id=parent_user_id)
+            student.parent_user = get_object_or_404(
+                User,
+                id=parent_user_id,
+                groups__name="Parents",
+            )
         else:
             student.parent_user = None
 
@@ -188,7 +397,10 @@ def edit_student(request, pk):
 
         student.save()
 
-        messages.success(request, "Student updated successfully.")
+        messages.success(
+            request,
+            "Student updated successfully."
+        )
 
         return redirect("student_list")
 
@@ -197,6 +409,7 @@ def edit_student(request, pk):
         "students/edit_student.html",
         {
             "student": student,
+            "schools": schools,
             "classes": classes,
             "parents": parents,
         },
@@ -258,35 +471,74 @@ def promote_students(request):
 
 
 @login_required
-@in_group(
-    "Administrators",
-    "Head Teacher",
-)
+@admin_or_bursar
 def delete_student(request, id):
-    student = get_object_or_404(Student, id=id)
+
+    if request.user.is_superuser:
+        student = get_object_or_404(
+            Student,
+            id=id
+        )
+    else:
+        school = request.user.school_user.school
+
+        student = get_object_or_404(
+            Student,
+            id=id,
+            school=school
+        )
 
     if request.method == "POST":
+        student_name = f"{student.first_name} {student.last_name}"
+
         student.delete()
+
+        messages.success(
+            request,
+            f"{student_name} has been deleted successfully."
+        )
+
         return redirect("student_list")
 
-    return render(request, "students/delete_student.html", {
-        "student": student
-    })
-
+    return render(
+        request,
+        "students/delete_student.html",
+        {
+            "student": student,
+        },
+    )
 
 @login_required
-@in_group(
-    "Administrators",
-    "Head Teacher",
-    "Senior Teacher",
-)
+@admin_or_bursar
 def teacher_list(request):
-    teachers = Teacher.objects.all()
-    return render(request, "students/teacher_list.html", {
-        "teachers": teachers
-    })
 
+    if request.user.is_superuser:
+        teachers = Teacher.objects.select_related(
+            "school"
+        ).prefetch_related(
+            "subjects",
+            "subjects__school_class",
+        ).all()
 
+    else:
+        school = request.user.school_user.school
+
+        teachers = Teacher.objects.select_related(
+            "school"
+        ).prefetch_related(
+            "subjects",
+            "subjects__school_class",
+        ).filter(
+            school=school
+        )
+
+    return render(
+        request,
+        "students/teacher_list.html",
+        {
+            "teachers": teachers,
+        },
+    )
 from django.contrib.auth.models import User, Group
 from django.contrib import messages
 
@@ -294,18 +546,113 @@ from django.contrib import messages
 @admin_required
 def add_teacher(request):
 
+    # --------------------------------
+    # AVAILABLE SCHOOLS
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        schools = SchoolProfile.objects.all()
+
+    else:
+
+        school = request.user.school_user.school
+
+        schools = [school]
+
+    # --------------------------------
+    # POST
+    # --------------------------------
+
     if request.method == "POST":
 
-        employee_number = request.POST["employee_number"]
-        first_name = request.POST["first_name"]
-        last_name = request.POST["last_name"]
-        gender = request.POST["gender"]
-        phone = request.POST["phone"]
-        email = request.POST["email"]
+        employee_number = request.POST.get(
+            "employee_number",
+            ""
+        ).strip()
 
-        username = request.POST["username"]
-        password = request.POST["password"]
-        confirm_password = request.POST["confirm_password"]
+        first_name = request.POST.get(
+            "first_name",
+            ""
+        ).strip()
+
+        last_name = request.POST.get(
+            "last_name",
+            ""
+        ).strip()
+
+        gender = request.POST.get(
+            "gender"
+        )
+
+        phone = request.POST.get(
+            "phone",
+            ""
+        ).strip()
+
+        email = request.POST.get(
+            "email",
+            ""
+        ).strip()
+
+        username = request.POST.get(
+            "username",
+            ""
+        ).strip()
+
+        password = request.POST.get(
+            "password",
+            ""
+        )
+
+        confirm_password = request.POST.get(
+            "confirm_password",
+            ""
+        )
+
+        # --------------------------------
+        # DETERMINE SCHOOL
+        # --------------------------------
+
+        if request.user.is_superuser:
+
+            school_id = request.POST.get(
+                "school"
+            )
+
+            if not school_id:
+
+                messages.error(
+                    request,
+                    "Please select a school."
+                )
+
+                return redirect(
+                    "add_teacher"
+                )
+
+            school = SchoolProfile.objects.filter(
+                id=school_id
+            ).first()
+
+            if not school:
+
+                messages.error(
+                    request,
+                    "Invalid school selected."
+                )
+
+                return redirect(
+                    "add_teacher"
+                )
+
+        else:
+
+            school = request.user.school_user.school
+
+        # --------------------------------
+        # PASSWORD CHECK
+        # --------------------------------
 
         if password != confirm_password:
 
@@ -314,37 +661,85 @@ def add_teacher(request):
                 "Passwords do not match."
             )
 
-            return redirect("add_teacher")
+            return redirect(
+                "add_teacher"
+            )
 
-        if User.objects.filter(username=username).exists():
+        # --------------------------------
+        # USERNAME CHECK
+        # --------------------------------
+
+        if User.objects.filter(
+            username=username
+        ).exists():
 
             messages.error(
                 request,
                 "Username already exists."
             )
 
-            return redirect("add_teacher")
+            return redirect(
+                "add_teacher"
+            )
+
+        # --------------------------------
+        # EMPLOYEE NUMBER CHECK
+        # --------------------------------
+
+        if Teacher.objects.filter(
+            employee_number=employee_number
+        ).exists():
+
+            messages.error(
+                request,
+                "Employee number already exists."
+            )
+
+            return redirect(
+                "add_teacher"
+            )
+
+        # --------------------------------
+        # CREATE USER
+        # --------------------------------
 
         user = User.objects.create_user(
 
             username=username,
             password=password,
+
             first_name=first_name,
             last_name=last_name,
             email=email,
 
         )
 
-        teacher_group = Group.objects.get(name="Teachers")
+        # --------------------------------
+        # TEACHER GROUP
+        # --------------------------------
 
-        user.groups.add(teacher_group)
+        teacher_group = Group.objects.get(
+            name="Teachers"
+        )
+
+        user.groups.add(
+            teacher_group
+        )
+
+        # --------------------------------
+        # CREATE TEACHER
+        # --------------------------------
 
         Teacher.objects.create(
 
             user=user,
+
+            school=school,
+
             employee_number=employee_number,
             first_name=first_name,
             last_name=last_name,
+
             gender=gender,
             phone=phone,
             email=email,
@@ -353,14 +748,24 @@ def add_teacher(request):
 
         messages.success(
             request,
-            "Teacher created successfully."
+            f"{first_name} {last_name} "
+            "was created successfully."
         )
 
-        return redirect("teacher_list")
+        return redirect(
+            "teacher_list"
+        )
+
+    # --------------------------------
+    # FORM
+    # --------------------------------
 
     return render(
         request,
-        "teachers/add_teacher.html",
+        "students/add_teacher.html",
+        {
+            "schools": schools,
+        },
     )
 @login_required
 @in_group(
@@ -369,24 +774,128 @@ def add_teacher(request):
     "Senior Teacher",
 )
 def edit_teacher(request, id):
-    teacher = get_object_or_404(Teacher, id=id)
+
+    # --------------------------------
+    # GET TEACHER
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        teacher = get_object_or_404(
+            Teacher.objects.select_related("school", "user"),
+            id=id,
+        )
+
+    else:
+
+        school = request.user.school_user.school
+
+        teacher = get_object_or_404(
+            Teacher.objects.select_related("school", "user"),
+            id=id,
+            school=school,
+        )
+
+    # --------------------------------
+    # POST
+    # --------------------------------
 
     if request.method == "POST":
-        teacher.employee_number = request.POST["employee_number"]
-        teacher.first_name = request.POST["first_name"]
-        teacher.last_name = request.POST["last_name"]
-        teacher.gender = request.POST["gender"]
-        teacher.phone = request.POST["phone"]
-        teacher.email = request.POST["email"]
-        teacher.subject = request.POST["subject"]
+
+        employee_number = request.POST.get(
+            "employee_number",
+            ""
+        ).strip()
+
+        first_name = request.POST.get(
+            "first_name",
+            ""
+        ).strip()
+
+        last_name = request.POST.get(
+            "last_name",
+            ""
+        ).strip()
+
+        gender = request.POST.get(
+            "gender"
+        )
+
+        phone = request.POST.get(
+            "phone",
+            ""
+        ).strip()
+
+        email = request.POST.get(
+            "email",
+            ""
+        ).strip()
+
+        # --------------------------------
+        # EMPLOYEE NUMBER CHECK
+        # --------------------------------
+
+        if Teacher.objects.filter(
+            employee_number=employee_number
+        ).exclude(
+            id=teacher.id
+        ).exists():
+
+            messages.error(
+                request,
+                "Employee number already exists."
+            )
+
+            return redirect(
+                "edit_teacher",
+                id=teacher.id,
+            )
+
+        # --------------------------------
+        # UPDATE TEACHER
+        # --------------------------------
+
+        teacher.employee_number = employee_number
+        teacher.first_name = first_name
+        teacher.last_name = last_name
+        teacher.gender = gender
+        teacher.phone = phone
+        teacher.email = email
+
         teacher.save()
 
-        return redirect("teacher_list")
+        # --------------------------------
+        # UPDATE LOGIN USER
+        # --------------------------------
 
-    return render(request, "students/edit_teacher.html", {
-        "teacher": teacher
-    })
+        if teacher.user:
 
+            teacher.user.first_name = first_name
+            teacher.user.last_name = last_name
+            teacher.user.email = email
+
+            teacher.user.save()
+
+        messages.success(
+            request,
+            "Teacher updated successfully."
+        )
+
+        return redirect(
+            "teacher_list"
+        )
+
+    # --------------------------------
+    # FORM
+    # --------------------------------
+
+    return render(
+        request,
+        "students/edit_teacher.html",
+        {
+            "teacher": teacher,
+        },
+    )
 
 @login_required
 @in_group(
@@ -394,128 +903,585 @@ def edit_teacher(request, id):
     "Head Teacher",
 )
 def delete_teacher(request, id):
-    teacher = get_object_or_404(Teacher, id=id)
+
+    # --------------------------------
+    # GET TEACHER
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        teacher = get_object_or_404(
+            Teacher.objects.select_related(
+                "school",
+                "user",
+            ),
+            id=id,
+        )
+
+    else:
+
+        school = request.user.school_user.school
+
+        teacher = get_object_or_404(
+            Teacher.objects.select_related(
+                "school",
+                "user",
+            ),
+            id=id,
+            school=school,
+        )
+
+    # --------------------------------
+    # DELETE
+    # --------------------------------
 
     if request.method == "POST":
+
+        # Keep reference to the linked login account
+        user = teacher.user
+
         teacher.delete()
+
+        # Delete the teacher's login account too
+        if user:
+            user.delete()
+
+        messages.success(
+            request,
+            "Teacher deleted successfully."
+        )
+
         return redirect("teacher_list")
 
-    return render(request, "students/delete_teacher.html", {
-        "teacher": teacher
-    })
+    # --------------------------------
+    # CONFIRMATION PAGE
+    # --------------------------------
 
-
+    return render(
+        request,
+        "students/delete_teacher.html",
+        {
+            "teacher": teacher,
+        },
+    )
 @login_required
+@admin_or_bursar
 def subject_list(request):
-    subjects = Subject.objects.all()
-    return render(request, "students/subject_list.html", {
-        "subjects": subjects
-    })
+
+    if request.user.is_superuser:
+        subjects = Subject.objects.select_related(
+            "school",
+            "school_class",
+            "teacher",
+        ).all()
+
+    else:
+        school = request.user.school_user.school
+
+        subjects = Subject.objects.select_related(
+            "school",
+            "school_class",
+            "teacher",
+        ).filter(
+            school=school
+        )
+
+    return render(
+        request,
+        "students/subject_list.html",
+        {
+            "subjects": subjects,
+        },
+    )
 
 
 
 @login_required
-@in_group(
-    "Administrators",
-    "Head Teacher",
-)
+@admin_or_bursar
 def add_subject(request):
+
+    if request.user.is_superuser:
+
+        schools = SchoolProfile.objects.all()
+
+        classes = SchoolClass.objects.select_related(
+            "school"
+        ).all()
+
+        teachers = Teacher.objects.select_related(
+            "school"
+        ).all()
+
+    else:
+
+        school = request.user.school_user.school
+
+        schools = [school]
+
+        classes = SchoolClass.objects.filter(
+            school=school
+        ).order_by("name")
+
+        teachers = Teacher.objects.filter(
+            school=school
+        ).order_by("first_name", "last_name")
+
     if request.method == "POST":
-        teacher = None
+
+        name = request.POST.get("name", "").strip()
+        code = request.POST.get("code", "").strip()
+        school_class_id = request.POST.get("school_class")
         teacher_id = request.POST.get("teacher")
+
+        # -------------------------
+        # DETERMINE SCHOOL
+        # -------------------------
+
+        if request.user.is_superuser:
+
+            school_id = request.POST.get("school")
+
+            if not school_id:
+                messages.error(
+                    request,
+                    "Please select a school."
+                )
+                return redirect("add_subject")
+
+            school = SchoolProfile.objects.filter(
+                id=school_id
+            ).first()
+
+            if not school:
+                messages.error(
+                    request,
+                    "Invalid school selected."
+                )
+                return redirect("add_subject")
+
+        else:
+
+            school = request.user.school_user.school
+
+        # -------------------------
+        # VALIDATE CLASS
+        # -------------------------
+
+        school_class = None
+
+        if school_class_id:
+
+            school_class = SchoolClass.objects.filter(
+                id=school_class_id,
+                school=school,
+            ).first()
+
+            if not school_class:
+                messages.error(
+                    request,
+                    "Invalid class selected for this school."
+                )
+                return redirect("add_subject")
+
+        # -------------------------
+        # VALIDATE TEACHER
+        # -------------------------
+
+        teacher = None
+
         if teacher_id:
-            teacher = Teacher.objects.get(id=teacher_id)
+
+            teacher = Teacher.objects.filter(
+                id=teacher_id,
+                school=school,
+            ).first()
+
+            if not teacher:
+                messages.error(
+                    request,
+                    "Invalid teacher selected for this school."
+                )
+                return redirect("add_subject")
+
+        # -------------------------
+        # CREATE SUBJECT
+        # -------------------------
 
         Subject.objects.create(
-            name=request.POST["name"],
-            code=request.POST["code"],
+            name=name,
+            code=code,
+            school=school,
+            school_class=school_class,
             teacher=teacher,
+        )
+
+        messages.success(
+            request,
+            "Subject added successfully."
         )
 
         return redirect("subject_list")
 
-    teachers = Teacher.objects.all()
-    return render(request, "students/add_subject.html", {
-        "teachers": teachers
-    })
-
-
+    return render(
+        request,
+        "students/add_subject.html",
+        {
+            "schools": schools,
+            "classes": classes,
+            "teachers": teachers,
+        },
+    )
 @login_required
-@in_group(
-    "Administrators",
-    "Head Teacher",
-)
+@admin_or_bursar
 def edit_subject(request, id):
-    subject = get_object_or_404(Subject, id=id)
+
+    # --------------------------------
+    # GET SUBJECT FOR THIS SCHOOL
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        subject = get_object_or_404(
+            Subject,
+            id=id,
+        )
+
+        schools = SchoolProfile.objects.all()
+
+        classes = SchoolClass.objects.select_related(
+            "school"
+        ).all()
+
+        teachers = Teacher.objects.select_related(
+            "school"
+        ).all()
+
+    else:
+
+        school = request.user.school_user.school
+
+        subject = get_object_or_404(
+            Subject,
+            id=id,
+            school=school,
+        )
+
+        schools = [school]
+
+        classes = SchoolClass.objects.filter(
+            school=school
+        ).order_by("name")
+
+        teachers = Teacher.objects.filter(
+            school=school
+        ).order_by(
+            "first_name",
+            "last_name",
+        )
+
+    # --------------------------------
+    # SAVE CHANGES
+    # --------------------------------
 
     if request.method == "POST":
-        teacher = None
-        teacher_id = request.POST.get("teacher")
-        if teacher_id:
-            teacher = Teacher.objects.get(id=teacher_id)
 
-        subject.name = request.POST["name"]
-        subject.code = request.POST["code"]
+        name = request.POST.get(
+            "name",
+            ""
+        ).strip()
+
+        code = request.POST.get(
+            "code",
+            ""
+        ).strip()
+
+        school_class_id = request.POST.get(
+            "school_class"
+        )
+
+        teacher_id = request.POST.get(
+            "teacher"
+        )
+
+        # --------------------------------
+        # DETERMINE SCHOOL
+        # --------------------------------
+
+        if request.user.is_superuser:
+
+            school_id = request.POST.get(
+                "school"
+            )
+
+            if not school_id:
+                messages.error(
+                    request,
+                    "Please select a school."
+                )
+                return redirect(
+                    "edit_subject",
+                    id=id,
+                )
+
+            school = SchoolProfile.objects.filter(
+                id=school_id
+            ).first()
+
+            if not school:
+                messages.error(
+                    request,
+                    "Invalid school selected."
+                )
+                return redirect(
+                    "edit_subject",
+                    id=id,
+                )
+
+        else:
+
+            school = request.user.school_user.school
+
+        # --------------------------------
+        # VALIDATE CLASS
+        # --------------------------------
+
+        school_class = None
+
+        if school_class_id:
+
+            school_class = SchoolClass.objects.filter(
+                id=school_class_id,
+                school=school,
+            ).first()
+
+            if not school_class:
+                messages.error(
+                    request,
+                    "Invalid class selected for this school."
+                )
+                return redirect(
+                    "edit_subject",
+                    id=id,
+                )
+
+        # --------------------------------
+        # VALIDATE TEACHER
+        # --------------------------------
+
+        teacher = None
+
+        if teacher_id:
+
+            teacher = Teacher.objects.filter(
+                id=teacher_id,
+                school=school,
+            ).first()
+
+            if not teacher:
+                messages.error(
+                    request,
+                    "Invalid teacher selected for this school."
+                )
+                return redirect(
+                    "edit_subject",
+                    id=id,
+                )
+
+        # --------------------------------
+        # UPDATE SUBJECT
+        # --------------------------------
+
+        subject.name = name
+        subject.code = code
+        subject.school = school
+        subject.school_class = school_class
         subject.teacher = teacher
+
         subject.save()
 
-        return redirect("subject_list")
+        messages.success(
+            request,
+            "Subject updated successfully."
+        )
 
-    teachers = Teacher.objects.all()
-    return render(request, "students/edit_subject.html", {
-        "subject": subject,
-        "teachers": teachers,
-    })
+        return redirect(
+            "subject_list"
+        )
 
+    # --------------------------------
+    # DISPLAY FORM
+    # --------------------------------
+
+    return render(
+        request,
+        "students/edit_subject.html",
+        {
+            "subject": subject,
+            "schools": schools,
+            "classes": classes,
+            "teachers": teachers,
+        },
+    )
 
 
 @login_required
-@in_group(
-    "Administrators",
-    "Head Teacher",
-)
+@admin_or_bursar
 def delete_subject(request, id):
-    subject = get_object_or_404(Subject, id=id)
+
+    if request.user.is_superuser:
+
+        subject = get_object_or_404(
+            Subject,
+            id=id,
+        )
+
+    else:
+
+        school = request.user.school_user.school
+
+        subject = get_object_or_404(
+            Subject,
+            id=id,
+            school=school,
+        )
 
     if request.method == "POST":
+
+        subject_name = subject.name
+
         subject.delete()
+
+        messages.success(
+            request,
+            f"{subject_name} has been deleted successfully."
+        )
+
         return redirect("subject_list")
 
-    return render(request, "students/delete_subject.html", {
-        "subject": subject
-    })
-
-
+    return render(
+        request,
+        "students/delete_subject.html",
+        {
+            "subject": subject,
+        },
+    )
 @login_required
 @admin_or_bursar
 def class_list(request):
-    classes = SchoolClass.objects.all()
-    return render(request, "students/class_list.html", {
-        "classes": classes
-    })
 
+    if request.user.is_superuser:
+        classes = SchoolClass.objects.select_related(
+            "school",
+            "class_teacher",
+        ).all()
+
+    else:
+        school_user = request.user.school_user
+
+        classes = SchoolClass.objects.select_related(
+            "school",
+            "class_teacher",
+        ).filter(
+            school=school_user.school
+        )
+
+    return render(
+        request,
+        "students/class_list.html",
+        {
+            "classes": classes,
+        },
+    )
 @login_required
 @admin_or_bursar
 def add_class(request):
+
     if request.method == "POST":
-        teacher = None
+
+        name = request.POST.get("name", "").strip()
         teacher_id = request.POST.get("class_teacher")
 
+        if not name:
+            messages.error(request, "Class name is required.")
+            return redirect("add_class")
+
+        # Determine school
+        if request.user.is_superuser:
+            school_id = request.POST.get("school")
+
+            if not school_id:
+                messages.error(request, "Please select a school.")
+                return redirect("add_class")
+
+            school = SchoolProfile.objects.get(id=school_id)
+
+        else:
+            school_user = request.user.school_user
+            school = school_user.school
+
+        # Prevent duplicate class within the same school
+        if SchoolClass.objects.filter(
+            school=school,
+            name=name,
+        ).exists():
+            messages.error(
+                request,
+                f"{name} already exists in {school.name}."
+            )
+            return redirect("add_class")
+
+        class_teacher = None
+
         if teacher_id:
-            teacher = Teacher.objects.get(id=teacher_id)
+            class_teacher = Teacher.objects.filter(
+                id=teacher_id,
+                school=school,
+            ).first()
+
+            if not class_teacher:
+                messages.error(
+                    request,
+                    "Invalid class teacher."
+                )
+                return redirect("add_class")
 
         SchoolClass.objects.create(
-            name=request.POST["name"],
-            class_teacher=teacher,
+            school=school,
+            name=name,
+            class_teacher=class_teacher,
+        )
+
+        messages.success(
+            request,
+            f"{name} has been added successfully."
         )
 
         return redirect("class_list")
 
-    teachers = Teacher.objects.all()
-    return render(request, "students/add_class.html", {
-        "teachers": teachers
-    })
+    # -------------------------
+    # GET
+    # -------------------------
 
+    if request.user.is_superuser:
+        schools = SchoolProfile.objects.all()
+        teachers = Teacher.objects.all()
+    else:
+        school = request.user.school_user.school
+
+        schools = [school]
+
+        teachers = Teacher.objects.filter(
+            school=school
+        )
+
+    return render(
+        request,
+        "students/add_class.html",
+        {
+            "schools": schools,
+            "teachers": teachers,
+        },
+    )
 
 @login_required
 @admin_or_bursar

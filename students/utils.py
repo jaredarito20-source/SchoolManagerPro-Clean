@@ -1,5 +1,6 @@
 from datetime import datetime
 from reportlab.lib.colors import HexColor
+from django.core.exceptions import PermissionDenied
 
 def draw_school_header(pdf, title):
 
@@ -82,3 +83,17 @@ def draw_school_footer(pdf, request):
             "%d-%m-%Y %H:%M"
         )
     )
+
+    
+
+
+def get_user_school(user):
+    if user.is_superuser:
+        return None
+
+    try:
+        return user.school_user.school
+    except AttributeError:
+        raise PermissionDenied(
+            "Your account is not connected to a school."
+        )

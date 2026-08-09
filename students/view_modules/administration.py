@@ -8,6 +8,7 @@ from django.db.models import Count, Sum
 
 
 
+
 import os
 import shutil
 
@@ -568,7 +569,7 @@ def system_logs(request):
         },
     )
 
-@login_required
+
 def register_school(request):
 
     # Only the system superuser can register a new school
@@ -582,6 +583,7 @@ def register_school(request):
     if request.method == "POST":
 
         # -----------------------------
+        # -----------------------------
         # SCHOOL INFORMATION
         # -----------------------------
         school_name = request.POST.get("school_name", "").strip()
@@ -590,8 +592,8 @@ def register_school(request):
         phone = request.POST.get("phone", "").strip()
         email = request.POST.get("email", "").strip()
         website = request.POST.get("website", "").strip()
-
-        # -----------------------------
+        current_term = request.POST.get("current_term", "").strip()
+        academic_year = request.POST.get("academic_year", "").strip()
         # ADMINISTRATOR INFORMATION
         # -----------------------------
         first_name = request.POST.get("first_name", "").strip()
@@ -653,6 +655,8 @@ def register_school(request):
             phone=phone,
             email=email,
             website=website,
+            current_term=current_term,
+            academic_year=academic_year,
         )
 
         # -----------------------------

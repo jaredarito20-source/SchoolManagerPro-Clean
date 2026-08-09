@@ -2,31 +2,62 @@
 
 {% block content %}
 
-<h2>Edit Examination</h2>
+<h1>Edit Exam</h1>
 
-<form method="POST">
+<form method="post">
     {% csrf_token %}
 
     <p>
         <label>Exam Name</label><br>
-        <input type="text" name="name" value="{{ exam.name }}" required>
+        <input
+            type="text"
+            name="name"
+            value="{{ exam.name }}"
+            required
+        >
     </p>
 
     <p>
         <label>Term</label><br>
-        <select name="term">
-            <option value="1" {% if exam.term == "1" %}selected{% endif %}>Term 1</option>
-            <option value="2" {% if exam.term == "2" %}selected{% endif %}>Term 2</option>
-            <option value="3" {% if exam.term == "3" %}selected{% endif %}>Term 3</option>
+
+        <select name="term" required>
+
+            <option value="1"
+                {% if exam.term == "1" %}selected{% endif %}>
+                Term 1
+            </option>
+
+            <option value="2"
+                {% if exam.term == "2" %}selected{% endif %}>
+                Term 2
+            </option>
+
+            <option value="3"
+                {% if exam.term == "3" %}selected{% endif %}>
+                Term 3
+            </option>
+
         </select>
     </p>
 
     <p>
         <label>Year</label><br>
-        <input type="number" name="year" value="{{ exam.year }}" required>
+
+        <input
+            type="number"
+            name="year"
+            value="{{ exam.year }}"
+            required
+        >
     </p>
 
-    <button type="submit">Update Exam</button>
+    <button type="submit">
+        💾 Update Exam
+    </button>
+
+    <a href="{% url 'exam_list' %}">
+        Cancel
+    </a>
 
 </form>
 

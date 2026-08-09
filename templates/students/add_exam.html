@@ -2,31 +2,73 @@
 
 {% block content %}
 
-<h2>Add Examination</h2>
+<h1>Add Exam</h1>
 
-<form method="POST">
+<form method="post">
     {% csrf_token %}
+
+    {% if user.is_superuser %}
+
+        <p>
+            <label>School</label><br>
+
+            <select name="school" required>
+                <option value="">
+                    Select School
+                </option>
+
+                {% for school in schools %}
+                    <option value="{{ school.id }}">
+                        {{ school.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+
+    {% endif %}
+
 
     <p>
         <label>Exam Name</label><br>
-        <input type="text" name="name" required>
+
+        <input
+            type="text"
+            name="name"
+            required
+        >
     </p>
+
 
     <p>
         <label>Term</label><br>
-        <select name="term">
+
+        <select name="term" required>
             <option value="1">Term 1</option>
             <option value="2">Term 2</option>
             <option value="3">Term 3</option>
         </select>
     </p>
 
+
     <p>
         <label>Year</label><br>
-        <input type="number" name="year" value="2026" required>
+
+        <input
+            type="number"
+            name="year"
+            value="2026"
+            required
+        >
     </p>
 
-    <button type="submit">Save Exam</button>
+
+    <button type="submit">
+        💾 Save Exam
+    </button>
+
+    <a href="{% url 'exam_list' %}">
+        Cancel
+    </a>
 
 </form>
 

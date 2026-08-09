@@ -2,43 +2,89 @@
 
 {% block content %}
 
-<h2>Subjects</h2>
+<h1>Subjects</h1>
 
-<p>
-    <a href="{% url 'add_subject' %}">
-        <button>Add Subject</button>
-    </a>
-</p>
+<a href="{% url 'add_subject' %}">
+    ➕ Add Subject
+</a>
 
-<table border="1">
-    <tr>
-        <th>Subject Name</th>
-        <th>Subject Code</th>
-        <th>Teacher</th>
-        <th>Actions</th>
-    </tr>
+<table>
+    <thead>
+        <tr>
+            <th>Subject</th>
+            <th>Code</th>
+            <th>School</th>
+            <th>Class</th>
+            <th>Teacher</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
 
     {% for subject in subjects %}
-    <tr>
-        <td>{{ subject.name }}</td>
-        <td>{{ subject.code }}</td>
-        <td>
-            {% if subject.teacher %}
-                {{ subject.teacher.first_name }} {{ subject.teacher.last_name }}
-            {% else %}
-                Not Assigned
-            {% endif %}
-        </td>
-        <td>
-            <a href="{% url 'edit_subject' subject.id %}">✏ Edit</a> |
-            <a href="{% url 'delete_subject' subject.id %}">🗑 Delete</a>
-        </td>
-    </tr>
+
+        <tr>
+
+            <td>
+                {{ subject.name }}
+            </td>
+
+            <td>
+                {{ subject.code }}
+            </td>
+
+            <td>
+                {% if subject.school %}
+                    {{ subject.school.name }}
+                {% else %}
+                    Not Assigned
+                {% endif %}
+            </td>
+
+            <td>
+                {% if subject.school_class %}
+                    {{ subject.school_class.name }}
+                {% else %}
+                    All Classes
+                {% endif %}
+            </td>
+
+            <td>
+                {% if subject.teacher %}
+                    {{ subject.teacher.first_name }}
+                    {{ subject.teacher.last_name }}
+                {% else %}
+                    Not Assigned
+                {% endif %}
+            </td>
+
+            <td>
+                <a href="{% url 'edit_subject' subject.id %}">
+                    ✏ Edit
+                </a>
+
+                |
+
+                <a href="{% url 'delete_subject' subject.id %}">
+                    🗑 Delete
+                </a>
+            </td>
+
+        </tr>
+
     {% empty %}
-    <tr>
-        <td colspan="4">No subjects available.</td>
-    </tr>
+
+        <tr>
+            <td colspan="6">
+                No subjects available.
+            </td>
+        </tr>
+
     {% endfor %}
+
+    </tbody>
+
 </table>
 
 {% endblock %}
