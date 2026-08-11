@@ -172,60 +172,67 @@ urlpatterns = [
         name="ajax_load_exams",
 ),
 
-    path(
-        "exam/<int:id>/toggle/",
-        views.toggle_exam_status,
-        name="toggle_exam_status",
-    ),
+   path(
+    "exam/<int:id>/toggle/",
+    views.toggle_exam_status,
+    name="toggle_exam_status",
+),
 
-        path(
+    path(
         "marks/<int:id>/submit/",
         views.submit_mark,
         name="submit_mark",
     ),
 
-    path("mark-submissions/", 
-         views.mark_submission_list, 
-         name="mark_submission_list"),
-    path("mark-submissions/<int:id>/submit/",
-        views.submit_mark_submission, 
-        name="submit_mark_submission"),
+    path(
+        "mark-submissions/",
+        views.mark_submission_list,
+        name="mark_submission_list",
+    ),
 
     path(
-    "admin/mark-submissions/",
-    views.admin_mark_submission_list,
-    name="admin_mark_submission_list",
-),
+        "mark-submissions/<int:id>/submit/",
+        views.submit_mark_submission,
+        name="submit_mark_submission",
+    ),
+
+    # Administrator mark review
     path(
-    "admin/mark-submissions/<int:id>/view/",
-    views.view_mark_submission,
-    name="view_mark_submission",
-),
-    path(
-    "teacher/drafts/",
-    views.teacher_draft_submissions,
-    name="teacher_draft_submissions",
-),
+        "administration/mark-submissions/",
+        views.admin_mark_submission_list,
+        name="admin_mark_submission_list",
+    ),
 
     path(
-    "marks/draft/<int:id>/",
-    views.continue_mark_entry,
-    name="continue_mark_entry",
-),
+        "administration/mark-submissions/<int:id>/view/",
+        views.view_mark_submission,
+        name="view_mark_submission",
+    ),
 
     path(
-        "admin/mark-submissions/<int:id>/approve/",
+        "administration/mark-submissions/<int:id>/approve/",
         views.approve_mark_submission,
         name="approve_mark_submission",
     ),
 
     path(
-        "admin/mark-submissions/<int:id>/reject/",
+        "administration/mark-submissions/<int:id>/reject/",
         views.reject_mark_submission,
         name="reject_mark_submission",
     ),
 
+    # Teacher drafts
+    path(
+        "teacher/drafts/",
+        views.teacher_draft_submissions,
+        name="teacher_draft_submissions",
+    ),
 
+    path(
+        "marks/draft/<int:id>/",
+        views.continue_mark_entry,
+        name="continue_mark_entry",
+    ),
 
     path(
         "timetable/print/",

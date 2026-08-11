@@ -307,142 +307,156 @@ def delete_exam(request, id):
 @login_required
 @admin_or_teacher
 def mark_list(request):
+
     if request.user.is_superuser:
-        marks = Mark.objects.all()
+
+        marks = Mark.objects.select_related(
+            "student",
+            "student__school",
+            "subject",
+            "subject__school",
+            "subject__teacher",
+            "exam",
+            "exam__school",
+        ).all()
+
     else:
+
         teacher = request.user.teacher_profile
-        marks = Mark.objects.filter(subject__teacher=teacher)
+        school = teacher.school
 
+        marks = Mark.objects.select_related(
+            "student",
+            "student__school",
+            "subject",
+            "subject__school",
+            "subject__teacher",
+            "exam",
+            "exam__school",
+        ).filter(
+            subject__teacher=teacher,
+            student__school=school,
+            subject__school=school,
+            exam__school=school,
+        )
 
-    return render(request, "students/mark_list.html", {
-        "marks": marks
-    })
-
-
+    return render(
+        request,
+        "students/mark_list.html",
+        {
+            "marks": marks,
+        },
+    )
 @login_required
 @admin_or_teacher
 def add_mark(request):
 
-    if request.user.is_superuser:
-        classes = SchoolClass.objects.all()
-    else:
-        teacher = request.user.teacher_profile
-        classes = SchoolClass.objects.filter(
-            subjects__teacher=teacher
-        ).distinct()
+    # --------------------------------
+    # SCHOOL
+    # --------------------------------
 
-    exams = Exam.objects.filter(status="OPEN")
+    if request.user.is_superuser:
+
+        school = None
+
+    elif hasattr(request.user, "school_user"):
+
+        school = request.user.school_user.school
+
+    else:
+
+        teacher = Teacher.objects.filter(
+            user=request.user
+        ).first()
+
+        if teacher:
+            school = teacher.school
+        else:
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+            return redirect("home")
+
+    # --------------------------------
+    # CLASSES
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        classes = SchoolClass.objects.all().order_by("name")
+
+    elif request.user.groups.filter(
+        name="Administrators"
+    ).exists():
+
+        classes = SchoolClass.objects.filter(
+            school=school
+        ).order_by("name")
+
+    else:
+
+        teacher = Teacher.objects.filter(
+            user=request.user
+        ).first()
+
+        if teacher:
+
+            classes = SchoolClass.objects.filter(
+                school=school,
+                subjects__teacher=teacher,
+            ).distinct().order_by("name")
+
+        else:
+
+            classes = SchoolClass.objects.none()
+
+    # --------------------------------
+    # OPEN EXAMS
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        exams = Exam.objects.filter(
+            status="OPEN"
+        ).order_by(
+            "year",
+            "term",
+            "name",
+        )
+
+    else:
+
+        exams = Exam.objects.filter(
+            school=school,
+            status="OPEN",
+        ).order_by(
+            "year",
+            "term",
+            "name",
+        )
+
+    # --------------------------------
+    # INITIAL VALUES
+    # --------------------------------
 
     students = Student.objects.none()
     subjects = Subject.objects.none()
     selected_class = None
 
+    # --------------------------------
+    # POST
+    # --------------------------------
+
     if request.method == "POST":
 
-        class_id = request.POST.get("school_class")
+        # your existing POST code goes here
 
-        if class_id:
-            selected_class = get_object_or_404(
-                SchoolClass,
-                id=class_id,
-            )
+        ...
 
-            students = Student.objects.filter(
-                school_class=selected_class
-            ).order_by(
-                "admission_number"
-            )
-
-            if request.user.is_superuser:
-                subjects = Subject.objects.filter(
-                    school_class=selected_class
-                )
-            else:
-                teacher = request.user.teacher_profile
-
-                subjects = Subject.objects.filter(
-                    school_class=selected_class,
-                    teacher=teacher,
-                )
-
-        # Only loading students
-        if "save_marks" not in request.POST:
-
-            return render(
-                request,
-                "students/add_mark.html",
-                {
-                    "classes": classes,
-                    "students": students,
-                    "subjects": subjects,
-                    "exams": exams,
-                    "selected_class": selected_class,
-                },
-            )
-
-        subject = get_object_or_404(
-            Subject,
-            id=request.POST["subject"],
-        )
-
-        exam = get_object_or_404(
-            Exam,
-            id=request.POST["exam"],
-        )
-
-        if request.user.is_superuser:
-            teacher = subject.teacher
-        else:
-            teacher = request.user.teacher_profile
-
-        submission, created = MarkSubmission.objects.get_or_create(
-            school_class=selected_class,
-            subject=subject,
-            exam=exam,
-            defaults={
-                "teacher": teacher,
-                "status": "DRAFT",
-            },
-        )
-
-        if (
-            not request.user.is_superuser
-            and submission.status != "DRAFT"
-        ):
-            messages.error(
-                request,
-                "This submission has already been submitted."
-            )
-            return redirect("mark_list")
-
-        for student in students:
-
-            value = request.POST.get(
-                f"marks_{student.id}"
-            )
-
-            if value in [None, ""]:
-                continue
-
-            marks = float(value)
-
-            Mark.objects.update_or_create(
-                student=student,
-                subject=subject,
-                exam=exam,
-                defaults={
-                    "submission": submission,
-                    "marks": marks,
-                    "grade": calculate_grade(marks),
-                },
-            )
-
-        messages.success(
-            request,
-            "Class marks saved successfully."
-        )
-
-        return redirect("add_mark")
+    # --------------------------------
+    # INITIAL PAGE
+    # --------------------------------
 
     return render(
         request,
@@ -621,15 +635,68 @@ def submit_mark(request, id):
 @admin_or_teacher
 def mark_submission_list(request):
 
+    # --------------------------------
+    # SUPERUSER
+    # --------------------------------
+
     if request.user.is_superuser:
-        submissions = MarkSubmission.objects.all()
+
+        submissions = MarkSubmission.objects.select_related(
+            "teacher",
+            "school_class",
+            "subject",
+            "exam",
+        ).all()
 
     else:
-        teacher = request.user.teacher_profile
 
-        submissions = MarkSubmission.objects.filter(
-            teacher=teacher
-        )
+        # --------------------------------
+        # GET SCHOOL
+        # --------------------------------
+
+        school = request.user.school_user.school
+
+        # --------------------------------
+        # GET TEACHER PROFILE
+        # --------------------------------
+
+        teacher = Teacher.objects.filter(
+            user=request.user
+        ).first()
+
+        if teacher:
+
+            # Teacher:
+            # only their own submissions
+            # within their school
+
+            submissions = MarkSubmission.objects.select_related(
+                "teacher",
+                "school_class",
+                "subject",
+                "exam",
+            ).filter(
+                teacher=teacher,
+                school_class__school=school,
+                subject__school=school,
+                exam__school=school,
+            )
+
+        else:
+
+            # Administrator:
+            # submissions from their school
+
+            submissions = MarkSubmission.objects.select_related(
+                "teacher",
+                "school_class",
+                "subject",
+                "exam",
+            ).filter(
+                school_class__school=school,
+                subject__school=school,
+                exam__school=school,
+            )
 
     return render(
         request,
@@ -643,30 +710,67 @@ def mark_submission_list(request):
 @admin_or_teacher
 def submit_mark_submission(request, id):
 
-    submission = get_object_or_404(
-        MarkSubmission,
-        id=id,
-    )
+    # --------------------------------
+    # GET TEACHER
+    # --------------------------------
 
-    if (
-        not request.user.is_superuser
-        and submission.teacher != request.user.teacher_profile
-    ):
+    teacher = Teacher.objects.filter(
+        user=request.user
+    ).first()
+
+    # --------------------------------
+    # GET SUBMISSION
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        submission = get_object_or_404(
+            MarkSubmission,
+            id=id,
+        )
+
+    elif teacher:
+
+        submission = get_object_or_404(
+            MarkSubmission,
+            id=id,
+            teacher=teacher,
+            school_class__school=teacher.school,
+            subject__school=teacher.school,
+            exam__school=teacher.school,
+        )
+
+    else:
+
         messages.error(
             request,
-            "You cannot submit another teacher's marks."
+            "Your account is not linked to a teacher profile."
         )
+
         return redirect("mark_submission_list")
 
+    # --------------------------------
+    # CHECK STATUS
+    # --------------------------------
+
     if submission.status != "DRAFT":
+
         messages.warning(
             request,
             "This submission has already been submitted."
         )
+
         return redirect("mark_submission_list")
 
+    # --------------------------------
+    # SUBMIT
+    # --------------------------------
+
     submission.status = "SUBMITTED"
-    submission.save()
+
+    submission.save(
+        update_fields=["status"]
+    )
 
     messages.success(
         request,
@@ -674,13 +778,21 @@ def submit_mark_submission(request, id):
     )
 
     return redirect("mark_submission_list")
-
 @login_required
 @admin_or_bursar
 def admin_mark_submission_list(request):
 
-    submissions = MarkSubmission.objects.filter(
-        status="SUBMITTED"
+    submissions = (
+        MarkSubmission.objects
+        .filter(status="SUBMITTED")
+        .select_related(
+            "school_class",
+            "subject",
+            "exam",
+            "teacher",
+        )
+        .prefetch_related("marks")
+        .order_by("-id")
     )
 
     return render(
@@ -691,21 +803,34 @@ def admin_mark_submission_list(request):
         },
     )
 
-
-
 @login_required
 @admin_or_bursar
 def approve_mark_submission(request, id):
 
+    if request.method != "POST":
+        messages.error(
+            request,
+            "Invalid request."
+        )
+        return redirect("admin_mark_submission_list")
+
     submission = get_object_or_404(
         MarkSubmission,
         id=id,
+        status="SUBMITTED",
     )
 
     submission.status = "APPROVED"
     submission.approved_by = request.user
     submission.approved_at = timezone.now()
-    submission.save()
+
+    submission.save(
+        update_fields=[
+            "status",
+            "approved_by",
+            "approved_at",
+        ]
+    )
 
     messages.success(
         request,
@@ -713,26 +838,35 @@ def approve_mark_submission(request, id):
     )
 
     return redirect("admin_mark_submission_list")
-
 @login_required
 @admin_or_bursar
 def reject_mark_submission(request, id):
 
+    if request.method != "POST":
+        messages.error(
+            request,
+            "Invalid request."
+        )
+        return redirect("admin_mark_submission_list")
+
     submission = get_object_or_404(
         MarkSubmission,
         id=id,
+        status="SUBMITTED",
     )
 
     submission.status = "REJECTED"
-    submission.save()
 
-    messages.warning(
+    submission.save(
+        update_fields=["status"]
+    )
+
+    messages.success(
         request,
-        "Submission rejected."
+        "Marks rejected successfully."
     )
 
     return redirect("admin_mark_submission_list")
-
 @login_required
 @admin_or_bursar
 def view_mark_submission(request, id):
@@ -794,40 +928,136 @@ def continue_mark_entry(request, id):
         id=id,
     )
 
+    # --------------------------------
+    # TEACHER PERMISSION
+    # --------------------------------
+
     if (
         not request.user.is_superuser
         and submission.teacher != request.user.teacher_profile
     ):
         messages.error(
             request,
-            "You cannot edit another teacher's draft."
+            "You cannot edit another teacher's marks."
         )
-        return redirect("teacher_draft_submissions")
+
+        return redirect("mark_submission_list")
+
+    # --------------------------------
+    # ONLY DRAFT OR REJECTED
+    # --------------------------------
+
+    if submission.status not in ["DRAFT", "REJECTED"]:
+
+        messages.error(
+            request,
+            "This submission cannot be edited."
+        )
+
+        return redirect("mark_submission_list")
+
+    # --------------------------------
+    # EXISTING MARKS
+    # --------------------------------
 
     marks = Mark.objects.filter(
         submission=submission
-    ).select_related("student")
+    ).select_related(
+        "student"
+    ).order_by(
+        "student__admission_number"
+    )
+
+    # --------------------------------
+    # SAVE CORRECTED MARKS
+    # --------------------------------
 
     if request.method == "POST":
 
         for mark in marks:
 
-            value = request.POST.get(f"mark_{mark.id}")
+            value = request.POST.get(
+                f"mark_{mark.id}"
+            )
 
-        if value:
+            # Empty field
+            if value in [None, ""]:
+                continue
 
-            mark.marks = float(value)
-            mark.grade = calculate_grade(mark.marks)
+            try:
+
+                value = float(value)
+
+            except (TypeError, ValueError):
+
+                messages.error(
+                    request,
+                    f"Invalid mark for "
+                    f"{mark.student.first_name} "
+                    f"{mark.student.last_name}."
+                )
+
+                return render(
+                    request,
+                    "students/edit_mark_draft.html",
+                    {
+                        "submission": submission,
+                        "marks": marks,
+                    },
+                )
+
+            # --------------------------------
+            # VALIDATE MARK
+            # --------------------------------
+
+            if value < 0 or value > 100:
+
+                messages.error(
+                    request,
+                    "Marks must be between 0 and 100."
+                )
+
+                return render(
+                    request,
+                    "students/edit_mark_draft.html",
+                    {
+                        "submission": submission,
+                        "marks": marks,
+                    },
+                )
+
+            # --------------------------------
+            # UPDATE MARK
+            # --------------------------------
+
+            mark.marks = value
+            mark.grade = calculate_grade(value)
             mark.save()
 
-    messages.success(
-        request,
-        "Draft updated successfully."
-    )
+        # --------------------------------
+        # REJECTED → DRAFT
+        # --------------------------------
 
-    return redirect(
-        "teacher_draft_submissions"
-    )
+        if submission.status == "REJECTED":
+
+            submission.status = "DRAFT"
+            submission.save(
+                update_fields=["status"]
+            )
+
+        messages.success(
+            request,
+            "Marks corrected successfully. "
+            "The submission is now a draft and can be submitted again."
+        )
+
+        return redirect(
+            "mark_submission_list"
+        )
+
+    # --------------------------------
+    # DISPLAY EXISTING MARKS
+    # --------------------------------
 
     return render(
         request,
@@ -837,7 +1067,6 @@ def continue_mark_entry(request, id):
             "marks": marks,
         },
     )
-
 
 
 

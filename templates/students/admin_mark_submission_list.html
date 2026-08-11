@@ -4,93 +4,112 @@
 
 <h2>Submitted Marks</h2>
 
-<table class="table table-bordered">
+<table class="table table-bordered table-striped">
 
-<thead>
+    <thead>
 
-<tr>
+        <tr>
+            <th>Class</th>
+            <th>Subject</th>
+            <th>Exam</th>
+            <th>Teacher</th>
+            <th>Students</th>
+            <th>Submitted</th>
+            <th>Action</th>
+        </tr>
 
-<th>Class</th>
+    </thead>
 
-<th>Subject</th>
+    <tbody>
 
-<th>Exam</th>
+    {% for submission in submissions %}
 
-<th>Teacher</th>
+        <tr>
 
-<th>Students</th>
+            <td>
+                {{ submission.school_class }}
+            </td>
 
-<th>Submitted</th>
+            <td>
+                {{ submission.subject }}
+            </td>
 
-<th>Action</th>
+            <td>
+                {{ submission.exam }}
+            </td>
 
-</tr>
+            <td>
+                {{ submission.teacher }}
+            </td>
 
-</thead>
+            <td>
+                {{ submission.marks.count }}
+            </td>
 
-<tbody>
+            <td>
+                {{ submission.submitted_at|date:"d M Y, H:i" }}
+            </td>
 
-{% for submission in submissions %}
+            <td>
 
-<tr>
+            <a
+                href="{% url 'view_mark_submission' submission.id %}"
+                class="btn btn-info btn-sm">
+                👁 View
+            </a>
 
-<td>{{ submission.school_class }}</td>
+            <form
+                method="post"
+                action="{% url 'approve_mark_submission' submission.id %}"
+                style="display:inline;">
 
-<td>{{ submission.subject }}</td>
+                {% csrf_token %}
 
-<td>{{ submission.exam }}</td>
+                <button
+                    type="submit"
+                    class="btn btn-success btn-sm"
+                    onclick="return confirm('Are you sure you want to approve these marks?');">
 
-<td>{{ submission.teacher }}</td>
+                    ✅ Approve
 
-<td>{{ submission.marks.count }}</td>
+                </button>
 
-<td>{{ submission.submitted_at }}</td>
+            </form>
 
-<td>
+            <form
+                method="post"
+                action="{% url 'reject_mark_submission' submission.id %}"
+                style="display:inline;">
 
-<a
-href="{% url 'view_mark_submission' submission.id %}"
-class="btn btn-info btn-sm">
+                {% csrf_token %}
 
-👁 View
+                <button
+                    type="submit"
+                    class="btn btn-danger btn-sm"
+                    onclick="return confirm('Are you sure you want to reject these marks?');">
 
-</a>
+                    ❌ Reject
 
-<a
-href="{% url 'approve_mark_submission' submission.id %}"
-class="btn btn-success btn-sm">
+                </button>
 
-Approve
+            </form>
 
-</a>
+        </td>
+        </tr>
 
-<a
-href="{% url 'reject_mark_submission' submission.id %}"
-class="btn btn-danger btn-sm">
+    {% empty %}
 
-Reject
+        <tr>
 
-</a>
+            <td colspan="7" class="text-center">
+                No submitted marks.
+            </td>
 
-</td>
+        </tr>
 
-</tr>
+    {% endfor %}
 
-{% empty %}
-
-<tr>
-
-<td colspan="7">
-
-No submitted marks.
-
-</td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
+    </tbody>
 
 </table>
 

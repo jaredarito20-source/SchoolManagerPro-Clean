@@ -96,7 +96,6 @@ def is_secretary(user):
 
 
 
-
 @login_required
 def home(request):
     user = request.user
@@ -114,13 +113,14 @@ def home(request):
         return redirect("parent_dashboard")
 
     elif user.groups.filter(name="Head Teacher").exists():
-        return render(request, "home.html")
+        return render(request, "students/home.html")
 
     elif user.groups.filter(name="Secretaries").exists():
-        return render(request, "home.html")
+        return render(request, "students/home.html")
 
     # Default for authenticated users
     return render(request, "students/home.html")
+
 @login_required
 @admin_or_bursar
 def school_profile(request):

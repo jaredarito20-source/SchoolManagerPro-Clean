@@ -13,25 +13,15 @@
 <table class="table table-bordered table-striped">
 
     <thead>
-
         <tr>
-
             <th>Class</th>
-
             <th>Subject</th>
-
             <th>Exam</th>
-
             <th>Teacher</th>
-
             <th>Status</th>
-
             <th>Students</th>
-
             <th>Action</th>
-
         </tr>
-
     </thead>
 
     <tbody>
@@ -40,37 +30,59 @@
 
         <tr>
 
-            <td>{{ submission.school_class }}</td>
+            <!-- CLASS -->
+            <td>
+                {{ submission.school_class }}
+            </td>
 
-            <td>{{ submission.subject }}</td>
+            <!-- SUBJECT -->
+            <td>
+                {{ submission.subject }}
+            </td>
 
-            <td>{{ submission.exam }}</td>
+            <!-- EXAM -->
+            <td>
+                {{ submission.exam }}
+            </td>
 
-            <td>{{ submission.teacher }}</td>
+            <!-- TEACHER -->
+            <td>
+                {{ submission.teacher }}
+            </td>
 
+            <!-- STATUS -->
             <td>
 
                 {% if submission.status == "DRAFT" %}
+
                     🟡 Draft
 
                 {% elif submission.status == "SUBMITTED" %}
+
                     🔵 Submitted
 
                 {% elif submission.status == "APPROVED" %}
+
                     🟢 Approved
 
-                {% else %}
+                {% elif submission.status == "REJECTED" %}
+
                     🔴 Rejected
+
+                {% else %}
+
+                    {{ submission.status }}
+
                 {% endif %}
 
             </td>
 
+            <!-- STUDENTS -->
             <td>
-
                 {{ submission.marks.count }}
-
             </td>
 
+            <!-- ACTION -->
             <td>
 
                 {% if submission.status == "DRAFT" %}
@@ -78,17 +90,33 @@
                     <a
                         href="{% url 'submit_mark_submission' submission.id %}"
                         class="btn btn-success btn-sm">
-
                         📤 Submit
-
                     </a>
+
+                {% elif submission.status == "REJECTED" %}
+
+                    <a
+                        href="{% url 'continue_mark_entry' submission.id %}"
+                        class="btn btn-warning btn-sm">
+                        ✏️ Correct Marks
+                    </a>
+
+                {% elif submission.status == "SUBMITTED" %}
+
+                    <span class="text-muted">
+                        Waiting for approval
+                    </span>
+
+                {% elif submission.status == "APPROVED" %}
+
+                    <span class="text-success">
+                        ✓ Approved
+                    </span>
 
                 {% else %}
 
                     <span class="text-muted">
-
-                        Waiting
-
+                        —
                     </span>
 
                 {% endif %}
@@ -102,9 +130,7 @@
         <tr>
 
             <td colspan="7">
-
                 No submissions found.
-
             </td>
 
         </tr>
