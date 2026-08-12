@@ -17,8 +17,10 @@
 
     <table class="table">
 
+        <!-- CLASS -->
         <tr>
             <td><strong>Class</strong></td>
+
             <td>
                 <select
                     name="school_class"
@@ -26,9 +28,13 @@
                     onchange="this.form.submit()"
                     required
                 >
-                    <option value="">Select Class</option>
+
+                    <option value="">
+                        Select Class
+                    </option>
 
                     {% for class in classes %}
+
                         <option
                             value="{{ class.id }}"
                             {% if selected_class and selected_class.id == class.id %}
@@ -37,48 +43,75 @@
                         >
                             {{ class.name }}
                         </option>
+
                     {% endfor %}
 
                 </select>
             </td>
         </tr>
 
+
         {% if selected_class %}
 
+        <!-- SUBJECT -->
         <tr>
             <td><strong>Subject</strong></td>
+
             <td>
                 <select
                     name="subject"
                     class="form-control"
                     required
                 >
-                    <option value="">Select Subject</option>
+
+                    <option value="">
+                        Select Subject
+                    </option>
 
                     {% for subject in subjects %}
-                        <option value="{{ subject.id }}">
+
+                        <option
+                            value="{{ subject.id }}"
+                            {% if selected_subject and selected_subject.id == subject.id %}
+                                selected
+                            {% endif %}
+                        >
                             {{ subject.name }}
                         </option>
+
                     {% endfor %}
 
                 </select>
             </td>
         </tr>
 
+
+        <!-- EXAM -->
         <tr>
             <td><strong>Exam</strong></td>
+
             <td>
                 <select
                     name="exam"
                     class="form-control"
                     required
                 >
-                    <option value="">Select Exam</option>
+
+                    <option value="">
+                        Select Exam
+                    </option>
 
                     {% for exam in exams %}
-                        <option value="{{ exam.id }}">
-                            {{ exam.name }}
+
+                        <option
+                            value="{{ exam.id }}"
+                            {% if selected_exam and selected_exam.id == exam.id %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ exam.name }} - {{ exam.term }} {{ exam.year }}
                         </option>
+
                     {% endfor %}
 
                 </select>
@@ -90,6 +123,7 @@
     </table>
 
 
+    <!-- STUDENTS -->
     {% if students %}
 
         <hr>
@@ -141,6 +175,7 @@
             </tbody>
 
         </table>
+
 
         <button
             type="submit"

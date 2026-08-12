@@ -1,3 +1,4 @@
+```html
 {% extends "base.html" %}
 
 {% block content %}
@@ -11,13 +12,13 @@
 
     |
 
-        <a href="{% url 'print_attendance' %}?action=view&school_class={{ request.GET.school_class }}&date={{ request.GET.date }}">
+    <a href="{% url 'print_attendance' %}?action=view&school_class={{ selected_class }}&date={{ selected_date }}">
         🖨 Print Attendance
     </a>
 
     |
 
-    <a href="{% url 'print_attendance' %}?action=download&school_class={{ request.GET.school_class }}&date={{ request.GET.date }}">
+    <a href="{% url 'print_attendance' %}?action=download&school_class={{ selected_class }}&date={{ selected_date }}">
         📥 Download PDF
     </a>
 </p>
@@ -26,21 +27,26 @@
 
 <form method="GET">
 
-    <label><strong>Class</strong></label>
+    <label>
+        <strong>Class</strong>
+    </label>
 
     <select name="school_class">
 
-        <option value="">All Classes</option>
+        <option value="">
+            All Classes
+        </option>
 
         {% for class in classes %}
 
-        <option value="{{ class.id }}"
-        {% if request.GET.school_class == class.id|stringformat:"s" %}
-            selected
-        {% endif %}
-        >
-            {{ class.name }}
-        </option>
+            <option
+                value="{{ class.id }}"
+                {% if selected_class|stringformat:"s" == class.id|stringformat:"s" %}
+                    selected
+                {% endif %}
+            >
+                {{ class.name }}
+            </option>
 
         {% endfor %}
 
@@ -48,12 +54,14 @@
 
     &nbsp;&nbsp;
 
-    <label><strong>Date</strong></label>
+    <label>
+        <strong>Date</strong>
+    </label>
 
     <input
         type="date"
         name="date"
-        value="{{ request.GET.date }}"
+        value="{{ selected_date }}"
     >
 
     &nbsp;
@@ -66,93 +74,125 @@
 
 <br>
 
-<table border="1" cellpadding="8" cellspacing="0" width="100%">
+<table
+    border="1"
+    cellpadding="8"
+    cellspacing="0"
+    width="100%"
+>
 
-    <tr style="background:#1F4E79;color:white;">
+    <thead>
 
-        <th>Date</th>
-        <th>Class</th>
-        <th>Admission No</th>
-        <th>Student Name</th>
-        <th>Status</th>
-        <th>Remarks</th>
-        <th>Actions</th>
+        <tr style="background:#1F4E79;color:white;">
 
-    </tr>
+            <th>Date</th>
+            <th>Class</th>
+            <th>Admission No</th>
+            <th>Student Name</th>
+            <th>Status</th>
+            <th>Remarks</th>
+            <th>Actions</th>
 
-    {% for attendance in attendances %}
+        </tr>
 
-    <tr>
+    </thead>
 
-        <td>{{ attendance.date }}</td>
+    <tbody>
 
-        <td>{{ attendance.school_class.name }}</td>
+        {% for attendance in attendances %}
 
-        <td>{{ attendance.student.admission_number }}</td>
+            <tr>
 
-        <td>
-            {{ attendance.student.first_name }}
-            {{ attendance.student.last_name }}
-        </td>
+                <td>
+                    {{ attendance.date }}
+                </td>
 
-        <td>
+                <td>
+                    {{ attendance.school_class.name }}
+                </td>
 
-            {% if attendance.status == "Present" %}
-                ✅ Present
+                <td>
+                    {{ attendance.student.admission_number }}
+                </td>
 
-            {% elif attendance.status == "Absent" %}
-                ❌ Absent
+                <td>
+                    {{ attendance.student.first_name }}
+                    {{ attendance.student.last_name }}
+                </td>
 
-            {% elif attendance.status == "Late" %}
-                ⏰ Late
+                <td>
 
-            {% elif attendance.status == "Excused" %}
-                🟡 Excused
+                    {% if attendance.status == "Present" %}
 
-            {% endif %}
+                        ✅ Present
 
-        </td>
+                    {% elif attendance.status == "Absent" %}
 
-        <td>
+                        ❌ Absent
 
-            {% if attendance.remarks %}
-                {{ attendance.remarks }}
-            {% else %}
-                -
-            {% endif %}
+                    {% elif attendance.status == "Late" %}
 
-        </td>
+                        ⏰ Late
 
-        <td>
+                    {% elif attendance.status == "Excused" %}
 
-            <a href="{% url 'edit_attendance' attendance.id %}">
-                ✏ Edit
-            </a>
+                        🟡 Excused
 
-            |
+                    {% else %}
 
-            <a href="{% url 'delete_attendance' attendance.id %}">
-                🗑 Delete
-            </a>
+                        {{ attendance.status }}
 
-        </td>
+                    {% endif %}
 
-    </tr>
+                </td>
 
-    {% empty %}
+                <td>
 
-    <tr>
+                    {% if attendance.remarks %}
 
-        <td colspan="7" align="center">
+                        {{ attendance.remarks }}
 
-            No attendance records found.
+                    {% else %}
 
-        </td>
+                        -
 
-    </tr>
+                    {% endif %}
 
-    {% endfor %}
+                </td>
+
+                <td>
+
+                    <a href="{% url 'edit_attendance' attendance.id %}">
+                        ✏ Edit
+                    </a>
+
+                    |
+
+                    <a href="{% url 'delete_attendance' attendance.id %}">
+                        🗑 Delete
+                    </a>
+
+                </td>
+
+            </tr>
+
+        {% empty %}
+
+            <tr>
+
+                <td colspan="7" align="center">
+
+                    No attendance records found.
+
+                </td>
+
+            </tr>
+
+        {% endfor %}
+
+    </tbody>
 
 </table>
 
 {% endblock %}
+```

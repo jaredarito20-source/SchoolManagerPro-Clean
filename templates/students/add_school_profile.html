@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Add School Profile</h1>
+
+<form method="post" enctype="multipart/form-data">
+
+    {% csrf_token %}
+
+    <table class="table">
+
+        <tr>
+            <td><strong>Name:</strong></td>
+            <td>
+                <input
+                    type="text"
+                    name="name"
+                    class="form-control"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Motto:</td>
+            <td>
+                <input
+                    type="text"
+                    name="motto"
+                    class="form-control"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td><strong>Address:</strong></td>
+            <td>
+                <input
+                    type="text"
+                    name="address"
+                    class="form-control"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td><strong>Phone:</strong></td>
+            <td>
+                <input
+                    type="text"
+                    name="phone"
+                    class="form-control"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Email:</td>
+            <td>
+                <input
+                    type="email"
+                    name="email"
+                    class="form-control"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Website:</td>
+            <td>
+                <input
+                    type="text"
+                    name="website"
+                    class="form-control"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td><strong>Current Term:</strong></td>
+            <td>
+                <input
+                    type="text"
+                    name="current_term"
+                    class="form-control"
+                    placeholder="e.g. Term 1"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td><strong>Academic Year:</strong></td>
+            <td>
+                <input
+                    type="text"
+                    name="academic_year"
+                    class="form-control"
+                    placeholder="e.g. 2026"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Principal Name:</td>
+            <td>
+                <input
+                    type="text"
+                    name="principal_name"
+                    class="form-control"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>Principal Signature:</td>
+            <td>
+                <input
+                    type="file"
+                    name="principal_signature"
+                    class="form-control"
+                    accept="image/*"
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>School Logo:</td>
+            <td>
+                <input
+                    type="file"
+                    name="logo"
+                    class="form-control"
+                    accept="image/*"
+                >
+            </td>
+        </tr>
+
+    </table>
+    <hr>
+
+    <h2>First School Administrator</h2>
+
+    <table class="table">
+
+        <tr>
+            <td>
+                <strong>First Name:</strong>
+            </td>
+            <td>
+                <input
+                    type="text"
+                    name="admin_first_name"
+                    class="form-control"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>
+                <strong>Last Name:</strong>
+            </td>
+            <td>
+                <input
+                    type="text"
+                    name="admin_last_name"
+                    class="form-control"
+                    required
+                >
+            </td>
+        </tr>
+
+        <tr>
+            <td>
+                <strong>Email:</strong>
+            </td>
+            <td>
+                <input
+                    type="email"
+                    name="admin_email"
+                    class="form-control"
+                    required
+                >
+            </td>
+        </tr>
+
+    </table>
+
+    <button
+        type="submit"
+        class="btn btn-success"
+    >
+        💾 Save School
+    </button>
+
+    <a href="{% url 'home' %}" class="btn btn-secondary">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

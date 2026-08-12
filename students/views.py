@@ -16,6 +16,11 @@ from .view_modules.academic import add_student
 
 from .view_modules.timetable import *
 
+from .view_modules.school import (
+    add_school_profile,
+    school_credentials,
+)
+
 
 
 

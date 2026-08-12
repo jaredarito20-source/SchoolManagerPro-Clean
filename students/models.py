@@ -469,7 +469,9 @@ class FeePayment(models.Model):
             f"{self.student} - "
             f"{self.amount}"
         )
+
 class Attendance(models.Model):
+
     STATUS_CHOICES = [
         ("Present", "Present"),
         ("Absent", "Absent"),
@@ -477,14 +479,19 @@ class Attendance(models.Model):
         ("Excused", "Excused"),
     ]
 
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+    )
+
     student = models.ForeignKey(
         Student,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     school_class = models.ForeignKey(
         SchoolClass,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     date = models.DateField()
@@ -509,50 +516,12 @@ class Attendance(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.student} - {self.date} - {self.status}"
-
-class Timetable(models.Model):
-    DAYS = [
-        ("Monday", "Monday"),
-        ("Tuesday", "Tuesday"),
-        ("Wednesday", "Wednesday"),
-        ("Thursday", "Thursday"),
-        ("Friday", "Friday"),
-    ]
-
-    school_class = models.ForeignKey(
-        SchoolClass,
-        on_delete=models.CASCADE
-    )
-
-    subject = models.ForeignKey(
-        Subject,
-        on_delete=models.CASCADE
-    )
-
-    teacher = models.ForeignKey(
-        Teacher,
-        on_delete=models.CASCADE
-    )
-
-    day = models.CharField(
-        max_length=10,
-        choices=DAYS,
-    )
-
-    start_time = models.TimeField()
-
-    end_time = models.TimeField()
-
-    class Meta:
-        ordering = ["day", "start_time"]
-
-    def __str__(self):
         return (
-            f"{self.school_class} - "
-            f"{self.subject} - "
-            f"{self.day}"
-        ) 
+            f"{self.student} - "
+            f"{self.date} - "
+            f"{self.status}"
+        )
+
 
 class ExamTimetable(models.Model):
     DAYS = [
@@ -1603,6 +1572,12 @@ class TeacherAvailability(models.Model):
 
 class Timetable(models.Model):
 
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="timetables",
+    )
+
     school_class = models.ForeignKey(
         SchoolClass,
         on_delete=models.CASCADE,
@@ -1628,20 +1603,40 @@ class Timetable(models.Model):
         on_delete=models.CASCADE,
     )
 
-    locked = models.BooleanField(default=False)
+    locked = models.BooleanField(
+        default=False
+    )
 
     class Meta:
 
         constraints = [
 
             models.UniqueConstraint(
-                fields=["school_class","day","period"],
-                name="unique_class_period",
+                fields=[
+                    "school",
+                    "school_class",
+                    "day",
+                    "period",
+                ],
+                name="unique_school_class_period",
             ),
 
             models.UniqueConstraint(
-                fields=["teacher","day","period"],
-                name="unique_teacher_period",
+                fields=[
+                    "school",
+                    "teacher",
+                    "day",
+                    "period",
+                ],
+                name="unique_school_teacher_period",
             ),
 
         ]
+
+    def __str__(self):
+        return (
+            f"{self.school_class} - "
+            f"{self.day} - "
+            f"{self.period} - "
+            f"{self.subject}"
+        )

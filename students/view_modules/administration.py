@@ -95,31 +95,38 @@ def is_secretary(user):
 
 
 
-
 @login_required
 def home(request):
     user = request.user
 
     if user.is_superuser or user.groups.filter(name="Administrators").exists():
-        return render(request, "students/home.html")
+        role = "administrator"
 
     elif user.groups.filter(name="Teachers").exists():
-        return render(request, "students/home.html")
+        role = "teacher"
 
     elif user.groups.filter(name="Bursar").exists():
-        return render(request, "students/home.html")
+        role = "bursar"
 
     elif user.groups.filter(name="Parents").exists():
         return redirect("parent_dashboard")
 
     elif user.groups.filter(name="Head Teacher").exists():
-        return render(request, "students/home.html")
+        role = "head_teacher"
 
     elif user.groups.filter(name="Secretaries").exists():
-        return render(request, "students/home.html")
+        role = "secretary"
 
-    # Default for authenticated users
-    return render(request, "students/home.html")
+    else:
+        role = "user"
+
+    return render(
+        request,
+        "students/home.html",
+        {
+            "role": role,
+        }
+    )
 
 @login_required
 @admin_or_bursar

@@ -1,54 +1,225 @@
+
 {% extends "base.html" %}
 
 {% block content %}
 
-<h2>Mark Attendance</h2>
+<h2>📋 Mark Class Attendance</h2>
 
-<form method="post">
-    {% csrf_token %}
+<form method="get">
 
-    <label>Student</label><br>
-    <select name="student" required>
-        {% for student in students %}
-        <option value="{{ student.id }}">
-            {{ student }}
+    <label>
+        <strong>Class</strong>
+    </label>
+
+    <select
+        name="school_class"
+        class="form-control"
+        onchange="this.form.submit()"
+        required
+    >
+
+        <option value="">
+            Select Class
         </option>
-        {% endfor %}
-    </select>
 
-    <br><br>
-
-    <label>Class</label><br>
-    <select name="school_class" required>
         {% for class in classes %}
-        <option value="{{ class.id }}">
-            {{ class.name }}
-        </option>
+
+            <option
+                value="{{ class.id }}"
+                {% if selected_class and selected_class.id == class.id %}
+                    selected
+                {% endif %}
+            >
+                {{ class.name }}
+            </option>
+
         {% endfor %}
+
     </select>
 
-    <br><br>
+    <br>
 
-    <label>Date</label><br>
+    <label>
+        <strong>Date</strong>
+    </label>
+
     <input
-    type="date"
-    name="date"
-    value="{{ today|date:'Y-m-d' }}"
-    required
->
-    <br><br>
+        type="date"
+        name="date"
+        value="{{ selected_date }}"
+        class="form-control"
+        onchange="this.form.submit()"
+        required
+    >
 
-    <label>Status</label><br>
-    <select name="status">
-        <option value="Present">Present</option>
-        <option value="Absent">Absent</option>
-        <option value="Late">Late</option>
-        <option value="Excused">Excused</option>
-    </select>
-
-    <br><br>
-
-    <button type="submit">Save Attendance</button>
 </form>
 
+{% if selected_class %}
+
+    <hr>
+
+    <h3>
+        {{ selected_class.name }} —
+        {{ selected_date }}
+    </h3>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <input
+            type="hidden"
+            name="school_class"
+            value="{{ selected_class.id }}"
+        >
+
+        <input
+            type="hidden"
+            name="date"
+            value="{{ selected_date }}"
+        >
+
+        <table
+            class="table table-bordered table-striped"
+            width="100%"
+        >
+
+            <thead>
+
+                <tr
+                    style="
+                        background:#1F4E79;
+                        color:white;
+                    "
+                >
+
+                    <th>#</th>
+                    <th>Admission No</th>
+                    <th>Student Name</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                
+                {% for student in students %}
+
+                    {% with attendance=student.attendance_record %}
+
+                    <tr>
+
+                        <td>
+                            {{ forloop.counter }}
+                        </td>
+
+                        <td>
+                            {{ student.admission_number }}
+                        </td>
+
+                        <td>
+                            {{ student.first_name }}
+                            {{ student.last_name }}
+                        </td>
+
+                        <td>
+
+                            <select
+                                name="status_{{ student.id }}"
+                                class="form-control"
+                            >
+
+                                <option
+                                    value="Present"
+                                    {% if attendance and attendance.status == "Present" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    ✅ Present
+                                </option>
+
+                                <option
+                                    value="Absent"
+                                    {% if attendance and attendance.status == "Absent" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    ❌ Absent
+                                </option>
+
+                                <option
+                                    value="Late"
+                                    {% if attendance and attendance.status == "Late" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    ⏰ Late
+                                </option>
+
+                                <option
+                                    value="Excused"
+                                    {% if attendance and attendance.status == "Excused" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    🟡 Excused
+                                </option>
+
+                            </select>
+
+                        </td>
+
+                        <td>
+
+                            <input
+                                type="text"
+                                name="remarks_{{ student.id }}"
+                                value="{% if attendance %}{{ attendance.remarks }}{% endif %}"
+                                class="form-control"
+                                maxlength="200"
+                                placeholder="Optional"
+                            >
+
+                        </td>
+
+                    </tr>
+
+                    {% endwith %}
+
+                {% endfor %}
+                
+
+            </tbody>
+
+        </table>
+
+        {% if students %}
+
+            <button
+                type="submit"
+                class="btn btn-success"
+            >
+                💾 Save Attendance
+            </button>
+
+        {% endif %}
+
+    </form>
+
+{% else %}
+
+    <br>
+
+    <div class="alert alert-info">
+
+        Please select a class to load its students.
+
+    </div>
+
+{% endif %}
+
 {% endblock %}
+

@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.db.models import Count
 from students.utils import get_user_school
 from students.models import SchoolClass, SchoolProfile, Teacher,Student
+from datetime import date
 
 
 
@@ -1486,40 +1487,136 @@ def add_class(request):
 @login_required
 @admin_or_bursar
 def edit_class(request, id):
-    school_class = get_object_or_404(SchoolClass, id=id)
+
+    # --------------------------------
+    # GET CLASS
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        school_class = get_object_or_404(
+            SchoolClass,
+            id=id,
+        )
+
+    else:
+
+        school = request.user.school_user.school
+
+        school_class = get_object_or_404(
+            SchoolClass,
+            id=id,
+            school=school,
+        )
+
+    # --------------------------------
+    # POST
+    # --------------------------------
 
     if request.method == "POST":
+
         teacher = None
-        teacher_id = request.POST.get("class_teacher")
+
+        teacher_id = request.POST.get(
+            "class_teacher"
+        )
 
         if teacher_id:
-            teacher = Teacher.objects.get(id=teacher_id)
 
-        school_class.name = request.POST["name"]
+            teacher = get_object_or_404(
+                Teacher,
+                id=teacher_id,
+                school=school_class.school,
+            )
+
+        school_class.name = request.POST.get(
+            "name",
+            ""
+        ).strip()
+
         school_class.class_teacher = teacher
+
         school_class.save()
+
+        messages.success(
+            request,
+            "Class updated successfully."
+        )
 
         return redirect("class_list")
 
-    teachers = Teacher.objects.all()
-    return render(request, "students/edit_class.html", {
-        "school_class": school_class,
-        "teachers": teachers,
-    })
+    # --------------------------------
+    # TEACHERS
+    # --------------------------------
 
+    teachers = Teacher.objects.filter(
+        school=school_class.school
+    ).order_by(
+        "first_name",
+        "last_name",
+    )
 
+    return render(
+        request,
+        "students/edit_class.html",
+        {
+            "school_class": school_class,
+            "teachers": teachers,
+        },
+    )
 @login_required
 @admin_or_bursar
 def delete_class(request, id):
-    school_class = get_object_or_404(SchoolClass, id=id)
+
+    # --------------------------------
+    # GET CLASS
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        school_class = get_object_or_404(
+            SchoolClass,
+            id=id,
+        )
+
+    else:
+
+        school = request.user.school_user.school
+
+        school_class = get_object_or_404(
+            SchoolClass,
+            id=id,
+            school=school,
+        )
+
+    # --------------------------------
+    # DELETE
+    # --------------------------------
 
     if request.method == "POST":
+
+        class_name = school_class.name
+
         school_class.delete()
+
+        messages.success(
+            request,
+            f"{class_name} deleted successfully."
+        )
+
         return redirect("class_list")
 
-    return render(request, "students/delete_class.html", {
-        "school_class": school_class
-    })
+    # --------------------------------
+    # CONFIRMATION PAGE
+    # --------------------------------
+
+    return render(
+        request,
+        "students/delete_class.html",
+        {
+            "school_class": school_class,
+        },
+    )
 
 @login_required
 @in_group(
@@ -1531,25 +1628,66 @@ def delete_class(request, id):
 )
 def attendance_list(request):
 
-    attendances = Attendance.objects.select_related(
-        "student",
-        "school_class",
+    # --------------------------------
+    # SUPERUSER
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        attendances = Attendance.objects.select_related(
+            "student",
+            "school_class",
+        )
+
+        classes = SchoolClass.objects.all()
+
+    # --------------------------------
+    # SCHOOL USER
+    # --------------------------------
+
+    else:
+
+        school = request.user.school_user.school
+
+        attendances = Attendance.objects.select_related(
+            "student",
+            "school_class",
+        ).filter(
+            school_class__school=school,
+            student__school_class__school=school,
+        )
+
+        classes = SchoolClass.objects.filter(
+            school=school
+        )
+
+    # --------------------------------
+    # FILTERS
+    # --------------------------------
+
+    school_class = request.GET.get(
+        "school_class"
     )
 
-    classes = SchoolClass.objects.all()
-
-    school_class = request.GET.get("school_class")
-    date = request.GET.get("date")
+    attendance_date = request.GET.get(
+        "date"
+    )
 
     if school_class:
+
         attendances = attendances.filter(
             school_class_id=school_class
         )
 
-    if date:
+    if attendance_date:
+
         attendances = attendances.filter(
-            date=date
+            date=attendance_date
         )
+
+    # --------------------------------
+    # ORDERING
+    # --------------------------------
 
     attendances = attendances.order_by(
         "-date",
@@ -1557,44 +1695,262 @@ def attendance_list(request):
         "student__admission_number",
     )
 
+    # --------------------------------
+    # RENDER
+    # --------------------------------
+
     return render(
         request,
         "students/attendance_list.html",
         {
             "attendances": attendances,
             "classes": classes,
+            "selected_class": school_class,
+            "selected_date": attendance_date,
         },
     )
 @login_required
-@admin_or_bursar
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+    "Teachers",
+    "Secretaries",
+)
 def add_attendance(request):
+
+    # --------------------------------
+    # GET SCHOOL
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        school = None
+
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("home")
+
+        school = school_user.school
+
+    # --------------------------------
+    # GET CLASSES
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        classes = SchoolClass.objects.all().order_by(
+            "name"
+        )
+
+    else:
+
+        classes = SchoolClass.objects.filter(
+            school=school
+        ).order_by(
+            "name"
+        )
+
+    # --------------------------------
+    # DEFAULT VALUES
+    # --------------------------------
+
+    selected_class = None
+
+    students = []
+
+    selected_date = (
+        request.GET.get("date")
+        or date.today().isoformat()
+    )
+
+    # --------------------------------
+    # GET SELECTED CLASS
+    # --------------------------------
+
+    class_id = request.GET.get(
+        "school_class"
+    )
+
+    if class_id:
+
+        if request.user.is_superuser:
+
+            selected_class = get_object_or_404(
+                SchoolClass,
+                id=class_id,
+            )
+
+        else:
+
+            selected_class = get_object_or_404(
+                SchoolClass,
+                id=class_id,
+                school=school,
+            )
+
+        students = Student.objects.filter(
+            school_class=selected_class,
+        ).order_by(
+            "admission_number"
+        )
+
+    # --------------------------------
+    # SAVE ALL ATTENDANCE
+    # --------------------------------
 
     if request.method == "POST":
 
-        student = Student.objects.get(id=request.POST["student"])
-        school_class = SchoolClass.objects.get(id=request.POST["school_class"])
-
-        Attendance.objects.create(
-            student=student,
-            school_class=school_class,
-            date=request.POST["date"],
-            status=request.POST["status"],
+        class_id = request.POST.get(
+            "school_class"
         )
 
-        return redirect("attendance_list")
+        attendance_date = request.POST.get(
+            "date"
+        )
 
-    students = Student.objects.all()
-    classes = SchoolClass.objects.all()
+        if not class_id or not attendance_date:
+
+            messages.error(
+                request,
+                "Class and date are required."
+            )
+
+            return redirect(
+                "take_attendance"
+            )
+
+        # --------------------------------
+        # GET CLASS SECURELY
+        # --------------------------------
+
+        if request.user.is_superuser:
+
+            selected_class = get_object_or_404(
+                SchoolClass,
+                id=class_id,
+            )
+
+        else:
+
+            selected_class = get_object_or_404(
+                SchoolClass,
+                id=class_id,
+                school=school,
+            )
+
+        # --------------------------------
+        # GET STUDENTS
+        # --------------------------------
+
+        students = Student.objects.filter(
+            school_class=selected_class,
+        ).order_by(
+            "admission_number"
+        )
+
+        # --------------------------------
+        # SAVE EACH STUDENT
+        # --------------------------------
+
+        for student in students:
+
+            status = request.POST.get(
+                f"status_{student.id}"
+            )
+
+            remarks = request.POST.get(
+                f"remarks_{student.id}",
+                ""
+            ).strip()
+
+            if status:
+
+                Attendance.objects.update_or_create(
+
+                    student=student,
+
+                    date=attendance_date,
+
+                    defaults={
+                        "school_class": selected_class,
+                        "status": status,
+                        "remarks": remarks,
+                    },
+                )
+
+        messages.success(
+            request,
+            "Attendance saved successfully."
+        )
+
+        return redirect(
+            "attendance_list"
+        )
+
+    
+
+    # --------------------------------
+    # LOAD EXISTING ATTENDANCE
+    # --------------------------------
+
+    attendance_map = {}
+
+    if selected_class:
+
+        records = Attendance.objects.filter(
+            school_class=selected_class,
+            date=selected_date,
+        )
+
+        attendance_map = {
+            record.student_id: record
+            for record in records
+        }
+
+        # Attach existing attendance to each student
+        for student in students:
+
+            student.attendance_record = (
+                attendance_map.get(student.id)
+            )
+
+    else:
+
+        for student in students:
+
+            student.attendance_record = None
+
+
+    # --------------------------------
+    # RENDER
+    # --------------------------------
 
     return render(
         request,
         "students/add_attendance.html",
         {
-            "students": students,
             "classes": classes,
-            "today": date.today(),
+            "selected_class": selected_class,
+            "students": students,
+            "selected_date": selected_date,
+            "existing_attendance": attendance_map,
         },
     )
+    
 
 
 from datetime import date
