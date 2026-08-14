@@ -6,17 +6,16 @@
 
 <p>
     <a href="{% url 'add_exam_timetable' %}">
-        <button>➕ Add Exam Timetable</button>
-    </a>
-
-    <a href="{% url 'print_exam_timetable' %}">
-        <button>🖨 Print School Exam Timetable</button>
+        ➕ Add Exam Timetable
     </a>
 </p>
 
-<table border="1" cellpadding="8">
+<hr>
 
-    <tr>
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+
+    <tr style="background:#1F4E79;color:white;">
+
         <th>Class</th>
         <th>Exam</th>
         <th>Subject</th>
@@ -27,35 +26,62 @@
         <th>Room</th>
         <th>Supervisor</th>
         <th>Actions</th>
+
     </tr>
 
     {% for timetable in timetables %}
 
     <tr>
 
-        <td>{{ timetable.school_class.name }}</td>
-
-        <td>{{ timetable.exam.name }}</td>
-
-        <td>{{ timetable.subject.name }}</td>
-
-        <td>{{ timetable.exam_date }}</td>
-
-        <td>{{ timetable.day }}</td>
-
-        <td>{{ timetable.start_time }}</td>
-
-        <td>{{ timetable.end_time }}</td>
-
-        <td>{{ timetable.room }}</td>
+        <td>
+            {{ timetable.school_class.name }}
+        </td>
 
         <td>
+            {{ timetable.exam.name }}
+        </td>
+
+        <td>
+            {{ timetable.subject.name }}
+        </td>
+
+        <td>
+            {{ timetable.exam_date }}
+        </td>
+
+        <td>
+            {{ timetable.day }}
+        </td>
+
+        <td>
+            {{ timetable.start_time }}
+        </td>
+
+        <td>
+            {{ timetable.end_time }}
+        </td>
+
+        <td>
+            {% if timetable.room %}
+                {{ timetable.room }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+
+        <td>
+
             {% if timetable.supervisor %}
+
                 {{ timetable.supervisor.first_name }}
                 {{ timetable.supervisor.last_name }}
+
             {% else %}
+
                 Not Assigned
+
             {% endif %}
+
         </td>
 
         <td>
@@ -78,8 +104,10 @@
 
     <tr>
 
-        <td colspan="10">
+        <td colspan="10" align="center">
+
             No examination timetable has been added.
+
         </td>
 
     </tr>

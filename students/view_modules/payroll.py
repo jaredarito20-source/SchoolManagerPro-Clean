@@ -66,9 +66,50 @@ from students.utils import (
 )
 def salary_structure_list(request):
 
-    salaries = SalaryStructure.objects.select_related(
-        "teacher"
-    ).all()
+    # -----------------------------------------
+    # SUPERUSER
+    # -----------------------------------------
+    if request.user.is_superuser:
+
+        salaries = SalaryStructure.objects.select_related(
+            "teacher",
+            "teacher__school",
+        ).all().order_by(
+            "teacher__first_name",
+            "teacher__last_name",
+        )
+
+    # -----------------------------------------
+    # NORMAL SCHOOL USER
+    # -----------------------------------------
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("home")
+
+        school = school_user.school
+
+        salaries = SalaryStructure.objects.select_related(
+            "teacher",
+            "teacher__school",
+        ).filter(
+            teacher__school=school
+        ).order_by(
+            "teacher__first_name",
+            "teacher__last_name",
+        )
 
     return render(
         request,
@@ -77,29 +118,141 @@ def salary_structure_list(request):
             "salaries": salaries,
         },
     )
+
+
 @login_required
 @admin_or_bursar
 def add_salary_structure(request):
 
-    teachers = Teacher.objects.all()
+    # -----------------------------------------
+    # SUPERUSER
+    # -----------------------------------------
+    if request.user.is_superuser:
 
+        teachers = Teacher.objects.select_related(
+            "school"
+        ).all().order_by(
+            "first_name",
+            "last_name",
+        )
+
+    # -----------------------------------------
+    # NORMAL SCHOOL USER
+    # -----------------------------------------
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("home")
+
+        school = school_user.school
+
+        teachers = Teacher.objects.filter(
+            school=school
+        ).order_by(
+            "first_name",
+            "last_name",
+        )
+
+    # -----------------------------------------
+    # SAVE
+    # -----------------------------------------
     if request.method == "POST":
 
-        SalaryStructure.objects.create(
-            teacher=Teacher.objects.get(id=request.POST["teacher"]),
-            basic_salary=request.POST["basic_salary"],
-            house_allowance=request.POST["house_allowance"],
-            medical_allowance=request.POST["medical_allowance"],
-            transport_allowance=request.POST["transport_allowance"],
-            other_allowance=request.POST["other_allowance"],
-            paye=request.POST["paye"],
-            sha=request.POST["sha"],
-            nssf=request.POST["nssf"],
-            other_deductions=request.POST.get("other_deductions", 0),
-            bank_name=request.POST.get("bank_name", ""),
-            account_number=request.POST.get("account_number", ""),
+        teacher = get_object_or_404(
+            Teacher,
+            id=request.POST["teacher"],
         )
-        return redirect("salary_structure_list")
+
+        # -------------------------------------
+        # SECURITY CHECK
+        # -------------------------------------
+
+        if not request.user.is_superuser:
+
+            if teacher.school_id != school.id:
+
+                messages.error(
+                    request,
+                    "You cannot create a salary structure "
+                    "for a teacher from another school."
+                )
+
+                return redirect(
+                    "salary_structure_list"
+                )
+
+        SalaryStructure.objects.create(
+
+            teacher=teacher,
+
+            basic_salary=request.POST[
+                "basic_salary"
+            ],
+
+            house_allowance=request.POST[
+                "house_allowance"
+            ],
+
+            medical_allowance=request.POST[
+                "medical_allowance"
+            ],
+
+            transport_allowance=request.POST[
+                "transport_allowance"
+            ],
+
+            other_allowance=request.POST[
+                "other_allowance"
+            ],
+
+            paye=request.POST[
+                "paye"
+            ],
+
+            sha=request.POST[
+                "sha"
+            ],
+
+            nssf=request.POST[
+                "nssf"
+            ],
+
+            other_deductions=request.POST.get(
+                "other_deductions",
+                0,
+            ),
+
+            bank_name=request.POST.get(
+                "bank_name",
+                "",
+            ),
+
+            account_number=request.POST.get(
+                "account_number",
+                "",
+            ),
+        )
+
+        messages.success(
+            request,
+            "Salary structure added successfully."
+        )
+
+        return redirect(
+            "salary_structure_list"
+        )
 
     return render(
         request,
@@ -181,23 +334,113 @@ def delete_salary_structure(request, id):
 @admin_or_bursar
 def generate_payroll(request):
 
+    # -----------------------------------------
+    # SUPERUSER
+    # -----------------------------------------
+    if request.user.is_superuser:
+
+        school = None
+
+    # -----------------------------------------
+    # NORMAL SCHOOL USER
+    # -----------------------------------------
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("home")
+
+        school = school_user.school
+
+    # -----------------------------------------
+    # GENERATE PAYROLL
+    # -----------------------------------------
     if request.method == "POST":
 
-        month = request.POST["month"]
-        year = int(request.POST["year"])
+        month = request.POST.get("month")
+        year = int(request.POST.get("year"))
+
+        # -------------------------------------
+        # SUPERUSER
+        # -------------------------------------
+        if request.user.is_superuser:
+
+            school_id = request.POST.get("school")
+
+            if not school_id:
+
+                messages.error(
+                    request,
+                    "Please select a school."
+                )
+
+                return redirect("generate_payroll")
+
+            school = get_object_or_404(
+                SchoolProfile,
+                id=school_id,
+            )
+
+        # -------------------------------------
+        # SALARY STRUCTURES
+        # -------------------------------------
 
         salary_structures = SalaryStructure.objects.select_related(
             "teacher"
         )
 
+        # -------------------------------------
+        # FILTER BY SCHOOL
+        # -------------------------------------
+
+        if school:
+
+            salary_structures = salary_structures.filter(
+                teacher__school=school
+            )
+
+        # -------------------------------------
+        # GENERATE EACH PAYROLL
+        # -------------------------------------
+
         for salary in salary_structures:
 
+            teacher = salary.teacher
+
+            # ---------------------------------
+            # SAFETY CHECK
+            # ---------------------------------
+
+            if not teacher.school:
+
+                continue
+
+            # ---------------------------------
+            # PREVENT DUPLICATE PAYROLL
+            # ---------------------------------
+
             if Payroll.objects.filter(
-                teacher=salary.teacher,
+                teacher=teacher,
                 month=month,
                 year=year,
             ).exists():
+
                 continue
+
+            # ---------------------------------
+            # SALARY CALCULATIONS
+            # ---------------------------------
 
             gross_salary = salary.gross_salary()
 
@@ -208,40 +451,119 @@ def generate_payroll(request):
                 + salary.other_deductions
             )
 
-            net_salary = gross_salary - deductions
+            net_salary = (
+                gross_salary
+                - deductions
+            )
+
+            # ---------------------------------
+            # CREATE PAYROLL
+            # ---------------------------------
 
             Payroll.objects.create(
-                teacher=salary.teacher,
+
+                school=teacher.school,
+
+                teacher=teacher,
+
                 month=month,
+
                 year=year,
+
                 basic_salary=salary.basic_salary,
+
                 gross_salary=gross_salary,
+
                 paye=salary.paye,
+
                 sha=salary.sha,
+
                 nssf=salary.nssf,
+
                 other_deductions=salary.other_deductions,
+
                 deductions=deductions,
+
                 net_salary=net_salary,
             )
 
+        messages.success(
+            request,
+            f"Payroll for {month} {year} generated successfully."
+        )
+
         return redirect("payroll_list")
+
+    # -----------------------------------------
+    # SCHOOLS FOR SUPERUSER
+    # -----------------------------------------
+
+    schools = []
+
+    if request.user.is_superuser:
+
+        schools = SchoolProfile.objects.all().order_by(
+            "name"
+        )
 
     return render(
         request,
         "students/generate_payroll.html",
+        {
+            "schools": schools,
+        },
     )
 
 @login_required
 @admin_or_bursar
 def payroll_list(request):
 
-    payrolls = Payroll.objects.select_related(
-        "teacher"
-    ).order_by(
-        "-year",
-        "-generated_on",
-        "teacher__first_name",
-    )
+    # -----------------------------------------
+    # SUPERUSER
+    # -----------------------------------------
+    if request.user.is_superuser:
+
+        payrolls = Payroll.objects.select_related(
+            "teacher",
+            "school",
+        ).all().order_by(
+            "-year",
+            "-generated_on",
+            "teacher__first_name",
+        )
+
+    # -----------------------------------------
+    # NORMAL SCHOOL USER
+    # -----------------------------------------
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("home")
+
+        school = school_user.school
+
+        payrolls = Payroll.objects.select_related(
+            "teacher",
+            "school",
+        ).filter(
+            school=school
+        ).order_by(
+            "-year",
+            "-generated_on",
+            "teacher__first_name",
+        )
 
     return render(
         request,
@@ -250,13 +572,63 @@ def payroll_list(request):
             "payrolls": payrolls,
         },
     )
-
 @login_required
 @admin_or_bursar
 def print_payslip(request, id):
 
-    payroll = get_object_or_404(Payroll, id=id)
-    school = SchoolProfile.objects.first()
+    # -----------------------------------------
+    # GET PAYROLL
+    # -----------------------------------------
+
+    payroll = get_object_or_404(
+        Payroll.objects.select_related(
+            "teacher",
+            "school",
+        ),
+        id=id,
+    )
+
+    # -----------------------------------------
+    # CHECK SCHOOL ACCESS
+    # -----------------------------------------
+
+    if not request.user.is_superuser:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("home")
+
+        school = school_user.school
+
+        # Prevent accessing another school's payslip
+        if payroll.school_id != school.id:
+
+            messages.error(
+                request,
+                "You do not have permission to view this payslip."
+            )
+
+            return redirect("payroll_list")
+
+    else:
+
+        # Superuser can print any school's payslip
+        school = payroll.school
+
+    # -----------------------------------------
+    # PDF BUFFER
+    # -----------------------------------------
 
     buffer = BytesIO()
 
@@ -270,9 +642,13 @@ def print_payslip(request, id):
     )
 
     styles = getSampleStyleSheet()
+
     story = []
 
-    # School Header
+    # -----------------------------------------
+    # SCHOOL HEADER
+    # -----------------------------------------
+
     if school:
 
         story.append(
@@ -291,7 +667,16 @@ def print_payslip(request, id):
             )
         )
 
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(
+        Spacer(
+            1,
+            0.2 * inch,
+        )
+    )
+
+    # -----------------------------------------
+    # TITLE
+    # -----------------------------------------
 
     story.append(
         Paragraph(
@@ -300,79 +685,216 @@ def print_payslip(request, id):
         )
     )
 
-    story.append(Spacer(1, 0.15 * inch))
+    story.append(
+        Spacer(
+            1,
+            0.15 * inch,
+        )
+    )
 
-    # Employee Details
+    # -----------------------------------------
+    # EMPLOYEE DETAILS
+    # -----------------------------------------
 
     teacher = payroll.teacher
 
     employee_table = Table(
         [
-            ["Employee", str(teacher)],
-            ["Month", payroll.month],
-            ["Year", payroll.year],
-            ["Date Generated", payroll.generated_on],
+            [
+                "Employee",
+                str(teacher),
+            ],
+
+            [
+                "Month",
+                payroll.month,
+            ],
+
+            [
+                "Year",
+                payroll.year,
+            ],
+
+            [
+                "Date Generated",
+                payroll.generated_on,
+            ],
         ],
-        colWidths=[2.2 * inch, 4.2 * inch],
+        colWidths=[
+            2.2 * inch,
+            4.2 * inch,
+        ],
     )
 
     employee_table.setStyle(
         TableStyle(
             [
-                ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    1,
+                    colors.black,
+                ),
+
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (0, -1),
+                    colors.lightgrey,
+                ),
+
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    6,
+                ),
             ]
         )
     )
 
     story.append(employee_table)
 
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(
+        Spacer(
+            1,
+            0.2 * inch,
+        )
+    )
 
-    # Salary Breakdown
+    # -----------------------------------------
+    # SALARY BREAKDOWN
+    # -----------------------------------------
 
     salary_table = Table(
         [
-            ["Description", "Amount (KSh)"],
+            [
+                "Description",
+                "Amount (KSh)",
+            ],
 
-            ["Basic Salary", payroll.basic_salary],
-            ["Gross Salary", payroll.gross_salary],
+            [
+                "Basic Salary",
+                payroll.basic_salary,
+            ],
 
-            ["PAYE", payroll.paye],
-            ["SHA", payroll.sha],
-            ["NSSF", payroll.nssf],
-            ["Other Deductions", payroll.other_deductions],
+            [
+                "Gross Salary",
+                payroll.gross_salary,
+            ],
 
-            ["Total Deductions", payroll.deductions],
+            [
+                "PAYE",
+                payroll.paye,
+            ],
 
-            ["NET SALARY", payroll.net_salary],
+            [
+                "SHA",
+                payroll.sha,
+            ],
+
+            [
+                "NSSF",
+                payroll.nssf,
+            ],
+
+            [
+                "Other Deductions",
+                payroll.other_deductions,
+            ],
+
+            [
+                "Total Deductions",
+                payroll.deductions,
+            ],
+
+            [
+                "NET SALARY",
+                payroll.net_salary,
+            ],
         ],
-        colWidths=[4.5 * inch, 2 * inch],
+        colWidths=[
+            4.5 * inch,
+            2 * inch,
+        ],
     )
 
     salary_table.setStyle(
         TableStyle(
             [
-                ("GRID", (0,0), (-1,-1), 1, colors.black),
-                ("BACKGROUND", (0,0), (-1,0), colors.darkblue),
-                ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    1,
+                    colors.black,
+                ),
 
-                ("BACKGROUND", (0,-1), (-1,-1), colors.lightgreen),
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.darkblue,
+                ),
 
-                ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
-                ("FONTNAME", (0,-1), (-1,-1), "Helvetica-Bold"),
+                (
+                    "TEXTCOLOR",
+                    (0, 0),
+                    (-1, 0),
+                    colors.white,
+                ),
 
-                ("ALIGN", (1,1), (-1,-1), "RIGHT"),
+                (
+                    "BACKGROUND",
+                    (0, -1),
+                    (-1, -1),
+                    colors.lightgreen,
+                ),
+
+                (
+                    "FONTNAME",
+                    (0, 0),
+                    (-1, 0),
+                    "Helvetica-Bold",
+                ),
+
+                (
+                    "FONTNAME",
+                    (0, -1),
+                    (-1, -1),
+                    "Helvetica-Bold",
+                ),
+
+                (
+                    "ALIGN",
+                    (1, 1),
+                    (-1, -1),
+                    "RIGHT",
+                ),
+
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    6,
+                ),
             ]
         )
     )
 
     story.append(salary_table)
 
-    story.append(Spacer(1, 0.4 * inch))
+    story.append(
+        Spacer(
+            1,
+            0.4 * inch,
+        )
+    )
 
-    # Signature Section
+    # -----------------------------------------
+    # SIGNATURES
+    # -----------------------------------------
 
     signature_table = Table(
         [
@@ -380,24 +902,43 @@ def print_payslip(request, id):
                 "_______________________",
                 "_______________________",
             ],
+
             [
                 "Employee Signature",
                 "Bursar / Principal",
             ],
         ],
-        colWidths=[3.3 * inch, 3.3 * inch],
+        colWidths=[
+            3.3 * inch,
+            3.3 * inch,
+        ],
     )
 
     signature_table.setStyle(
         TableStyle(
             [
-                ("ALIGN", (0,0), (-1,-1), "CENTER"),
-                ("TOPPADDING", (0,0), (-1,-1), 10),
+                (
+                    "ALIGN",
+                    (0, 0),
+                    (-1, -1),
+                    "CENTER",
+                ),
+
+                (
+                    "TOPPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    10,
+                ),
             ]
         )
     )
 
     story.append(signature_table)
+
+    # -----------------------------------------
+    # BUILD PDF
+    # -----------------------------------------
 
     doc.build(story)
 
@@ -413,8 +954,58 @@ def print_payslip(request, id):
 @admin_or_bursar
 def print_salary_structure(request, id):
 
-    salary = get_object_or_404(SalaryStructure, id=id)
-    school = SchoolProfile.objects.first()
+    salary = get_object_or_404(
+        SalaryStructure.objects.select_related(
+            "teacher",
+            "teacher__school",
+        ),
+        id=id,
+    )
+
+    teacher = salary.teacher
+
+    # -----------------------------------------
+    # SUPERUSER
+    # -----------------------------------------
+    if request.user.is_superuser:
+
+        school = teacher.school
+
+    # -----------------------------------------
+    # NORMAL SCHOOL USER
+    # -----------------------------------------
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("home")
+
+        school = school_user.school
+
+        # -------------------------------------
+        # SECURITY CHECK
+        # -------------------------------------
+
+        if teacher.school_id != school.id:
+
+            messages.error(
+                request,
+                "You cannot print a salary structure "
+                "belonging to another school."
+            )
+
+            return redirect("salary_structure_list")
 
     buffer = BytesIO()
 
@@ -428,9 +1019,13 @@ def print_salary_structure(request, id):
     )
 
     styles = getSampleStyleSheet()
+
     story = []
 
-    # School Header
+    # -----------------------------------------
+    # SCHOOL HEADER
+    # -----------------------------------------
+
     if school:
 
         story.append(
@@ -442,14 +1037,19 @@ def print_salary_structure(request, id):
 
         story.append(
             Paragraph(
-                f"{school.address}<br/>"
-                f"Tel: {school.phone}<br/>"
-                f"Email: {school.email}",
+                f"{school.address or ''}<br/>"
+                f"Tel: {school.phone or ''}<br/>"
+                f"Email: {school.email or ''}",
                 styles["Normal"],
             )
         )
 
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(
+        Spacer(
+            1,
+            0.2 * inch
+        )
+    )
 
     story.append(
         Paragraph(
@@ -458,81 +1058,228 @@ def print_salary_structure(request, id):
         )
     )
 
-    story.append(Spacer(1, 0.15 * inch))
+    story.append(
+        Spacer(
+            1,
+            0.15 * inch
+        )
+    )
 
-    # Teacher Details
+    # -----------------------------------------
+    # TEACHER DETAILS
+    # -----------------------------------------
 
     teacher_table = Table(
         [
-            ["Teacher", str(salary.teacher)],
-            ["Bank", salary.bank_name or "-"],
-            ["Account Number", salary.account_number or "-"],
+            [
+                "Teacher",
+                str(teacher),
+            ],
+
+            [
+                "Bank",
+                salary.bank_name or "-",
+            ],
+
+            [
+                "Account Number",
+                salary.account_number or "-",
+            ],
         ],
-        colWidths=[2.2 * inch, 4.2 * inch],
+        colWidths=[
+            2.2 * inch,
+            4.2 * inch,
+        ],
     )
 
     teacher_table.setStyle(
         TableStyle(
             [
-                ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    1,
+                    colors.black,
+                ),
+
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (0, -1),
+                    colors.lightgrey,
+                ),
+
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    6,
+                ),
             ]
         )
     )
 
     story.append(teacher_table)
 
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(
+        Spacer(
+            1,
+            0.2 * inch
+        )
+    )
 
-    # Salary Breakdown
+    # -----------------------------------------
+    # SALARY BREAKDOWN
+    # -----------------------------------------
 
     salary_table = Table(
         [
-            ["Description", "Amount (KSh)"],
+            [
+                "Description",
+                "Amount (KSh)",
+            ],
 
-            ["Basic Salary", salary.basic_salary],
-            ["House Allowance", salary.house_allowance],
-            ["Transport Allowance", salary.transport_allowance],
-            ["Medical Allowance", salary.medical_allowance],
-            ["Other Allowance", salary.other_allowance],
+            [
+                "Basic Salary",
+                salary.basic_salary,
+            ],
 
-            ["Gross Salary", salary.gross_salary()],
+            [
+                "House Allowance",
+                salary.house_allowance,
+            ],
 
-            ["PAYE", salary.paye],
-            ["SHA", salary.sha],
-            ["NSSF", salary.nssf],
-            ["Other Deductions", salary.other_deductions],
+            [
+                "Transport Allowance",
+                salary.transport_allowance,
+            ],
 
-            ["Total Deductions", salary.total_deductions()],
+            [
+                "Medical Allowance",
+                salary.medical_allowance,
+            ],
 
-            ["NET SALARY", salary.net_salary()],
+            [
+                "Other Allowance",
+                salary.other_allowance,
+            ],
+
+            [
+                "Gross Salary",
+                salary.gross_salary(),
+            ],
+
+            [
+                "PAYE",
+                salary.paye,
+            ],
+
+            [
+                "SHA",
+                salary.sha,
+            ],
+
+            [
+                "NSSF",
+                salary.nssf,
+            ],
+
+            [
+                "Other Deductions",
+                salary.other_deductions,
+            ],
+
+            [
+                "Total Deductions",
+                salary.total_deductions(),
+            ],
+
+            [
+                "NET SALARY",
+                salary.net_salary(),
+            ],
         ],
-        colWidths=[4.5 * inch, 2 * inch],
+        colWidths=[
+            4.5 * inch,
+            2 * inch,
+        ],
     )
 
     salary_table.setStyle(
         TableStyle(
             [
-                ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    1,
+                    colors.black,
+                ),
 
-                ("BACKGROUND", (0, -1), (-1, -1), colors.lightgreen),
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.darkblue,
+                ),
 
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                (
+                    "TEXTCOLOR",
+                    (0, 0),
+                    (-1, 0),
+                    colors.white,
+                ),
 
-                ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+                (
+                    "BACKGROUND",
+                    (0, -1),
+                    (-1, -1),
+                    colors.lightgreen,
+                ),
+
+                (
+                    "FONTNAME",
+                    (0, 0),
+                    (-1, 0),
+                    "Helvetica-Bold",
+                ),
+
+                (
+                    "FONTNAME",
+                    (0, -1),
+                    (-1, -1),
+                    "Helvetica-Bold",
+                ),
+
+                (
+                    "ALIGN",
+                    (1, 1),
+                    (-1, -1),
+                    "RIGHT",
+                ),
             ]
         )
     )
 
     story.append(salary_table)
 
-    story.append(Spacer(1, 0.35 * inch))
+    story.append(
+        Spacer(
+            1,
+            0.35 * inch
+        )
+    )
 
-    # Signature Section
+    # -----------------------------------------
+    # SIGNATURE SECTION
+    # -----------------------------------------
+
+    principal_name = (
+        school.principal_name
+        if school and school.principal_name
+        else "Principal"
+    )
 
     signature_table = Table(
         [
@@ -540,23 +1287,39 @@ def print_salary_structure(request, id):
                 "______________________",
                 "______________________",
             ],
+
             [
                 "Teacher",
-                school.principal_name if school else "Principal",
+                principal_name,
             ],
+
             [
                 "",
                 "Principal",
             ],
         ],
-        colWidths=[3.3 * inch, 3.3 * inch],
+        colWidths=[
+            3.3 * inch,
+            3.3 * inch,
+        ],
     )
 
     signature_table.setStyle(
         TableStyle(
             [
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                (
+                    "ALIGN",
+                    (0, 0),
+                    (-1, -1),
+                    "CENTER",
+                ),
+
+                (
+                    "TOPPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    8,
+                ),
             ]
         )
     )
@@ -570,5 +1333,9 @@ def print_salary_structure(request, id):
     return FileResponse(
         buffer,
         as_attachment=False,
-        filename=f"{salary.teacher}_Salary_Structure.pdf",
+        filename=(
+            f"{teacher.first_name}_"
+            f"{teacher.last_name}_"
+            f"Salary_Structure.pdf"
+        ),
     )

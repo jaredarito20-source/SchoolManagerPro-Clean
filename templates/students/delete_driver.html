@@ -5,16 +5,16 @@
 <h2>Delete Driver</h2>
 
 <p>
+    Are you sure you want to delete
+    <strong>
+        {{ driver.first_name }} {{ driver.last_name }}
+    </strong>?
+</p>
 
-Are you sure you want to delete
-
-<strong>
-
-{{ driver.first_name }}
-{{ driver.last_name }}
-
-</strong>?
-
+<p>
+    Phone: {{ driver.phone }}<br>
+    National ID: {{ driver.national_id }}<br>
+    License: {{ driver.license_number }}
 </p>
 
 <form method="POST">
@@ -22,7 +22,7 @@ Are you sure you want to delete
     {% csrf_token %}
 
     <button type="submit">
-        Yes, Delete
+        🗑 Yes, Delete
     </button>
 
     <a href="{% url 'driver_list' %}">

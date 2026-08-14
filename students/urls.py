@@ -338,35 +338,35 @@ urlpatterns = [
     ),
 
 # attendance register
-    path(
-    "attendance/take/",
-    views.take_attendance,
-    name="take_attendance",
-),
+        path(
+        "attendance/take/",
+        views.add_attendance,
+        name="take_attendance",
+    ),
+
+        path(
+        "attendance/",
+        views.attendance_list,
+        name="attendance_list",
+    ),
 
     path(
-    "attendance/",
-    views.attendance_list,
-    name="attendance_list",
-),
+        "attendance/edit/<int:id>/",
+        views.edit_attendance,
+        name="edit_attendance",
+    ),
 
-path(
-    "attendance/edit/<int:id>/",
-    views.edit_attendance,
-    name="edit_attendance",
-),
+    path(
+        "attendance/delete/<int:id>/",
+        views.delete_attendance,
+        name="delete_attendance",
+    ),
 
-path(
-    "attendance/delete/<int:id>/",
-    views.delete_attendance,
-    name="delete_attendance",
-),
-
-path(
-    "attendance/print/",
-    views.print_attendance,
-    name="print_attendance",
-),
+    path(
+        "attendance/print/",
+        views.print_attendance,
+        name="print_attendance",
+    ),
 
 path(
     "inventory/",

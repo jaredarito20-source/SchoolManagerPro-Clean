@@ -2,53 +2,106 @@
 
 {% block content %}
 
-<h2>Add Driver</h2>
+<h2>🚗 Add Driver</h2>
 
-<form method="POST">
+<form method="post">
 
     {% csrf_token %}
 
+    {% if request.user.is_superuser %}
+        <p>
+            <label><strong>School</strong></label><br>
+
+            <select name="school" required>
+                <option value="">-- Select School --</option>
+
+                {% for school in schools %}
+                    <option value="{{ school.id }}">
+                        {{ school.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+    {% endif %}
+
     <p>
-        <label>First Name</label><br>
-        <input type="text" name="first_name" required>
+        <label><strong>First Name</strong></label><br>
+        <input
+            type="text"
+            name="first_name"
+            maxlength="100"
+            required
+        >
     </p>
 
     <p>
-        <label>Last Name</label><br>
-        <input type="text" name="last_name" required>
+        <label><strong>Last Name</strong></label><br>
+        <input
+            type="text"
+            name="last_name"
+            maxlength="100"
+            required
+        >
     </p>
 
     <p>
-        <label>Phone</label><br>
-        <input type="text" name="phone" required>
+        <label><strong>Phone</strong></label><br>
+        <input
+            type="text"
+            name="phone"
+            maxlength="20"
+            required
+        >
     </p>
 
     <p>
-        <label>National ID</label><br>
-        <input type="text" name="national_id" required>
+        <label><strong>National ID</strong></label><br>
+        <input
+            type="text"
+            name="national_id"
+            maxlength="20"
+            required
+        >
     </p>
 
     <p>
-        <label>License Number</label><br>
-        <input type="text" name="license_number" required>
+        <label><strong>License Number</strong></label><br>
+        <input
+            type="text"
+            name="license_number"
+            maxlength="50"
+            required
+        >
     </p>
 
     <p>
-        <label>License Expiry</label><br>
-        <input type="date" name="license_expiry" required>
+        <label><strong>License Expiry</strong></label><br>
+        <input
+            type="date"
+            name="license_expiry"
+            required
+        >
     </p>
 
     <p>
         <label>
-            <input type="checkbox" name="active" checked>
-            Active
+            <input
+                type="checkbox"
+                name="active"
+                checked
+            >
+            Driver is Active
         </label>
     </p>
 
-    <button type="submit">Save</button>
+    <button type="submit">
+        💾 Save Driver
+    </button>
 
     <a href="{% url 'driver_list' %}">
-        <button type="button">Cancel</button>
+        <button type="button">
+            Cancel
+        </button>
     </a>
 
 </form>

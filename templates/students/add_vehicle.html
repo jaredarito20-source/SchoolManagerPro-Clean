@@ -2,63 +2,98 @@
 
 {% block content %}
 
-<h2>Add Vehicle</h2>
+<h2>🚗 Add Vehicle</h2>
 
 <form method="POST">
 
     {% csrf_token %}
 
+    {% if request.user.is_superuser %}
+        <p>
+            <label><strong>School</strong></label><br>
+
+            <select name="school" required>
+                <option value="">-- Select School --</option>
+
+                {% for school in schools %}
+                    <option value="{{ school.id }}">
+                        {{ school.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+    {% endif %}
+
     <p>
-        <label>Registration Number</label><br>
-        <input type="text" name="registration_number" required>
+        <label><strong>Registration Number</strong></label><br>
+        <input
+            type="text"
+            name="registration_number"
+            maxlength="30"
+            required
+        >
     </p>
 
     <p>
-        <label>Vehicle Name</label><br>
-        <input type="text" name="vehicle_name" required>
+        <label><strong>Vehicle Name</strong></label><br>
+        <input
+            type="text"
+            name="vehicle_name"
+            maxlength="100"
+            required
+        >
     </p>
 
     <p>
-        <label>Make / Model</label><br>
-        <input type="text" name="make">
+        <label><strong>Make / Model</strong></label><br>
+        <input
+            type="text"
+            name="make"
+            maxlength="100"
+        >
     </p>
 
     <p>
-        <label>Capacity</label><br>
-        <input type="number" name="capacity" required>
+        <label><strong>Capacity</strong></label><br>
+        <input
+            type="number"
+            name="capacity"
+            min="1"
+            required
+        >
     </p>
 
     <p>
-        <label>Driver</label><br>
+        <label><strong>Driver</strong></label><br>
+
         <select name="driver">
-            <option value="">-- Select Driver --</option>
+            <option value="">-- No Driver --</option>
 
             {% for driver in drivers %}
                 <option value="{{ driver.id }}">
-                    {{ driver.first_name }} {{ driver.last_name }}
+                    {{ driver.first_name }}
+                    {{ driver.last_name }}
                 </option>
             {% endfor %}
-
         </select>
     </p>
 
     <p>
-        <label>Status</label><br>
+        <label><strong>Status</strong></label><br>
 
-        <select name="status">
-
-            <option value="Active">Active</option>
+        <select name="status" required>
+            <option value="Active">
+                Active
+            </option>
 
             <option value="Maintenance">
                 Maintenance
             </option>
-
         </select>
-
     </p>
 
     <button type="submit">
-        Save Vehicle
+        💾 Save Vehicle
     </button>
 
     <a href="{% url 'vehicle_list' %}">

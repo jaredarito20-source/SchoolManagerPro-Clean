@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<h2>Student Transport</h2>
+<h2>🚌 Student Transport</h2>
 
 <p>
     <a href="{% url 'add_student_transport' %}">
@@ -10,22 +10,30 @@
     </a>
 </p>
 
+{% if messages %}
+    {% for message in messages %}
+        <p style="color: green;">
+            {{ message }}
+        </p>
+    {% endfor %}
+{% endif %}
+
 {% if transports %}
 
 <table border="1" cellpadding="6" cellspacing="0" width="100%">
 
     <thead>
-
         <tr>
             <th>Student</th>
             <th>Route</th>
+            <th>Vehicle</th>
+            <th>Driver</th>
             <th>Pickup Point</th>
             <th>Dropoff Point</th>
             <th>Status</th>
             <th>Assigned Date</th>
             <th>Actions</th>
         </tr>
-
     </thead>
 
     <tbody>
@@ -34,29 +42,69 @@
 
         <tr>
 
+            <!-- STUDENT -->
             <td>
                 {{ transport.student.first_name }}
                 {{ transport.student.last_name }}
             </td>
 
-            <td>{{ transport.route.route_name }}</td>
+            <!-- ROUTE -->
+            <td>
+                {{ transport.route.route_name }}
+            </td>
 
-            <td>{{ transport.pickup_point }}</td>
+            <!-- VEHICLE -->
+            <td>
+                {% if transport.route.vehicle %}
+                    {{ transport.route.vehicle.registration_number }}
+                    -
+                    {{ transport.route.vehicle.vehicle_name }}
+                {% else %}
+                    Not Assigned
+                {% endif %}
+            </td>
 
-            <td>{{ transport.dropoff_point }}</td>
+            <!-- DRIVER -->
+            <td>
+                {% if transport.route.driver %}
+                    {{ transport.route.driver.first_name }}
+                    {{ transport.route.driver.last_name }}
+                {% else %}
+                    Not Assigned
+                {% endif %}
+            </td>
 
+            <!-- PICKUP -->
+            <td>
+                {{ transport.pickup_point|default:"-" }}
+            </td>
+
+            <!-- DROPOFF -->
+            <td>
+                {{ transport.dropoff_point|default:"-" }}
+            </td>
+
+            <!-- STATUS -->
             <td>
 
                 {% if transport.active %}
-                    Active
+                    <span style="color: green;">
+                        Active
+                    </span>
                 {% else %}
-                    Inactive
+                    <span style="color: red;">
+                        Inactive
+                    </span>
                 {% endif %}
 
             </td>
 
-            <td>{{ transport.assigned_date }}</td>
+            <!-- ASSIGNED DATE -->
+            <td>
+                {{ transport.assigned_date }}
+            </td>
 
+            <!-- ACTIONS -->
             <td>
 
                 <a href="{% url 'edit_student_transport' transport.id %}">
@@ -87,7 +135,9 @@
 
 {% else %}
 
-<p>No students have been assigned to transport routes.</p>
+<p>
+    No students have been assigned to transport routes.
+</p>
 
 {% endif %}
 

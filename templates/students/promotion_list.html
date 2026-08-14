@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<h2>Student Promotion</h2>
+<h2>🎓 Student Promotion</h2>
 
 {% if messages %}
     {% for message in messages %}
@@ -19,41 +19,77 @@
     <p>
         <strong>Promote From</strong><br>
 
-        <select name="from_class" required>
+        <select name="from_class" id="from_class" required>
+
+            <option value="">
+                -- Select Current Class --
+            </option>
 
             {% for class in classes %}
 
-            <option value="{{ class.id }}">
-                {{ class.name }}
-            </option>
+                <option value="{{ class.id }}">
+                    {{ class.name }}
+                </option>
 
             {% endfor %}
 
         </select>
-
     </p>
 
     <p>
         <strong>Promote To</strong><br>
 
-        <select name="to_class" required>
+        <select name="to_class" id="to_class" required>
+
+            <option value="">
+                -- Select Destination Class --
+            </option>
 
             {% for class in classes %}
 
-            <option value="{{ class.id }}">
-                {{ class.name }}
-            </option>
+                <option value="{{ class.id }}">
+                    {{ class.name }}
+                </option>
 
             {% endfor %}
 
         </select>
-
     </p>
 
     <button type="submit">
-        Promote Students
+        🎓 Promote Students
     </button>
 
 </form>
+
+<script>
+
+const fromClass = document.getElementById("from_class");
+const toClass = document.getElementById("to_class");
+
+function preventSameClass() {
+
+    const selectedFrom = fromClass.value;
+
+    for (const option of toClass.options) {
+
+        option.disabled = (
+            option.value !== "" &&
+            option.value === selectedFrom
+        );
+
+    }
+
+    if (toClass.value === selectedFrom) {
+        toClass.value = "";
+    }
+}
+
+fromClass.addEventListener(
+    "change",
+    preventSameClass
+);
+
+</script>
 
 {% endblock %}

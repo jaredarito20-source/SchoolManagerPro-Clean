@@ -524,6 +524,7 @@ class Attendance(models.Model):
 
 
 class ExamTimetable(models.Model):
+
     DAYS = [
         ("Monday", "Monday"),
         ("Tuesday", "Tuesday"),
@@ -532,19 +533,24 @@ class ExamTimetable(models.Model):
         ("Friday", "Friday"),
     ]
 
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+    )
+
     school_class = models.ForeignKey(
         SchoolClass,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     exam = models.ForeignKey(
         Exam,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     subject = models.ForeignKey(
         Subject,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     exam_date = models.DateField()
@@ -576,7 +582,6 @@ class ExamTimetable(models.Model):
             f"{self.subject} - "
             f"{self.exam_date}"
         )
-
 class InventoryCategory(models.Model):
     name = models.CharField(
         max_length=100,
@@ -827,14 +832,25 @@ class SalaryStructure(models.Model):
 
 class Payroll(models.Model):
 
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="payrolls",
+    )
+
     teacher = models.ForeignKey(
         Teacher,
         on_delete=models.CASCADE,
+        related_name="payroll_records",
     )
 
     year = models.IntegerField()
 
-    month = models.CharField(max_length=20)
+    month = models.CharField(
+        max_length=20
+    )
 
     basic_salary = models.DecimalField(
         max_digits=12,
@@ -885,14 +901,28 @@ class Payroll(models.Model):
     )
 
     class Meta:
-        unique_together = ("teacher", "month", "year")
+
+        unique_together = (
+            "teacher",
+            "month",
+            "year",
+        )
 
     def __str__(self):
-        return f"{self.teacher} - {self.month} {self.year}"
 
-    # Transport
-
+        return (
+            f"{self.teacher} - "
+            f"{self.month} "
+            f"{self.year}"
+        )
 class Driver(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
 
     first_name = models.CharField(max_length=100)
 
@@ -916,8 +946,15 @@ class Driver(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
-
 class Vehicle(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+
     registration_number = models.CharField(
         max_length=30,
         unique=True,
@@ -954,11 +991,26 @@ class Vehicle(models.Model):
         return f"{self.registration_number} - {self.vehicle_name}"
 
 class TransportRoute(models.Model):
-    route_name = models.CharField(max_length=100)
 
-    start_point = models.CharField(max_length=150)
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="transport_routes",
+    )
 
-    end_point = models.CharField(max_length=150)
+    route_name = models.CharField(
+        max_length=100
+    )
+
+    start_point = models.CharField(
+        max_length=150
+    )
+
+    end_point = models.CharField(
+        max_length=150
+    )
 
     distance_km = models.DecimalField(
         max_digits=6,
@@ -971,24 +1023,23 @@ class TransportRoute(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="routes"
+        related_name="routes",
     )
 
     driver = models.ForeignKey(
-        Teacher,
+        Driver,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="transport_routes"
+        related_name="transport_routes",
     )
 
-    active = models.BooleanField(default=True)
+    active = models.BooleanField(
+        default=True
+    )
 
     def __str__(self):
         return self.route_name
-
-
-
 
 class StudentTransport(models.Model):
 
@@ -1024,7 +1075,6 @@ class StudentTransport(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.route}"
-
 # hostels
 
 class HostelBlock(models.Model):
