@@ -5,6 +5,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.db.models import Count, Sum
+from django.contrib.auth import get_user_model
+
+
+
+User = get_user_model()
 
 
 
@@ -59,6 +64,150 @@ from students.models import (
     Period,
     Timetable,
 )
+
+
+
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+)
+def admin_reset_user_password(request, id):
+
+    user = get_object_or_404(
+        User,
+        id=id,
+    )
+
+    # -----------------------------------------
+    # PREVENT RESETTING SUPERUSER
+    # -----------------------------------------
+
+    if user.is_superuser:
+
+        messages.error(
+            request,
+            "You cannot reset the password of a superuser."
+        )
+
+        return redirect("user_list")
+
+    # -----------------------------------------
+    # SCHOOL SECURITY
+    # -----------------------------------------
+
+    if not request.user.is_superuser:
+
+        admin_school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        target_school_user = getattr(
+            user,
+            "school_user",
+            None,
+        )
+
+        if not admin_school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("home")
+
+        if not target_school_user:
+
+            messages.error(
+                request,
+                "The selected user is not linked to a school."
+            )
+
+            return redirect("user_list")
+
+        if (
+            admin_school_user.school_id
+            != target_school_user.school_id
+        ):
+
+            messages.error(
+                request,
+                "You cannot reset a user from another school."
+            )
+
+            return redirect("user_list")
+
+    # -----------------------------------------
+    # RESET PASSWORD
+    # -----------------------------------------
+
+    if request.method == "POST":
+
+        password = request.POST.get(
+            "password"
+        )
+
+        password_confirm = request.POST.get(
+            "password_confirm"
+        )
+
+        if not password:
+
+            messages.error(
+                request,
+                "Please enter a new password."
+            )
+
+            return redirect(
+                "admin_reset_user_password",
+                id=user.id,
+            )
+
+        if password != password_confirm:
+
+            messages.error(
+                request,
+                "The passwords do not match."
+            )
+
+            return redirect(
+                "admin_reset_user_password",
+                id=user.id,
+            )
+
+        if len(password) < 8:
+
+            messages.error(
+                request,
+                "Password must contain at least 8 characters."
+            )
+
+            return redirect(
+                "admin_reset_user_password",
+                id=user.id,
+            )
+
+        user.set_password(password)
+
+        user.save()
+
+        messages.success(
+            request,
+            f"Password reset successfully for {user.username}."
+        )
+
+        return redirect("user_list")
+
+    return render(
+        request,
+        "registration/admin_reset_user_password.html",
+        {
+            "target_user": user,
+        },
+    )
 
 @login_required
 @in_group(
@@ -705,4 +854,52 @@ def register_school(request):
     return render(
         request,
         "students/register_school.html",
+    )
+@login_required
+@in_group("Administrators", "Head Teacher")
+def reset_user_password(request, id):
+
+    user = get_object_or_404(User, id=id)
+
+    if request.method == "POST":
+
+        password = request.POST.get("password")
+        confirm_password = request.POST.get("confirm_password")
+
+        if not password:
+            messages.error(
+                request,
+                "Please enter a new password."
+            )
+            return redirect(
+                "reset_user_password",
+                id=user.id,
+            )
+
+        if password != confirm_password:
+            messages.error(
+                request,
+                "Passwords do not match."
+            )
+            return redirect(
+                "reset_user_password",
+                id=user.id,
+            )
+
+        user.set_password(password)
+        user.save()
+
+        messages.success(
+            request,
+            f"Password for {user.username} has been reset successfully."
+        )
+
+        return redirect("user_list")
+
+    return render(
+        request,
+        "students/reset_user_password.html",
+        {
+            "user_account": user,
+        },
     )

@@ -7,3 +7,10 @@ admin.site.register(HostelBed)
 admin.site.register(StudentHostel)
 admin.site.register(HostelTransfer)
 admin.site.register(HostelWarden)
+
+from ..models import (
+    HostelBlock,
+    HostelRoom,
+    HostelBed,
+)
+

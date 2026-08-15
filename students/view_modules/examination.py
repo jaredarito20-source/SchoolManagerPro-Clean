@@ -3408,8 +3408,16 @@ def print_report(request, id):
 @admin_or_bursar
 def class_results(request):
 
-    classes = SchoolClass.objects.all()
-    exams = Exam.objects.all()
+    school = request.user.school_user.school
+
+    # Only show this school's data
+    classes = SchoolClass.objects.filter(
+        school=school
+    ).order_by("name")
+
+    exams = Exam.objects.filter(
+        school=school
+    ).order_by("-id")
 
     selected_class = None
     selected_exam = None
@@ -3427,41 +3435,58 @@ def class_results(request):
 
         selected_class = get_object_or_404(
             SchoolClass,
-            id=request.POST["school_class"]
+            id=request.POST["school_class"],
+            school=school,
         )
 
         selected_exam = get_object_or_404(
             Exam,
-            id=request.POST["exam"]
+            id=request.POST["exam"],
+            school=school,
         )
 
+        # Students belonging to this school and selected class
         students = Student.objects.filter(
-            school_class=selected_class
-        )
+            school=school,
+            school_class=selected_class,
+        ).order_by("first_name", "last_name")
 
-        subjects = Subject.objects.all().order_by("name")
+        # Subjects belonging to this school
+        subjects = Subject.objects.filter(
+            school=school
+        ).order_by("name")
 
-        # Student Results
+        # --------------------------------
+        # STUDENT RESULTS
+        # --------------------------------
+
         for student in students:
 
             student_marks = {}
             total = 0
+            subjects_with_marks = 0
 
             for subject in subjects:
 
                 mark = Mark.objects.filter(
                     student=student,
                     subject=subject,
-                    exam=selected_exam
+                    exam=selected_exam,
+                    school=school,
                 ).first()
 
                 if mark:
                     student_marks[subject.id] = mark.marks
                     total += mark.marks
+                    subjects_with_marks += 1
                 else:
                     student_marks[subject.id] = "-"
 
-            average = total / len(subjects) if subjects else 0
+            average = (
+                total / subjects_with_marks
+                if subjects_with_marks
+                else 0
+            )
 
             results.append({
                 "student": student,
@@ -3471,42 +3496,71 @@ def class_results(request):
                 "grade": calculate_grade(average),
             })
 
-        # Sort by Total
+        # --------------------------------
+        # SORT BY TOTAL
+        # --------------------------------
+
         results.sort(
             key=lambda x: x["total"],
             reverse=True
         )
 
-        # Positions
+        # --------------------------------
+        # POSITIONS
+        # --------------------------------
+
         for i, row in enumerate(results, start=1):
             row["position"] = i
 
-        # Summary
+        # --------------------------------
+        # SUMMARY
+        # --------------------------------
+
         student_count = len(results)
 
         if results:
 
             class_average = round(
-                sum(r["average"] for r in results) / student_count,
+                sum(
+                    r["average"]
+                    for r in results
+                ) / student_count,
                 2
             )
 
             highest_total = results[0]["total"]
             lowest_total = results[-1]["total"]
 
-        # Subject Analysis
+        # --------------------------------
+        # SUBJECT ANALYSIS
+        # --------------------------------
+
         for subject in subjects:
 
             subject_marks = Mark.objects.filter(
+                school=school,
                 subject=subject,
                 exam=selected_exam,
-                student__school_class=selected_class
+                student__school=school,
+                student__school_class=selected_class,
             )
 
             if subject_marks.exists():
 
-                highest = subject_marks.order_by("-marks").first().marks
-                lowest = subject_marks.order_by("marks").first().marks
+                highest = (
+                    subject_marks
+                    .order_by("-marks")
+                    .first()
+                    .marks
+                )
+
+                lowest = (
+                    subject_marks
+                    .order_by("marks")
+                    .first()
+                    .marks
+                )
+
                 average = round(
                     subject_marks.aggregate(
                         Avg("marks")
@@ -3547,8 +3601,6 @@ def class_results(request):
             "subject_analysis": subject_analysis,
         },
     )
-
-
 @login_required
 @admin_or_bursar
 def print_class_results(request):

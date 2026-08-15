@@ -3,6 +3,7 @@ from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from io import BytesIO
 from django.db.models import Count
 from students.utils import get_user_school
 from students.models import SchoolClass, SchoolProfile, Teacher,Student
@@ -12,6 +13,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
+from reportlab.lib.colors import HexColor, black, white
 
 from reportlab.platypus import (
     SimpleDocTemplate,

@@ -1,6 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.contrib import messages
+from django.utils import timezone
+from students.utils import get_user_school
 from django.shortcuts import render, redirect, get_object_or_404
 from students.models import(Student, 
                             FeePayment, 
@@ -11,10 +13,10 @@ from students.models import(Student,
                             Subject, 
                             SchoolClass, 
                             Teacher,
+                            HomeworkSubmission,
                            
 )
 
-from django.utils import timezone
 
 from django.http import HttpResponse
 from reportlab.lib.styles import getSampleStyleSheet
@@ -324,74 +326,113 @@ def parent_attendance(request):
             "attendance": attendance,
         },
     )
+
 @login_required
 def homework_list(request):
 
     user = request.user
+    school = get_user_school(user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+
+        return redirect("home")
 
     # Administrator
-    if user.is_superuser or user.groups.filter(name="Administrators").exists():
-
-        homework = Homework.objects.select_related(
-            "subject",
-            "school_class",
-            "teacher",
-        ).order_by("-date_given")
-
-    # Teacher
-    elif user.groups.filter(name="Teachers").exists():
-
-        teacher = Teacher.objects.filter(
-            user=user
-        ).first()
+    if (
+        user.is_superuser
+        or user.groups.filter(
+            name="Administrators"
+        ).exists()
+    ):
 
         homework = Homework.objects.filter(
-            teacher=teacher
+            school=school
         ).select_related(
             "subject",
             "school_class",
             "teacher",
-        ).order_by("-date_given")
+        ).order_by(
+            "-date_given"
+        )
+
+    # Teacher
+    elif user.groups.filter(
+        name="Teachers"
+    ).exists():
+
+        teacher = Teacher.objects.filter(
+            user=user,
+            school=school,
+        ).first()
+
+        if teacher:
+
+            homework = Homework.objects.filter(
+                school=school,
+                teacher=teacher,
+            ).select_related(
+                "subject",
+                "school_class",
+                "teacher",
+            ).order_by(
+                "-date_given"
+            )
+
+        else:
+            homework = Homework.objects.none()
 
     # Parent
-    elif user.groups.filter(name="Parents").exists():
+    elif user.groups.filter(
+        name="Parents"
+    ).exists():
 
         children = Student.objects.filter(
-            parent_user=user
+            parent_user=user,
+            school=school,
         )
 
         classes = children.values_list(
-            "school_class",
+            "school_class_id",
             flat=True,
         )
 
         homework = Homework.objects.filter(
-            school_class__in=classes
+            school=school,
+            school_class_id__in=classes,
         ).select_related(
             "subject",
             "school_class",
             "teacher",
-        ).order_by("-date_given")
+        ).order_by(
+            "-date_given"
+        )
 
     # Student
     else:
 
         student = Student.objects.filter(
-            user=user
+            user=user,
+            school=school,
         ).first()
 
         if student:
 
             homework = Homework.objects.filter(
-                school_class=student.school_class
+                school=school,
+                school_class=student.school_class,
             ).select_related(
                 "subject",
                 "school_class",
                 "teacher",
-            ).order_by("-date_given")
+            ).order_by(
+                "-date_given"
+            )
 
         else:
-
             homework = Homework.objects.none()
 
     return render(
@@ -404,28 +445,101 @@ def homework_list(request):
 @login_required
 def add_homework(request):
 
-    subjects = Subject.objects.all()
-    classes = SchoolClass.objects.all()
-    teachers = Teacher.objects.all()
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    subjects = Subject.objects.filter(
+        school=school
+    ).select_related(
+        "school_class",
+        "teacher",
+    )
+
+    classes = SchoolClass.objects.filter(
+        school=school
+    )
+
+    teachers = Teacher.objects.filter(
+        school=school
+    )
 
     if request.method == "POST":
 
+        try:
+
+            subject = Subject.objects.get(
+                id=request.POST["subject"],
+                school=school,
+            )
+
+            school_class = SchoolClass.objects.get(
+                id=request.POST["school_class"],
+                school=school,
+            )
+
+            teacher = Teacher.objects.get(
+                id=request.POST["teacher"],
+                school=school,
+            )
+
+        except (
+            Subject.DoesNotExist,
+            SchoolClass.DoesNotExist,
+            Teacher.DoesNotExist,
+        ):
+
+            messages.error(
+                request,
+                "Invalid subject, class, or teacher."
+            )
+
+            return render(
+                request,
+                "homework/add_homework.html",
+                {
+                    "subjects": subjects,
+                    "classes": classes,
+                    "teachers": teachers,
+                },
+            )
+
+        # If the subject is assigned to a specific class,
+        # make sure it matches the selected class.
+        if (
+            subject.school_class
+            and subject.school_class_id != school_class.id
+        ):
+
+            messages.error(
+                request,
+                "The selected subject does not belong to the selected class."
+            )
+
+            return render(
+                request,
+                "homework/add_homework.html",
+                {
+                    "subjects": subjects,
+                    "classes": classes,
+                    "teachers": teachers,
+                },
+            )
+
         Homework.objects.create(
-
-            subject_id=request.POST["subject"],
-
-            school_class_id=request.POST["school_class"],
-
-            teacher_id=request.POST["teacher"],
-
+            school=school,
+            subject=subject,
+            school_class=school_class,
+            teacher=teacher,
             title=request.POST["title"],
-
             description=request.POST["description"],
-
             due_date=request.POST["due_date"],
-
             attachment=request.FILES.get("attachment"),
-
         )
 
         messages.success(
@@ -448,20 +562,102 @@ def add_homework(request):
 @login_required
 def edit_homework(request, pk):
 
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
     homework = get_object_or_404(
-        Homework,
-        pk=pk
+        Homework.objects.select_related(
+            "subject",
+            "school_class",
+            "teacher",
+        ),
+        pk=pk,
+        school=school,
     )
 
-    subjects = Subject.objects.all()
-    classes = SchoolClass.objects.all()
-    teachers = Teacher.objects.all()
+    subjects = Subject.objects.filter(
+        school=school
+    )
+
+    classes = SchoolClass.objects.filter(
+        school=school
+    )
+
+    teachers = Teacher.objects.filter(
+        school=school
+    )
 
     if request.method == "POST":
 
-        homework.subject_id = request.POST["subject"]
-        homework.school_class_id = request.POST["school_class"]
-        homework.teacher_id = request.POST["teacher"]
+        try:
+
+            subject = Subject.objects.get(
+                id=request.POST["subject"],
+                school=school,
+            )
+
+            school_class = SchoolClass.objects.get(
+                id=request.POST["school_class"],
+                school=school,
+            )
+
+            teacher = Teacher.objects.get(
+                id=request.POST["teacher"],
+                school=school,
+            )
+
+        except (
+            Subject.DoesNotExist,
+            SchoolClass.DoesNotExist,
+            Teacher.DoesNotExist,
+        ):
+
+            messages.error(
+                request,
+                "Invalid subject, class, or teacher."
+            )
+
+            return render(
+                request,
+                "homework/edit_homework.html",
+                {
+                    "homework": homework,
+                    "subjects": subjects,
+                    "classes": classes,
+                    "teachers": teachers,
+                },
+            )
+
+        if (
+            subject.school_class
+            and subject.school_class_id != school_class.id
+        ):
+
+            messages.error(
+                request,
+                "The selected subject does not belong to the selected class."
+            )
+
+            return render(
+                request,
+                "homework/edit_homework.html",
+                {
+                    "homework": homework,
+                    "subjects": subjects,
+                    "classes": classes,
+                    "teachers": teachers,
+                },
+            )
+
+        homework.subject = subject
+        homework.school_class = school_class
+        homework.teacher = teacher
         homework.title = request.POST["title"]
         homework.description = request.POST["description"]
         homework.due_date = request.POST["due_date"]
@@ -492,9 +688,19 @@ def edit_homework(request, pk):
 @login_required
 def delete_homework(request, pk):
 
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
     homework = get_object_or_404(
         Homework,
         pk=pk,
+        school=school,
     )
 
     if request.method == "POST":
@@ -503,7 +709,7 @@ def delete_homework(request, pk):
 
         messages.success(
             request,
-            "Homework deleted successfully.",
+            "Homework deleted successfully."
         )
 
         return redirect("homework_list")
@@ -519,16 +725,37 @@ def delete_homework(request, pk):
 @login_required
 def parent_homework(request):
 
-    children = Student.objects.filter(parent_user=request.user)
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    children = Student.objects.filter(
+        parent_user=request.user,
+        school=school,
+    ).select_related(
+        "school_class"
+    )
 
     classes = children.values_list(
-        "school_class",
-        flat=True
+        "school_class_id",
+        flat=True,
     )
 
     homework = Homework.objects.filter(
-        school_class__in=classes
-    ).order_by("-date_given")
+        school=school,
+        school_class_id__in=classes,
+    ).select_related(
+        "subject",
+        "school_class",
+        "teacher",
+    ).order_by(
+        "-date_given"
+    )
 
     return render(
         request,
@@ -539,32 +766,58 @@ def parent_homework(request):
         },
     )
 
-from django.shortcuts import get_object_or_404, render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-
 @login_required
 def submit_homework(request, homework_id):
 
-    student = Student.objects.get(user=request.user)
+    student = Student.objects.filter(
+        user=request.user
+    ).select_related(
+        "school",
+        "school_class",
+    ).first()
+
+    if not student:
+        messages.error(
+            request,
+            "Student profile not found."
+        )
+        return redirect("home")
+
+    if not student.school:
+        messages.error(
+            request,
+            "Your student account is not associated with a school."
+        )
+        return redirect("home")
 
     homework = get_object_or_404(
-        Homework,
-        id=homework_id
+        Homework.objects.select_related(
+            "school",
+            "school_class",
+            "subject",
+            "teacher",
+        ),
+        id=homework_id,
+        school=student.school,
+        school_class=student.school_class,
     )
 
     submission = HomeworkSubmission.objects.filter(
         homework=homework,
-        student=student
+        student=student,
     ).first()
 
     if request.method == "POST":
 
-        file = request.FILES.get("submission_file")
+        file = request.FILES.get(
+            "submission_file"
+        )
 
         if submission:
 
-            submission.submission_file = file
+            if file:
+                submission.submission_file = file
+
             submission.save()
 
             messages.success(
@@ -573,6 +826,21 @@ def submit_homework(request, homework_id):
             )
 
         else:
+
+            if not file:
+                messages.error(
+                    request,
+                    "Please select a file to submit."
+                )
+
+                return render(
+                    request,
+                    "students/submit_homework.html",
+                    {
+                        "homework": homework,
+                        "submission": submission,
+                    },
+                )
 
             HomeworkSubmission.objects.create(
                 homework=homework,
@@ -585,7 +853,9 @@ def submit_homework(request, homework_id):
                 "Homework submitted successfully."
             )
 
-        return redirect("student_homework")
+        return redirect(
+            "student_homework"
+        )
 
     return render(
         request,
@@ -599,15 +869,54 @@ def submit_homework(request, homework_id):
 @login_required
 def homework_submissions(request, homework_id):
 
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
     homework = get_object_or_404(
-        Homework,
-        id=homework_id
+        Homework.objects.select_related(
+            "school",
+            "teacher",
+            "school_class",
+            "subject",
+        ),
+        id=homework_id,
+        school=school,
     )
 
+    user = request.user
+
+    # Teachers can only view submissions
+    # for their own homework.
+    if user.groups.filter(
+        name="Teachers"
+    ).exists():
+
+        teacher = Teacher.objects.filter(
+            user=user,
+            school=school,
+        ).first()
+
+        if not teacher or homework.teacher_id != teacher.id:
+            messages.error(
+                request,
+                "You are not allowed to view these submissions."
+            )
+            return redirect("homework_list")
+
     submissions = HomeworkSubmission.objects.filter(
-        homework=homework
+        homework=homework,
+        student__school=school,
     ).select_related(
-        "student"
+        "student",
+        "graded_by",
+    ).order_by(
+        "-submitted_at"
     )
 
     return render(
@@ -619,23 +928,113 @@ def homework_submissions(request, homework_id):
         },
     )
 
-
 @login_required
 def mark_homework(request, submission_id):
 
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+    
     submission = get_object_or_404(
-        HomeworkSubmission,
-        id=submission_id
+        HomeworkSubmission.objects.select_related(
+            "homework",
+            "homework__teacher",
+            "homework__school",
+            "student",
+            "student__school",
+        ),
+        id=submission_id,
+        homework__school=school,
+        student__school=school,
     )
 
+    user = request.user
+
+    # Find teacher
     teacher = Teacher.objects.filter(
-        user=request.user
+        user=user,
+        school=school,
     ).first()
 
+    # Teacher permission
+    if user.groups.filter(
+        name="Teachers"
+    ).exists():
+
+        if not teacher:
+            messages.error(
+                request,
+                "Teacher profile not found."
+            )
+            return redirect("homework_list")
+
+        if submission.homework.teacher_id != teacher.id:
+            messages.error(
+                request,
+                "You are not allowed to mark this homework."
+            )
+            return redirect(
+                "homework_submissions",
+                submission.homework.id,
+            )
+
+    # Administrator or authorized teacher
     if request.method == "POST":
 
-        submission.marks = request.POST["marks"]
-        submission.teacher_comment = request.POST["teacher_comment"]
+        marks_value = request.POST.get(
+            "marks"
+        )
+
+        teacher_comment = request.POST.get(
+            "teacher_comment",
+            "",
+        )
+
+        if marks_value:
+            try:
+                marks = float(marks_value)
+
+            except (TypeError, ValueError):
+
+                messages.error(
+                    request,
+                    "Please enter valid marks."
+                )
+
+                return render(
+                    request,
+                    "homework/mark_homework.html",
+                    {
+                        "submission": submission,
+                    },
+                )
+
+            if marks < 0 or marks > 100:
+
+                messages.error(
+                    request,
+                    "Marks must be between 0 and 100."
+                )
+
+                return render(
+                    request,
+                    "homework/mark_homework.html",
+                    {
+                        "submission": submission,
+                    },
+                )
+
+            submission.marks = marks
+
+        else:
+            submission.marks = None
+
+        submission.teacher_comment = teacher_comment
         submission.graded_by = teacher
         submission.graded_at = timezone.now()
 

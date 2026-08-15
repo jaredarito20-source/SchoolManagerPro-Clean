@@ -1,6 +1,10 @@
 from django.db import models
 from django.db.models import Sum
 from django.contrib.auth.models import User
+from django.contrib import admin
+
+
+
 
 
 class SchoolProfile(models.Model):
@@ -583,19 +587,37 @@ class ExamTimetable(models.Model):
             f"{self.exam_date}"
         )
 class InventoryCategory(models.Model):
-    name = models.CharField(
-        max_length=100,
-        unique=True,
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="inventory_categories",
     )
+
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "name"],
+                name="unique_inventory_category_per_school",
+            )
+        ]
 
     def __str__(self):
         return self.name
 
 
 class InventoryItem(models.Model):
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="inventory_items",
+    )
+
     category = models.ForeignKey(
         InventoryCategory,
         on_delete=models.CASCADE,
+        related_name="items",
     )
 
     name = models.CharField(max_length=150)
@@ -618,18 +640,30 @@ class InventoryItem(models.Model):
         blank=True,
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "name"],
+                name="unique_inventory_item_per_school",
+            )
+        ]
+
     def __str__(self):
         return self.name
+
 
 class StockTransaction(models.Model):
 
     TRANSACTION_TYPES = [
-
         ("RECEIVED", "Received"),
-
         ("ISSUED", "Issued"),
-
     ]
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="stock_transactions",
+    )
 
     item = models.ForeignKey(
         InventoryItem,
@@ -660,10 +694,14 @@ class StockTransaction(models.Model):
     )
 
     def __str__(self):
-
         return f"{self.item.name} - {self.transaction_type}"
-
 class Book(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="library_books",
+    )
 
     title = models.CharField(max_length=200)
 
@@ -671,7 +709,6 @@ class Book(models.Model):
 
     isbn = models.CharField(
         max_length=30,
-        unique=True,
     )
 
     category = models.CharField(
@@ -688,28 +725,47 @@ class Book(models.Model):
         blank=True,
     )
 
-    copies = models.PositiveIntegerField(default=1)
+    copies = models.PositiveIntegerField(
+        default=1,
+    )
 
-    available_copies = models.PositiveIntegerField(default=1)
+    available_copies = models.PositiveIntegerField(
+        default=1,
+    )
 
     shelf = models.CharField(
         max_length=100,
         blank=True,
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "isbn"],
+                name="unique_book_isbn_per_school",
+            )
+        ]
+
     def __str__(self):
         return self.title
 
+
 class BorrowBook(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="library_borrowings",
+    )
 
     student = models.ForeignKey(
         Student,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     book = models.ForeignKey(
         Book,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     borrow_date = models.DateField()
@@ -718,7 +774,7 @@ class BorrowBook(models.Model):
 
     return_date = models.DateField(
         null=True,
-        blank=True
+        blank=True,
     )
 
     STATUS = (
@@ -729,18 +785,18 @@ class BorrowBook(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS,
-        default="Borrowed"
+        default="Borrowed",
     )
 
     issued_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
-        null=True
+        null=True,
+        blank=True,
     )
 
     def __str__(self):
         return f"{self.student} - {self.book}"
-
 
 class SalaryStructure(models.Model):
     teacher = models.OneToOneField(
@@ -1077,180 +1133,6 @@ class StudentTransport(models.Model):
         return f"{self.student} - {self.route}"
 # hostels
 
-class HostelBlock(models.Model):
-
-    name = models.CharField(
-        max_length=100,
-        unique=True,
-    )
-
-    description = models.TextField(
-        blank=True,
-    )
-
-    active = models.BooleanField(
-        default=True,
-    )
-
-    def __str__(self):
-        return self.name
-
-class HostelRoom(models.Model):
-
-    block = models.ForeignKey(
-        HostelBlock,
-        on_delete=models.CASCADE,
-        related_name="rooms",
-    )
-
-    room_number = models.CharField(max_length=30)
-
-    capacity = models.PositiveIntegerField()
-
-    class Meta:
-        unique_together = ("block", "room_number")
-
-    @property
-    def occupied_beds(self):
-        return self.students.count()
-
-    @property
-    def available_beds(self):
-        return self.capacity - self.occupied_beds
-
-    @property
-    def is_full(self):
-        return self.occupied_beds >= self.capacity
-
-    def __str__(self):
-        return f"{self.block.name} - Room {self.room_number}"
-
-class HostelBed(models.Model):
-
-    room = models.ForeignKey(
-        HostelRoom,
-        on_delete=models.CASCADE,
-        related_name="beds",
-    )
-
-    bed_number = models.CharField(
-        max_length=20,
-    )
-
-    occupied = models.BooleanField(
-        default=False,
-    )
-
-    class Meta:
-        unique_together = ("room", "bed_number")
-        ordering = ["bed_number"]
-
-    def __str__(self):
-        return f"{self.room} - Bed {self.bed_number}"
-class StudentHostel(models.Model):
-
-    student = models.OneToOneField(
-        Student,
-        on_delete=models.CASCADE,
-        related_name="hostel",
-    )
-
-    room = models.ForeignKey(
-        HostelRoom,
-        on_delete=models.CASCADE,
-        related_name="students",
-    )
-
-    bed_number = models.CharField(max_length=20)
-
-    assigned_date = models.DateField(
-        auto_now_add=True,
-    )
-
-    active = models.BooleanField(
-        default=True,
-    )
-
-    def __str__(self):
-        return f"{self.student} - {self.room}"
-
-class HostelWarden(models.Model):
-
-    hostel_block = models.ForeignKey(
-        HostelBlock,
-        on_delete=models.CASCADE,
-        related_name="wardens",
-    )
-
-    first_name = models.CharField(max_length=100)
-
-    last_name = models.CharField(max_length=100)
-
-    designation = models.CharField(
-        max_length=50,
-        choices=[
-            ("Senior Warden", "Senior Warden"),
-            ("Assistant Warden", "Assistant Warden"),
-            ("Night Warden", "Night Warden"),
-            ("Matron", "Matron"),
-            ("Patron", "Patron"),
-        ],
-    )
-
-    gender = models.CharField(
-        max_length=10,
-        choices=[
-            ("Male", "Male"),
-            ("Female", "Female"),
-        ],
-    )
-
-    phone = models.CharField(max_length=20, blank=True)
-
-    email = models.EmailField(blank=True)
-
-    active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}"
-
-class HostelTransfer(models.Model):
-
-    student = models.ForeignKey(
-        Student,
-        on_delete=models.CASCADE,
-        related_name="hostel_transfers",
-    )
-
-    from_room = models.ForeignKey(
-        HostelRoom,
-        on_delete=models.CASCADE,
-        related_name="transfers_from",
-    )
-
-    to_room = models.ForeignKey(
-        HostelRoom,
-        on_delete=models.CASCADE,
-        related_name="transfers_to",
-    )
-
-    transfer_date = models.DateField(
-        auto_now_add=True,
-    )
-
-    reason = models.TextField(
-        blank=True,
-    )
-
-    transferred_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-    )
-
-    def __str__(self):
-        return f"{self.student} ({self.from_room} → {self.to_room})"
 
 class DisciplineCategory(models.Model):
 
@@ -1261,6 +1143,12 @@ class DisciplineCategory(models.Model):
 
     description = models.TextField(
         blank=True,
+    )
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="discipline_categories",
     )
 
     def __str__(self):
@@ -1291,6 +1179,12 @@ class DisciplineCase(models.Model):
         null=True,
     )
 
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="discipline_cases",
+    )
+
     incident_date = models.DateField()
 
     description = models.TextField()
@@ -1311,7 +1205,6 @@ class DisciplineCase(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.category}"
-
 class Medication(models.Model):
 
     name = models.CharField(
@@ -1462,19 +1355,27 @@ class Prescription(models.Model):
 
 class Homework(models.Model):
 
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="homework",
+    )
     subject = models.ForeignKey(
         Subject,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="homework",
     )
 
     school_class = models.ForeignKey(
         SchoolClass,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="homework",
     )
 
     teacher = models.ForeignKey(
         Teacher,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="homework",
     )
 
     title = models.CharField(
@@ -1483,7 +1384,9 @@ class Homework(models.Model):
 
     description = models.TextField()
 
-    date_given = models.DateField(auto_now_add=True)
+    date_given = models.DateField(
+        auto_now_add=True
+    )
 
     due_date = models.DateField()
 
@@ -1495,18 +1398,18 @@ class Homework(models.Model):
 
     def __str__(self):
         return f"{self.school_class} - {self.title}"
-
-
 class HomeworkSubmission(models.Model):
 
     homework = models.ForeignKey(
         Homework,
         on_delete=models.CASCADE,
+        related_name="submissions",
     )
 
     student = models.ForeignKey(
         Student,
         on_delete=models.CASCADE,
+        related_name="homework_submissions",
     )
 
     submission_file = models.FileField(
@@ -1538,13 +1441,11 @@ class HomeworkSubmission(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name="graded_homework_submissions",
     )
 
     def __str__(self):
         return f"{self.student} - {self.homework}"
-
-    # Timetable
-
 class Period(models.Model):
     name = models.CharField(max_length=20)
     start_time = models.TimeField()
@@ -1690,3 +1591,300 @@ class Timetable(models.Model):
             f"{self.period} - "
             f"{self.subject}"
         )
+class HostelBlock(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="hostel_blocks",
+    )
+
+    name = models.CharField(
+        max_length=100,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    capacity = models.PositiveIntegerField(
+        default=0,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "name"],
+                name="unique_hostel_block_per_school",
+            )
+        ]
+
+    def __str__(self):
+        return self.name
+
+class HostelRoom(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="hostel_rooms",
+    )
+
+    hostel_block = models.ForeignKey(
+        HostelBlock,
+        on_delete=models.CASCADE,
+        related_name="rooms",
+    )
+
+    room_number = models.CharField(
+        max_length=50,
+    )
+
+    capacity = models.PositiveIntegerField(
+        default=4,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "hostel_block", "room_number"],
+                name="unique_hostel_room_per_block",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.hostel_block.name} - Room {self.room_number}"
+
+class HostelBed(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="hostel_beds",
+    )
+
+    room = models.ForeignKey(
+        HostelRoom,
+        on_delete=models.CASCADE,
+        related_name="beds",
+    )
+
+    bed_number = models.CharField(
+        max_length=50,
+    )
+
+    is_occupied = models.BooleanField(
+        default=False,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "room", "bed_number"],
+                name="unique_hostel_bed_per_room",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.room} - Bed {self.bed_number}"
+
+class StudentHostel(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="student_hostel_allocations",
+    )
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="hostel_allocations",
+    )
+
+    hostel_block = models.ForeignKey(
+        HostelBlock,
+        on_delete=models.CASCADE,
+        related_name="student_allocations",
+        null=True,
+        blank=True,
+    )
+
+    room = models.ForeignKey(
+        HostelRoom,
+        on_delete=models.CASCADE,
+        related_name="student_allocations",
+    )
+
+    bed = models.ForeignKey(
+        HostelBed,
+        on_delete=models.CASCADE,
+        related_name="student_allocations",
+        null=True,
+        blank=True,
+    )
+
+    admission_date = models.DateField()
+    null=True,
+    blank=True,
+
+    leaving_date = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    remarks = models.TextField(
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    def __str__(self):
+        return f"{self.student} - {self.hostel_block} - {self.room}"
+
+class HostelTransfer(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="hostel_transfers",
+    )
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="hostel_transfers",
+    )
+
+    from_hostel = models.ForeignKey(
+        HostelBlock,
+        on_delete=models.CASCADE,
+        related_name="transfers_from",
+        null=True,
+        blank=True,
+    )
+
+    from_room = models.ForeignKey(
+        HostelRoom,
+        on_delete=models.CASCADE,
+        related_name="transfers_from",
+        null=True,
+        blank=True,
+    )
+
+    from_bed = models.ForeignKey(
+        HostelBed,
+        on_delete=models.CASCADE,
+        related_name="transfers_from",
+        null=True,
+        blank=True,
+    )
+
+    to_hostel = models.ForeignKey(
+        HostelBlock,
+        on_delete=models.CASCADE,
+        related_name="transfers_to",
+        null=True,
+        blank=True,
+    )
+
+    to_room = models.ForeignKey(
+        HostelRoom,
+        on_delete=models.CASCADE,
+        related_name="transfers_to",
+        null=True,
+        blank=True,
+    )
+
+    to_bed = models.ForeignKey(
+        HostelBed,
+        on_delete=models.CASCADE,
+        related_name="transfers_to",
+        null=True,
+        blank=True,
+    )
+
+    transfer_date = models.DateField()
+
+    reason = models.TextField(
+        blank=True,
+    )
+
+    transferred_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="hostel_transfers_made",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    def __str__(self):
+        return f"{self.student} - Hostel Transfer"
+
+class HostelWarden(models.Model):
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="hostel_wardens",
+    )
+
+    hostel_block = models.ForeignKey(
+        HostelBlock,
+        on_delete=models.CASCADE,
+        related_name="wardens",
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="hostel_warden_assignments",
+    )
+
+    name = models.CharField(
+        max_length=200,
+    )
+
+    phone = models.CharField(
+        max_length=30,
+        blank=True,
+    )
+
+    email = models.EmailField(
+        blank=True,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    assigned_date = models.DateField(
+        auto_now_add=True,
+    )
+
+    remarks = models.TextField(
+        blank=True,
+    )
+
+    def __str__(self):
+        return f"{self.name} - {self.hostel_block}"

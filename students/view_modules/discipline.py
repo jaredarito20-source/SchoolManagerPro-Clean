@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count
 from django.http import HttpResponse
+from students.utils import get_user_school
 
 from reportlab.pdfgen import canvas
 from students.models import *
@@ -21,7 +22,11 @@ from students.utils import draw_school_header, draw_school_footer
 @admin_or_bursar
 def discipline_case_list(request):
 
-    cases = DisciplineCase.objects.select_related(
+    school = get_user_school(request.user)
+
+    cases = DisciplineCase.objects.filter(
+        school=school
+    ).select_related(
         "student",
         "student__school_class",
         "category",
@@ -35,34 +40,63 @@ def discipline_case_list(request):
             "cases": cases,
         },
     )
-
 @login_required
 @admin_or_bursar
 def add_discipline_case(request):
 
-    students = Student.objects.select_related(
+    school = get_user_school(request.user)
+
+    students = Student.objects.filter(
+        school=school
+    ).select_related(
         "school_class"
+    ).order_by(
+        "first_name",
+        "last_name",
     )
 
-    categories = DisciplineCategory.objects.all()
+    categories = DisciplineCategory.objects.filter(
+        school=school
+    ).order_by(
+        "name"
+    )
 
-    teachers = Teacher.objects.all()
+    teachers = Teacher.objects.filter(
+        school=school
+    ).order_by(
+        "first_name",
+        "last_name",
+    )
 
     if request.method == "POST":
 
+        student = get_object_or_404(
+            Student,
+            id=request.POST["student"],
+            school=school,
+        )
+
+        category = get_object_or_404(
+            DisciplineCategory,
+            id=request.POST["category"],
+            school=school,
+        )
+
+        teacher = get_object_or_404(
+            Teacher,
+            id=request.POST["reported_by"],
+            school=school,
+        )
+
         DisciplineCase.objects.create(
 
-            student=Student.objects.get(
-                id=request.POST["student"]
-            ),
+            school=school,
 
-            category=DisciplineCategory.objects.get(
-                id=request.POST["category"]
-            ),
+            student=student,
 
-            reported_by=Teacher.objects.get(
-                id=request.POST["reported_by"]
-            ),
+            category=category,
+
+            reported_by=teacher,
 
             incident_date=request.POST["incident_date"],
 
@@ -92,37 +126,63 @@ def add_discipline_case(request):
             "teachers": teachers,
         },
     )
-
 @login_required
 @admin_or_bursar
 def edit_discipline_case(request, id):
 
+    school = get_user_school(request.user)
+
     case = get_object_or_404(
         DisciplineCase,
         id=id,
+        school=school,
     )
 
-    students = Student.objects.select_related(
+    students = Student.objects.filter(
+        school=school
+    ).select_related(
         "school_class"
+    ).order_by(
+        "first_name",
+        "last_name",
     )
 
-    categories = DisciplineCategory.objects.all()
+    categories = DisciplineCategory.objects.filter(
+        school=school
+    ).order_by(
+        "name"
+    )
 
-    teachers = Teacher.objects.all()
+    teachers = Teacher.objects.filter(
+        school=school
+    ).order_by(
+        "first_name",
+        "last_name",
+    )
 
     if request.method == "POST":
 
-        case.student = Student.objects.get(
-            id=request.POST["student"]
+        student = get_object_or_404(
+            Student,
+            id=request.POST["student"],
+            school=school,
         )
 
-        case.category = DisciplineCategory.objects.get(
-            id=request.POST["category"]
+        category = get_object_or_404(
+            DisciplineCategory,
+            id=request.POST["category"],
+            school=school,
         )
 
-        case.reported_by = Teacher.objects.get(
-            id=request.POST["reported_by"]
+        teacher = get_object_or_404(
+            Teacher,
+            id=request.POST["reported_by"],
+            school=school,
         )
+
+        case.student = student
+        case.category = category
+        case.reported_by = teacher
 
         case.incident_date = request.POST["incident_date"]
 
@@ -153,14 +213,16 @@ def edit_discipline_case(request, id):
             "teachers": teachers,
         },
     )
-
 @login_required
 @admin_or_bursar
 def delete_discipline_case(request, id):
 
+    school = get_user_school(request.user)
+
     case = get_object_or_404(
         DisciplineCase,
         id=id,
+        school=school,
     )
 
     if request.method == "POST":
@@ -183,10 +245,11 @@ def delete_discipline_case(request, id):
             "case": case,
         },
     )
-
 @login_required
 @admin_or_bursar
 def print_discipline_case(request, id):
+
+    school = get_user_school(request.user)
 
     case = get_object_or_404(
         DisciplineCase.objects.select_related(
@@ -194,14 +257,19 @@ def print_discipline_case(request, id):
             "student__school_class",
             "category",
             "reported_by",
+            "school",
         ),
         id=id,
+        school=school,
     )
 
-    response = HttpResponse(content_type="application/pdf")
+    response = HttpResponse(
+        content_type="application/pdf"
+    )
 
     response["Content-Disposition"] = (
-        f'inline; filename="Discipline_Case_{case.student.admission_number}.pdf"'
+        f'inline; filename="Discipline_Case_'
+        f'{case.student.admission_number}.pdf"'
     )
 
     p = canvas.Canvas(response)
@@ -213,13 +281,18 @@ def print_discipline_case(request, id):
 
     y = 690
 
-    p.drawString(50, y, f"Admission No : {case.student.admission_number}")
+    p.drawString(
+        50,
+        y,
+        f"Admission No : {case.student.admission_number}"
+    )
     y -= 20
 
     p.drawString(
         50,
         y,
-        f"Student : {case.student.first_name} {case.student.last_name}",
+        f"Student : {case.student.first_name} "
+        f"{case.student.last_name}",
     )
     y -= 20
 
@@ -259,14 +332,28 @@ def print_discipline_case(request, id):
 
     y -= 40
 
-    p.setFont("Helvetica-Bold", 11)
-    p.drawString(50, y, "Description")
+    p.setFont(
+        "Helvetica-Bold",
+        11,
+    )
+
+    p.drawString(
+        50,
+        y,
+        "Description",
+    )
 
     y -= 20
 
-    p.setFont("Helvetica", 10)
+    p.setFont(
+        "Helvetica",
+        10,
+    )
 
-    text = p.beginText(50, y)
+    text = p.beginText(
+        50,
+        y,
+    )
 
     for line in case.description.splitlines():
         text.textLine(line)
@@ -275,15 +362,28 @@ def print_discipline_case(request, id):
 
     y = text.getY() - 30
 
-    p.setFont("Helvetica-Bold", 11)
+    p.setFont(
+        "Helvetica-Bold",
+        11,
+    )
 
-    p.drawString(50, y, "Action Taken")
+    p.drawString(
+        50,
+        y,
+        "Action Taken",
+    )
 
     y -= 20
 
-    p.setFont("Helvetica", 10)
+    p.setFont(
+        "Helvetica",
+        10,
+    )
 
-    text = p.beginText(50, y)
+    text = p.beginText(
+        50,
+        y,
+    )
 
     for line in case.action_taken.splitlines():
         text.textLine(line)
@@ -303,7 +403,11 @@ def print_discipline_case(request, id):
 @admin_or_bursar
 def discipline_category_list(request):
 
-    categories = DisciplineCategory.objects.all()
+    school = get_user_school(request.user)
+
+    categories = DisciplineCategory.objects.filter(
+        school=school
+    ).order_by("name")
 
     return render(
         request,
@@ -312,14 +416,16 @@ def discipline_category_list(request):
             "categories": categories,
         },
     )
-
 @login_required
 @admin_or_bursar
 def edit_discipline_category(request, id):
 
+    school = get_user_school(request.user)
+
     category = get_object_or_404(
         DisciplineCategory,
         id=id,
+        school=school,
     )
 
     if request.method == "POST":
@@ -328,9 +434,12 @@ def edit_discipline_category(request, id):
 
         category.description = request.POST["description"]
 
-        category.active = "active" in request.POST
-
         category.save()
+
+        messages.success(
+            request,
+            "Discipline category updated successfully."
+        )
 
         return redirect(
             "discipline_category_list"
@@ -343,19 +452,26 @@ def edit_discipline_category(request, id):
             "category": category,
         },
     )
-
 @login_required
 @admin_or_bursar
 def delete_discipline_category(request, id):
 
+    school = get_user_school(request.user)
+
     category = get_object_or_404(
         DisciplineCategory,
         id=id,
+        school=school,
     )
 
     if request.method == "POST":
 
         category.delete()
+
+        messages.success(
+            request,
+            "Discipline category deleted successfully."
+        )
 
         return redirect(
             "discipline_category_list"
@@ -373,9 +489,12 @@ def delete_discipline_category(request, id):
 @admin_or_bursar
 def add_discipline_category(request):
 
+    school = get_user_school(request.user)
+
     if request.method == "POST":
 
         DisciplineCategory.objects.create(
+            school=school,
 
             name=request.POST["name"],
 
@@ -383,7 +502,6 @@ def add_discipline_category(request):
                 "description",
                 "",
             ),
-
         )
 
         messages.success(
@@ -404,37 +522,58 @@ def add_discipline_category(request):
 @admin_or_bursar
 def discipline_dashboard(request):
 
-    total_cases = DisciplineCase.objects.count()
+    school = get_user_school(request.user)
 
-    open_cases = DisciplineCase.objects.filter(
+    # All discipline cases for this school
+    cases = DisciplineCase.objects.filter(
+        school=school
+    )
+
+    # Basic statistics
+    total_cases = cases.count()
+
+    open_cases = cases.filter(
         status="Open"
     ).count()
 
-    closed_cases = DisciplineCase.objects.filter(
+    closed_cases = cases.filter(
         status="Closed"
     ).count()
 
-    total_categories = DisciplineCategory.objects.count()
+    # Categories belonging to this school
+    total_categories = DisciplineCategory.objects.filter(
+        school=school
+    ).count()
 
-    total_students = Student.objects.count()
+    # Students belonging to this school
+    total_students = Student.objects.filter(
+        school=school
+    ).count()
 
+    # Cases by category
     category_summary = (
         DisciplineCategory.objects
+        .filter(school=school)
         .annotate(
-            total_cases=Count("disciplinecase")
+            total_cases=Count(
+                "disciplinecase"
+            )
         )
         .order_by("-total_cases")
     )
 
+    # Cases by class
     class_summary = (
         SchoolClass.objects
+        .filter(school=school)
         .annotate(
             total_cases=Count(
                 "students__discipline_cases"
             )
         )
         .order_by("-total_cases")
-)
+    )
+
     return render(
         request,
         "students/discipline_dashboard.html",
@@ -450,39 +589,67 @@ def discipline_dashboard(request):
     )
 
 
-
-
 @login_required
 @admin_or_bursar
 def print_discipline_dashboard(request):
 
-    total_cases = DisciplineCase.objects.count()
+    school = get_user_school(request.user)
 
-    open_cases = DisciplineCase.objects.filter(
+    # --------------------------------------------------
+    # SCHOOL-FILTERED DATA
+    # --------------------------------------------------
+
+    cases = DisciplineCase.objects.filter(
+        school=school
+    )
+
+    total_cases = cases.count()
+
+    open_cases = cases.filter(
         status="Open"
     ).count()
 
-    closed_cases = DisciplineCase.objects.filter(
+    closed_cases = cases.filter(
         status="Closed"
     ).count()
 
-    total_categories = DisciplineCategory.objects.count()
+    total_categories = DisciplineCategory.objects.filter(
+        school=school
+    ).count()
 
-    total_students = Student.objects.count()
+    total_students = Student.objects.filter(
+        school=school
+    ).count()
 
     category_summary = (
         DisciplineCategory.objects
-        .annotate(total_cases=Count("disciplinecase"))
+        .filter(
+            school=school
+        )
+        .annotate(
+            total_cases=Count(
+                "disciplinecase"
+            )
+        )
         .order_by("-total_cases")
     )
 
     class_summary = (
         SchoolClass.objects
+        .filter(
+            school=school
+        )
         .annotate(
-            total_cases=Count("students__discipline_cases")
+            total_cases=Count(
+                "students__discipline_cases"
+            )
         )
         .order_by("-total_cases")
     )
+
+    # --------------------------------------------------
+    # PDF RESPONSE
+    # --------------------------------------------------
 
     response = HttpResponse(
         content_type="application/pdf"
@@ -494,39 +661,87 @@ def print_discipline_dashboard(request):
 
     p = canvas.Canvas(response)
 
-    # School Header
+    # --------------------------------------------------
+    # SCHOOL HEADER
+    # --------------------------------------------------
+
     draw_school_header(
         p,
         "DISCIPLINE DASHBOARD REPORT",
+        school,
     )
-
     y = 710
 
-    p.setFont("Helvetica-Bold", 13)
-    p.drawString(50, y, "SUMMARY")
+    # --------------------------------------------------
+    # SUMMARY
+    # --------------------------------------------------
+
+    p.setFont(
+        "Helvetica-Bold",
+        13,
+    )
+
+    p.drawString(
+        50,
+        y,
+        "SUMMARY",
+    )
+
     y -= 30
 
-    p.setFont("Helvetica", 11)
+    p.setFont(
+        "Helvetica",
+        11,
+    )
 
-    p.drawString(60, y, f"Total Discipline Cases : {total_cases}")
+    p.drawString(
+        60,
+        y,
+        f"Total Discipline Cases : {total_cases}",
+    )
+
     y -= 20
 
-    p.drawString(60, y, f"Open Cases             : {open_cases}")
+    p.drawString(
+        60,
+        y,
+        f"Open Cases             : {open_cases}",
+    )
+
     y -= 20
 
-    p.drawString(60, y, f"Closed Cases           : {closed_cases}")
+    p.drawString(
+        60,
+        y,
+        f"Closed Cases           : {closed_cases}",
+    )
+
     y -= 20
 
-    p.drawString(60, y, f"Discipline Categories  : {total_categories}")
+    p.drawString(
+        60,
+        y,
+        f"Discipline Categories  : {total_categories}",
+    )
+
     y -= 20
 
-    p.drawString(60, y, f"Total Students         : {total_students}")
+    p.drawString(
+        60,
+        y,
+        f"Total Students         : {total_students}",
+    )
 
+    # --------------------------------------------------
+    # CASES BY CATEGORY
     # --------------------------------------------------
 
     y -= 45
 
-    p.setFont("Helvetica-Bold", 13)
+    p.setFont(
+        "Helvetica-Bold",
+        13,
+    )
 
     p.drawString(
         50,
@@ -536,27 +751,61 @@ def print_discipline_dashboard(request):
 
     y -= 25
 
-    p.setFont("Helvetica-Bold", 11)
+    p.setFont(
+        "Helvetica-Bold",
+        11,
+    )
 
-    p.drawString(60, y, "No")
+    p.drawString(
+        60,
+        y,
+        "No",
+    )
 
-    p.drawString(110, y, "Category")
+    p.drawString(
+        110,
+        y,
+        "Category",
+    )
 
-    p.drawRightString(520, y, "Cases")
+    p.drawRightString(
+        520,
+        y,
+        "Cases",
+    )
 
     y -= 8
 
-    p.line(50, y, 530, y)
+    p.line(
+        50,
+        y,
+        530,
+        y,
+    )
 
     y -= 18
 
-    p.setFont("Helvetica", 10)
+    p.setFont(
+        "Helvetica",
+        10,
+    )
 
-    for i, category in enumerate(category_summary, start=1):
+    for i, category in enumerate(
+        category_summary,
+        start=1,
+    ):
 
-        p.drawString(60, y, str(i))
+        p.drawString(
+            60,
+            y,
+            str(i),
+        )
 
-        p.drawString(110, y, category.name)
+        p.drawString(
+            110,
+            y,
+            category.name,
+        )
 
         p.drawRightString(
             520,
@@ -568,6 +817,11 @@ def print_discipline_dashboard(request):
 
         if y < 120:
 
+            draw_school_footer(
+                p,
+                request,
+            )
+
             p.showPage()
 
             draw_school_header(
@@ -577,13 +831,21 @@ def print_discipline_dashboard(request):
 
             y = 720
 
-            p.setFont("Helvetica", 10)
+            p.setFont(
+                "Helvetica",
+                10,
+            )
 
+    # --------------------------------------------------
+    # CASES BY CLASS
     # --------------------------------------------------
 
     y -= 25
 
-    p.setFont("Helvetica-Bold", 13)
+    p.setFont(
+        "Helvetica-Bold",
+        13,
+    )
 
     p.drawString(
         50,
@@ -593,27 +855,61 @@ def print_discipline_dashboard(request):
 
     y -= 25
 
-    p.setFont("Helvetica-Bold", 11)
+    p.setFont(
+        "Helvetica-Bold",
+        11,
+    )
 
-    p.drawString(60, y, "No")
+    p.drawString(
+        60,
+        y,
+        "No",
+    )
 
-    p.drawString(110, y, "Class")
+    p.drawString(
+        110,
+        y,
+        "Class",
+    )
 
-    p.drawRightString(520, y, "Cases")
+    p.drawRightString(
+        520,
+        y,
+        "Cases",
+    )
 
     y -= 8
 
-    p.line(50, y, 530, y)
+    p.line(
+        50,
+        y,
+        530,
+        y,
+    )
 
     y -= 18
 
-    p.setFont("Helvetica", 10)
+    p.setFont(
+        "Helvetica",
+        10,
+    )
 
-    for i, school_class in enumerate(class_summary, start=1):
+    for i, school_class in enumerate(
+        class_summary,
+        start=1,
+    ):
 
-        p.drawString(60, y, str(i))
+        p.drawString(
+            60,
+            y,
+            str(i),
+        )
 
-        p.drawString(110, y, school_class.name)
+        p.drawString(
+            110,
+            y,
+            school_class.name,
+        )
 
         p.drawRightString(
             520,
@@ -625,6 +921,11 @@ def print_discipline_dashboard(request):
 
         if y < 80:
 
+            draw_school_footer(
+                p,
+                request,
+            )
+
             p.showPage()
 
             draw_school_header(
@@ -634,7 +935,14 @@ def print_discipline_dashboard(request):
 
             y = 720
 
-            p.setFont("Helvetica", 10)
+            p.setFont(
+                "Helvetica",
+                10,
+            )
+
+    # --------------------------------------------------
+    # FOOTER
+    # --------------------------------------------------
 
     draw_school_footer(
         p,
@@ -644,8 +952,3 @@ def print_discipline_dashboard(request):
     p.save()
 
     return response
-
-# medication
-
-
-

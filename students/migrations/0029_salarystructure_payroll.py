@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('transport_allowance', models.DecimalField(decimal_places=2, default=0, max_digits=12)),
                 ('other_allowance', models.DecimalField(decimal_places=2, default=0, max_digits=12)),
                 ('paye', models.DecimalField(decimal_places=2, default=0, max_digits=12)),
-                ('nhif', models.DecimalField(decimal_places=2, default=0, max_digits=12)),
+                ('sha', models.DecimalField(decimal_places=2, default=0, max_digits=12)),
                 ('nssf', models.DecimalField(decimal_places=2, default=0, max_digits=12)),
                 ('other_deductions', models.DecimalField(decimal_places=2, default=0, max_digits=12)),
                 ('bank_name', models.CharField(blank=True, max_length=100)),

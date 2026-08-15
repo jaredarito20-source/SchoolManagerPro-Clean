@@ -21,6 +21,14 @@ from .view_modules.school import (
     school_credentials,
 )
 
+from .view_modules.administration import (
+    user_list,
+    add_user,
+    edit_user,
+    delete_user,
+    reset_user_password,
+)
+
 
 
 

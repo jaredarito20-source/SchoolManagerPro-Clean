@@ -7,6 +7,7 @@ import string
 
 from ..models import SchoolProfile, SchoolUser
 
+
 @login_required
 def add_school_profile(request):
 

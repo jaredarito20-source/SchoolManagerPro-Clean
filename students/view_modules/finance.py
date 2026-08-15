@@ -581,10 +581,66 @@ def add_fee_payment(request):
 @in_group("Administrators", "Head Teacher", "Bursar")
 def finance_dashboard(request):
 
-    # Total expected fees
-    total_expected = 0
+    # -----------------------------------------
+    # SUPERUSER
+    # -----------------------------------------
+    if request.user.is_superuser:
 
-    students = Student.objects.select_related("school_class")
+        school = None
+
+        students = Student.objects.select_related(
+            "school_class",
+            "school",
+        )
+
+        payments = FeePayment.objects.all()
+
+    # -----------------------------------------
+    # NORMAL SCHOOL USER
+    # -----------------------------------------
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("home")
+
+        school = school_user.school
+
+        # -------------------------------------
+        # ONLY THIS SCHOOL'S STUDENTS
+        # -------------------------------------
+
+        students = Student.objects.select_related(
+            "school_class",
+            "school",
+        ).filter(
+            school=school
+        )
+
+        # -------------------------------------
+        # ONLY THIS SCHOOL'S PAYMENTS
+        # -------------------------------------
+
+        payments = FeePayment.objects.filter(
+            student__school=school
+        )
+
+    # -----------------------------------------
+    # TOTAL EXPECTED FEES
+    # -----------------------------------------
+
+    total_expected = 0
 
     for student in students:
 
@@ -593,6 +649,7 @@ def finance_dashboard(request):
         ).first()
 
         if structure:
+
             total_expected += (
                 structure.tuition_fee
                 + structure.activity_fee
@@ -600,32 +657,52 @@ def finance_dashboard(request):
                 + structure.other_fee
             )
 
-    # Total collected
+    # -----------------------------------------
+    # TOTAL COLLECTED
+    # -----------------------------------------
+
     total_collected = (
-        FeePayment.objects.aggregate(
+        payments.aggregate(
             total=Sum("amount")
         )["total"] or 0
     )
 
-    # Outstanding balance
-    outstanding = total_expected - total_collected
+    # -----------------------------------------
+    # OUTSTANDING BALANCE
+    # -----------------------------------------
 
-    # Today's collections
+    outstanding = (
+        total_expected
+        - total_collected
+    )
+
+    # -----------------------------------------
+    # TODAY'S COLLECTION
+    # -----------------------------------------
+
     today_collection = (
-        FeePayment.objects.filter(
+        payments.filter(
             payment_date=date.today()
         ).aggregate(
             total=Sum("amount")
         )["total"] or 0
     )
 
-    # Number of payments
-    total_payments = FeePayment.objects.count()
+    # -----------------------------------------
+    # NUMBER OF PAYMENTS
+    # -----------------------------------------
+
+    total_payments = payments.count()
+
+    # -----------------------------------------
+    # CONTEXT
+    # -----------------------------------------
 
     return render(
         request,
         "fees/finance_dashboard.html",
         {
+            "school": school,
             "total_expected": total_expected,
             "total_collected": total_collected,
             "outstanding": outstanding,
@@ -633,5 +710,3 @@ def finance_dashboard(request):
             "total_payments": total_payments,
         },
     )
-
-

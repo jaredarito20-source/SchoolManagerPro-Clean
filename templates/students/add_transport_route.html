@@ -25,7 +25,12 @@
 
     <p>
         <label>Distance (KM)</label><br>
-        <input type="number" step="0.01" name="distance_km" value="0">
+        <input
+            type="number"
+            step="0.01"
+            name="distance_km"
+            value="0"
+        >
     </p>
 
     <p>
@@ -56,11 +61,11 @@
 
             <option value="">Select Driver</option>
 
-            {% for teacher in teachers %}
+            {% for driver in drivers %}
 
-                <option value="{{ teacher.id }}">
-                    {{ teacher.first_name }}
-                    {{ teacher.last_name }}
+                <option value="{{ driver.id }}">
+                    {{ driver.first_name }}
+                    {{ driver.last_name }}
                 </option>
 
             {% endfor %}
