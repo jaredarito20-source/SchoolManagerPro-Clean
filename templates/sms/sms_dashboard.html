@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>SMS Management</h2>
+
+{% if school %}
+    <h3>{{ school.name }}</h3>
+{% endif %}
+
+<hr>
+
+<table width="100%" cellpadding="15">
+
+<tr>
+
+<td bgcolor="#d9edf7">
+    <h3>📱 SMS Balance</h3>
+    <h1>{{ wallet.balance }}</h1>
+    <p>SMS credits</p>
+</td>
+
+<td bgcolor="#dff0d8">
+    <h3>📤 SMS Sent</h3>
+    <h1>{{ total_sent }}</h1>
+</td>
+
+<td bgcolor="#fcf8e3">
+    <h3>✅ Delivered</h3>
+    <h1>{{ delivered }}</h1>
+</td>
+
+<td bgcolor="#f2dede">
+    <h3>❌ Failed</h3>
+    <h1>{{ failed }}</h1>
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<p>
+    <a href="{% url 'sms_packages' %}">
+    <button type="button">
+            💳 Buy SMS
+        </button>
+    </a>
+
+    <a href="#">
+        <button type="button">📤 Send SMS</button>
+    </a>
+</p>
+
+<hr>
+
+<h3>Recent SMS</h3>
+
+<table border="1" cellpadding="8" width="100%">
+
+<tr>
+    <th>Recipient</th>
+    <th>Message</th>
+    <th>SMS</th>
+    <th>Status</th>
+    <th>Date</th>
+</tr>
+
+{% for sms in recent_sms %}
+
+<tr>
+
+    <td>{{ sms.recipient }}</td>
+
+    <td>{{ sms.message|truncatechars:60 }}</td>
+
+    <td>{{ sms.sms_count }}</td>
+
+    <td>{{ sms.get_status_display }}</td>
+
+    <td>{{ sms.created_at }}</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+    <td colspan="5">
+        No SMS have been sent yet.
+    </td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

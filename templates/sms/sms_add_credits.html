@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add SMS Credits</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <p style="color: green;">
+            {{ message }}
+        </p>
+    {% endfor %}
+{% endif %}
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+        <label>School</label><br>
+
+        <select name="school" required>
+
+            <option value="">
+                -- Select School --
+            </option>
+
+            {% for school in schools %}
+
+                <option value="{{ school.id }}">
+                    {{ school.name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label>SMS Credits</label><br>
+
+        <input
+            type="number"
+            name="quantity"
+            min="1"
+            required
+        >
+    </p>
+
+    <button type="submit">
+        Add SMS Credits
+    </button>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Assign Student to Parent</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <p style="color: {% if message.tags == 'error' %}red{% else %}green{% endif %};">
+            {{ message }}
+        </p>
+    {% endfor %}
+{% endif %}
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+        <label>Parent Account</label><br>
+
+        <select name="parent" required>
+
+            <option value="">
+                -- Select Parent --
+            </option>
+
+            {% for parent in parent_users %}
+
+                <option value="{{ parent.id }}">
+                    {{ parent.username }}
+                    {% if parent.first_name or parent.last_name %}
+                        - {{ parent.first_name }} {{ parent.last_name }}
+                    {% endif %}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+
+    <p>
+        <label>Student</label><br>
+
+        <select name="student" required>
+
+            <option value="">
+                -- Select Student --
+            </option>
+
+            {% for student in students %}
+
+                <option value="{{ student.id }}">
+
+                    {{ student.admission_number }}
+                    -
+                    {{ student.first_name }}
+                    {{ student.last_name }}
+
+                    {% if student.school_class %}
+                        - {{ student.school_class }}
+                    {% endif %}
+
+                    {% if student.parent_user %}
+                        (Already Assigned)
+                    {% endif %}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <button type="submit">
+        Assign Student
+    </button>
+
+</form>
+
+{% endblock %}

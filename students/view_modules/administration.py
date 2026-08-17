@@ -1,61 +1,34 @@
 from datetime import datetime
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.db.models import Count, Sum
 from django.contrib.auth import get_user_model
-
-
-
+from students.utils import get_user_school
+from students.models import Student
 User = get_user_model()
-
-
-
-
 import os
 import shutil
-
-
 from django.conf import settings
-
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-
 from students.decorators import admin_or_bursar
-
 from django.contrib.auth.models import Group
-
-
-
-
 from students.decorators import admin_or_bursar
-
 from django.contrib.auth.models import User
-
-
-
-
 from students.decorators import admin_or_bursar
-
 from reportlab.pdfgen import canvas
-
 from students.models import *
-
 from students.decorators import (
     admin_or_bursar,
     in_group,
 )
-
 from students.utils import (
     draw_school_header,
     draw_school_footer,
 )
-
-
-
 from students.models import (
     SchoolClass,
     SubjectRequirement,
@@ -63,7 +36,85 @@ from students.models import (
     SchoolDay,
     Period,
     Timetable,
+    Teacher,
 )
+
+@login_required
+@in_group("Administrators")
+def assign_student_parent(request):
+
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    # Only parent accounts belonging to this school
+    parent_users = User.objects.filter(
+        school_user__school=school,
+        groups__name="Parents",
+    ).distinct().order_by("username")
+
+    # Only students belonging to this school
+    students = Student.objects.filter(
+        school=school
+    ).select_related(
+        "school_class",
+        "parent_user",
+    ).order_by(
+        "admission_number"
+    )
+
+    if request.method == "POST":
+
+        parent_id = request.POST.get("parent")
+        student_id = request.POST.get("student")
+
+        if not parent_id or not student_id:
+            messages.error(
+                request,
+                "Please select both a parent and a student."
+            )
+            return redirect("assign_student_parent")
+
+        # Make sure parent belongs to this school
+        parent = get_object_or_404(
+            User,
+            id=parent_id,
+            school_user__school=school,
+            groups__name="Parents",
+        )
+
+        # Make sure student belongs to this school
+        student = get_object_or_404(
+            Student,
+            id=student_id,
+            school=school,
+        )
+
+        student.parent_user = parent
+        student.save(update_fields=["parent_user"])
+
+        messages.success(
+            request,
+            f"{student.first_name} {student.last_name} "
+            f"has been assigned to parent account "
+            f"{parent.username}."
+        )
+
+        return redirect("assign_student_parent")
+
+    return render(
+        request,
+        "students/assign_student_parent.html",
+        {
+            "parent_users": parent_users,
+            "students": students,
+        },
+    )
 
 
 
@@ -246,25 +297,76 @@ def is_secretary(user):
 
 @login_required
 def home(request):
+
     user = request.user
 
-    if user.is_superuser or user.groups.filter(name="Administrators").exists():
+    school = None
+
+    # Administrator
+    if (
+        user.is_superuser
+        or user.groups.filter(
+            name="Administrators"
+        ).exists()
+    ):
         role = "administrator"
 
-    elif user.groups.filter(name="Teachers").exists():
+        # Administrator school
+        if hasattr(user, "school_user"):
+            school = user.school_user.school
+
+    # Teacher
+    elif user.groups.filter(
+        name="Teachers"
+    ).exists():
+
         role = "teacher"
 
-    elif user.groups.filter(name="Bursar").exists():
+        teacher = Teacher.objects.filter(
+            user=user
+        ).select_related(
+            "school"
+        ).first()
+
+        if teacher:
+            school = teacher.school
+
+    # Bursar
+    elif user.groups.filter(
+        name="Bursar"
+    ).exists():
+
         role = "bursar"
 
-    elif user.groups.filter(name="Parents").exists():
+        if hasattr(user, "school_user"):
+            school = user.school_user.school
+
+    # Parent
+    elif user.groups.filter(
+        name="Parents"
+    ).exists():
+
         return redirect("parent_dashboard")
 
-    elif user.groups.filter(name="Head Teacher").exists():
+    # Head Teacher
+    elif user.groups.filter(
+        name="Head Teacher"
+    ).exists():
+
         role = "head_teacher"
 
-    elif user.groups.filter(name="Secretaries").exists():
+        if hasattr(user, "school_user"):
+            school = user.school_user.school
+
+    # Secretary
+    elif user.groups.filter(
+        name="Secretaries"
+    ).exists():
+
         role = "secretary"
+
+        if hasattr(user, "school_user"):
+            school = user.school_user.school
 
     else:
         role = "user"
@@ -274,9 +376,9 @@ def home(request):
         "students/home.html",
         {
             "role": role,
+            "school": school,
         }
     )
-
 @login_required
 @admin_or_bursar
 def school_profile(request):
@@ -379,7 +481,23 @@ def system_settings(request):
 @admin_or_bursar
 def user_list(request):
 
-    users = User.objects.all().order_by("username")
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    users = (
+        User.objects
+        .filter(
+            school_user__school=school
+        )
+        .prefetch_related("groups")
+        .order_by("username")
+    )
 
     return render(
         request,
@@ -392,36 +510,220 @@ def user_list(request):
 @admin_or_bursar
 def add_user(request):
 
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    groups = Group.objects.all().order_by("name")
+
     if request.method == "POST":
 
-        username = request.POST["username"]
-        first_name = request.POST["first_name"]
-        last_name = request.POST["last_name"]
-        email = request.POST["email"]
-        password = request.POST["password"]
+        username = request.POST.get("username", "").strip()
+        first_name = request.POST.get("first_name", "").strip()
+        last_name = request.POST.get("last_name", "").strip()
+        email = request.POST.get("email", "").strip()
+        password = request.POST.get("password", "")
+        group_name = request.POST.get("group", "")
 
-        if User.objects.filter(username=username).exists():
+        employee_number = request.POST.get(
+            "employee_number", ""
+        ).strip()
+
+        gender = request.POST.get(
+            "gender", ""
+        ).strip()
+
+        phone = request.POST.get(
+            "phone", ""
+        ).strip()
+
+        # -----------------------------
+        # VALIDATION
+        # -----------------------------
+
+        if not username:
+            messages.error(
+                request,
+                "Username is required."
+            )
+
+            return render(
+                request,
+                "students/add_user.html",
+                {
+                    "groups": groups,
+                },
+            )
+
+        if not password:
+            messages.error(
+                request,
+                "Password is required."
+            )
+
+            return render(
+                request,
+                "students/add_user.html",
+                {
+                    "groups": groups,
+                },
+            )
+
+        if not first_name or not last_name:
+            messages.error(
+                request,
+                "First name and last name are required."
+            )
+
+            return render(
+                request,
+                "students/add_user.html",
+                {
+                    "groups": groups,
+                },
+            )
+
+        if User.objects.filter(
+            username=username
+        ).exists():
 
             messages.error(
                 request,
-                "Username already exists.",
+                "Username already exists."
             )
 
-            return redirect("add_user")
+            return render(
+                request,
+                "students/add_user.html",
+                {
+                    "groups": groups,
+                },
+            )
+
+        # -----------------------------
+        # TEACHER VALIDATION
+        # -----------------------------
+
+        if group_name == "Teachers":
+
+            if not employee_number:
+                messages.error(
+                    request,
+                    "Employee number is required for teachers."
+                )
+
+                return render(
+                    request,
+                    "students/add_user.html",
+                    {
+                        "groups": groups,
+                    },
+                )
+
+            if not gender:
+                messages.error(
+                    request,
+                    "Gender is required for teachers."
+                )
+
+                return render(
+                    request,
+                    "students/add_user.html",
+                    {
+                        "groups": groups,
+                    },
+                )
+
+            if not phone:
+                messages.error(
+                    request,
+                    "Phone number is required for teachers."
+                )
+
+                return render(
+                    request,
+                    "students/add_user.html",
+                    {
+                        "groups": groups,
+                    },
+                )
+
+            if Teacher.objects.filter(
+                employee_number=employee_number
+            ).exists():
+
+                messages.error(
+                    request,
+                    "Employee number already exists."
+                )
+
+                return render(
+                    request,
+                    "students/add_user.html",
+                    {
+                        "groups": groups,
+                    },
+                )
+
+        # -----------------------------
+        # CREATE USER
+        # -----------------------------
 
         user = User.objects.create_user(
             username=username,
             email=email,
             password=password,
+            first_name=first_name,
+            last_name=last_name,
         )
 
-        user.first_name = first_name
-        user.last_name = last_name
-        user.save()
+        # -----------------------------
+        # ASSIGN GROUP
+        # -----------------------------
+
+        if group_name:
+
+            group = get_object_or_404(
+                Group,
+                name=group_name,
+            )
+
+            user.groups.add(group)
+
+        # -----------------------------
+        # CREATE SCHOOL USER
+        # -----------------------------
+
+        SchoolUser.objects.create(
+            user=user,
+            school=school,
+        )
+
+        # -----------------------------
+        # CREATE TEACHER PROFILE
+        # -----------------------------
+
+        if group_name == "Teachers":
+
+            Teacher.objects.create(
+                user=user,
+                school=school,
+                employee_number=employee_number,
+                first_name=first_name,
+                last_name=last_name,
+                gender=gender,
+                phone=phone,
+                email=email,
+            )
 
         messages.success(
             request,
-            "User created successfully.",
+            "User created successfully."
         )
 
         return redirect("user_list")
@@ -429,6 +731,9 @@ def add_user(request):
     return render(
         request,
         "students/add_user.html",
+        {
+            "groups": groups,
+        },
     )
 @login_required
 @admin_or_bursar

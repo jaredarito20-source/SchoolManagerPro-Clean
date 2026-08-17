@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -89,6 +90,12 @@
 
 </tr>
 
+{% empty %}
+
+<tr>
+<td colspan="3">No students found.</td>
+</tr>
+
 {% endfor %}
 
 </table>
@@ -118,6 +125,12 @@
 
 <td>{{ payment.payment_date }}</td>
 
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="4">No fee payments found.</td>
 </tr>
 
 {% endfor %}

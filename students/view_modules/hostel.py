@@ -64,7 +64,7 @@ def add_hostel_block(request):
             school=school,
             name=request.POST["name"],
             description=request.POST.get("description", ""),
-            active="active" in request.POST,
+            is_active="active" in request.POST,
         )
 
         messages.success(
@@ -197,7 +197,7 @@ def print_hostel_block(request, id):
     p.drawString(
         50,
         y,
-        f"Status: {'Active' if block.active else 'Inactive'}",
+        f"Status: {'Active' if block.is_active else 'Inactive'}",
     )
 
     draw_school_footer(
@@ -217,11 +217,11 @@ def student_hostel_list(request):
 
     allocations = StudentHostel.objects.filter(
         school=school,
-        active=True,
+        is_active=True,
     ).select_related(
         "student",
         "room",
-        "room__block",
+        "room__hostel_block",
     )
 
     return render(
@@ -231,7 +231,6 @@ def student_hostel_list(request):
             "allocations": allocations,
         },
     )
-
 @login_required
 @admin_or_bursar
 def add_student_hostel(request):
@@ -249,9 +248,9 @@ def add_student_hostel(request):
     rooms = HostelRoom.objects.filter(
         school=school,
     ).select_related(
-        "block"
+        "hostel_block"
     ).order_by(
-        "block__name",
+        "hostel_block__name",
         "room_number",
     )
 
@@ -291,7 +290,7 @@ def add_student_hostel(request):
             school=school,
             student=student,
             room=room,
-            bed_number=bed.bed_number,
+            bed=bed,
         )
 
         bed.occupied = True
@@ -329,9 +328,9 @@ def edit_student_hostel(request, id):
     rooms = HostelRoom.objects.filter(
         school=school,
     ).select_related(
-        "block"
+        "hostel_block"
     ).order_by(
-        "block__name",
+        "hostel_block__name",
         "room_number",
     )
 
@@ -350,13 +349,10 @@ def edit_student_hostel(request, id):
             room=new_room,
         )
 
-        # If selecting the exact same bed
-        old_bed = HostelBed.objects.filter(
-            school=school,
-            room=allocation.room,
-            bed_number=allocation.bed_number,
-        ).first()
+        # Current allocated bed
+        old_bed = allocation.bed
 
+        # If selecting a different occupied bed
         if (
             new_bed.occupied
             and new_bed != old_bed
@@ -373,7 +369,7 @@ def edit_student_hostel(request, id):
             )
 
         # Free old bed
-        if old_bed:
+        if old_bed and old_bed != new_bed:
             old_bed.occupied = False
             old_bed.save(
                 update_fields=["occupied"]
@@ -385,13 +381,14 @@ def edit_student_hostel(request, id):
             update_fields=["occupied"]
         )
 
+        # Update allocation
         allocation.room = new_room
-        allocation.bed_number = new_bed.bed_number
+        allocation.bed = new_bed
 
         allocation.save(
             update_fields=[
                 "room",
-                "bed_number",
+                "bed",
             ]
         )
 
@@ -426,11 +423,7 @@ def delete_student_hostel(request, id):
 
     if request.method == "POST":
 
-        bed = HostelBed.objects.filter(
-            school=school,
-            room=allocation.room,
-            bed_number=allocation.bed_number,
-        ).first()
+        bed = allocation.bed
 
         if bed:
             bed.occupied = False
@@ -465,8 +458,10 @@ def print_student_hostel(request, id):
     allocation = get_object_or_404(
         StudentHostel.objects.select_related(
             "student",
+            "student__school_class",
             "room",
-            "room__block",
+            "room__hostel_block",
+            "bed",
         ),
         id=id,
         school=school,
@@ -524,7 +519,7 @@ def print_student_hostel(request, id):
         50,
         y,
         f"Hostel Block : "
-        f"{allocation.room.block.name}",
+        f"{allocation.room.hostel_block.name}",
     )
 
     y -= 20
@@ -537,10 +532,17 @@ def print_student_hostel(request, id):
 
     y -= 20
 
+    # Bed may be missing on an old allocation
+    bed_number = (
+        allocation.bed.bed_number
+        if allocation.bed
+        else "Not Assigned"
+    )
+
     p.drawString(
         50,
         y,
-        f"Bed : {allocation.bed_number}",
+        f"Bed : {bed_number}",
     )
 
     y -= 20
@@ -548,7 +550,7 @@ def print_student_hostel(request, id):
     p.drawString(
         50,
         y,
-        f"Assigned : {allocation.assigned_date}",
+        f"Assigned : {allocation.admission_date}",
     )
 
     y -= 20
@@ -557,7 +559,7 @@ def print_student_hostel(request, id):
         50,
         y,
         f"Status : "
-        f"{'Active' if allocation.active else 'Inactive'}",
+        f"{'Active' if allocation.is_active else 'Inactive'}",
     )
 
     draw_school_footer(
@@ -565,6 +567,7 @@ def print_student_hostel(request, id):
         request,
     )
 
+    p.showPage()
     p.save()
 
     return response
@@ -595,7 +598,7 @@ def add_hostel_warden(request):
 
     hostel_blocks = HostelBlock.objects.filter(
         school=school,
-        active=True,
+        is_active=True,
     )
 
     if request.method == "POST":
@@ -604,7 +607,7 @@ def add_hostel_warden(request):
             HostelBlock,
             id=request.POST["hostel_block"],
             school=school,
-            active=True,
+            is_active=True,
         )
 
         HostelWarden.objects.create(
@@ -622,7 +625,7 @@ def add_hostel_warden(request):
 
             hostel_block=hostel_block,
 
-            active="active" in request.POST,
+            is_active="active" in request.POST,
         )
 
         messages.success(
@@ -653,7 +656,7 @@ def edit_hostel_warden(request, id):
 
     hostel_blocks = HostelBlock.objects.filter(
         school=school,
-        active=True,
+        is_active=True,
     )
 
     if request.method == "POST":
@@ -662,7 +665,7 @@ def edit_hostel_warden(request, id):
             HostelBlock,
             id=request.POST["hostel_block"],
             school=school,
-            active=True,
+            is_active=True,
         )
 
         warden.first_name = request.POST["first_name"]
@@ -671,7 +674,7 @@ def edit_hostel_warden(request, id):
         warden.phone = request.POST.get("phone", "")
         warden.email = request.POST.get("email", "")
         warden.hostel_block = hostel_block
-        warden.active = "active" in request.POST
+        warden.is_active = "active" in request.POST
 
         warden.save()
 
@@ -727,7 +730,9 @@ def print_hostel_warden(request, id):
     school = request.user.school_user.school
 
     warden = get_object_or_404(
-        HostelWarden,
+        HostelWarden.objects.select_related(
+            "hostel_block",
+        ),
         id=id,
         school=school,
     )
@@ -789,7 +794,7 @@ def print_hostel_warden(request, id):
     p.drawString(
         50,
         y,
-        f"Hostel Block: {warden.hostel_block}",
+        f"Hostel Block: {warden.hostel_block.name}",
     )
 
     y -= 30
@@ -797,7 +802,7 @@ def print_hostel_warden(request, id):
     p.drawString(
         50,
         y,
-        f"Status: {'Active' if warden.active else 'Inactive'}",
+        f"Status: {'Active' if warden.is_active else 'Inactive'}",
     )
 
     p.showPage()
@@ -834,17 +839,18 @@ def add_hostel_transfer(request):
 
     allocations = StudentHostel.objects.filter(
         school=school,
-        active=True,
+        is_active=True,
     ).select_related(
         "student",
         "room",
-        "room__block",
+        "room__hostel_block",
+        "bed",
     )
 
     rooms = HostelRoom.objects.filter(
         school=school,
     ).select_related(
-        "block",
+        "hostel_block",
     )
 
     if request.method == "POST":
@@ -853,7 +859,7 @@ def add_hostel_transfer(request):
             StudentHostel,
             id=request.POST["allocation"],
             school=school,
-            active=True,
+            is_active=True,
         )
 
         new_room = get_object_or_404(
@@ -874,18 +880,31 @@ def add_hostel_transfer(request):
                 "add_hostel_transfer"
             )
 
-        # Check room capacity
-        if new_room.is_full:
+        # Find an available bed in the new room
+        new_bed = (
+            HostelBed.objects.filter(
+                school=school,
+                room=new_room,
+                occupied=False,
+            )
+            .order_by("bed_number")
+            .first()
+        )
+
+        if not new_bed:
 
             messages.error(
                 request,
-                "The selected room is already full.",
+                "The selected room has no available beds.",
             )
 
             return redirect(
                 "add_hostel_transfer"
             )
 
+        old_bed = allocation.bed
+
+        # Create transfer record
         HostelTransfer.objects.create(
             school=school,
             student=allocation.student,
@@ -898,8 +917,29 @@ def add_hostel_transfer(request):
             transferred_by=request.user,
         )
 
+        # Free old bed
+        if old_bed:
+            old_bed.occupied = False
+            old_bed.save(
+                update_fields=["occupied"]
+            )
+
+        # Occupy new bed
+        new_bed.occupied = True
+        new_bed.save(
+            update_fields=["occupied"]
+        )
+
+        # Update student allocation
         allocation.room = new_room
-        allocation.save()
+        allocation.bed = new_bed
+
+        allocation.save(
+            update_fields=[
+                "room",
+                "bed",
+            ]
+        )
 
         messages.success(
             request,
@@ -1025,28 +1065,10 @@ def hostel_room_list(request):
     school = request.user.school_user.school
 
     rooms = HostelRoom.objects.filter(
-        school=school
-    ).select_related(
-        "block"
-    )
-
-    return render(
-        request,
-        "students/hostel_room_list.html",
-        {
-            "rooms": rooms,
-        },
-    )
-@login_required
-@admin_or_bursar
-def hostel_room_list(request):
-
-    school = request.user.school_user.school
-
-    rooms = HostelRoom.objects.filter(
-        school=school
-    ).select_related("block")
-
+            school=school
+        ).select_related(
+            "hostel_block"
+        )
     return render(
         request,
         "students/hostel_room_list.html",
@@ -1064,7 +1086,7 @@ def add_hostel_room(request):
 
     blocks = HostelBlock.objects.filter(
         school=school,
-        active=True,
+        is_active=True,
     )
 
     if request.method == "POST":
@@ -1073,11 +1095,12 @@ def add_hostel_room(request):
             HostelBlock,
             id=request.POST["block"],
             school=school,
+            is_active=True,
         )
 
         room = HostelRoom.objects.create(
             school=school,
-            block=block,
+            hostel_block=block,
             room_number=request.POST["room_number"],
             capacity=int(request.POST["capacity"]),
         )
@@ -1093,7 +1116,8 @@ def add_hostel_room(request):
 
         messages.success(
             request,
-            f"Room {room.room_number} created with {room.capacity} beds."
+            f"Room {room.room_number} created with "
+            f"{room.capacity} beds."
         )
 
         return redirect("hostel_room_list")
@@ -1105,7 +1129,6 @@ def add_hostel_room(request):
             "blocks": blocks,
         },
     )
-
 
 @login_required
 @admin_or_bursar
@@ -1121,7 +1144,7 @@ def edit_hostel_room(request, id):
 
     blocks = HostelBlock.objects.filter(
         school=school,
-        active=True,
+        is_active=True,
     )
 
     if request.method == "POST":
@@ -1130,6 +1153,7 @@ def edit_hostel_room(request, id):
             HostelBlock,
             id=request.POST["block"],
             school=school,
+            is_active=True,
         )
 
         new_capacity = int(request.POST["capacity"])
@@ -1144,7 +1168,8 @@ def edit_hostel_room(request, id):
 
             messages.error(
                 request,
-                f"Capacity cannot be reduced below {occupied_beds} occupied beds."
+                f"Capacity cannot be reduced below "
+                f"{occupied_beds} occupied beds."
             )
 
             return redirect(
@@ -1152,7 +1177,7 @@ def edit_hostel_room(request, id):
                 id=room.id,
             )
 
-        room.block = block
+        room.hostel_block = block
         room.room_number = request.POST["room_number"]
 
         old_capacity = room.capacity
@@ -1245,17 +1270,20 @@ def print_hostel_room(request, id):
     school = request.user.school_user.school
 
     room = get_object_or_404(
-        HostelRoom.objects.select_related("block"),
+        HostelRoom.objects.select_related(
+            "hostel_block",
+        ),
         id=id,
         school=school,
     )
 
     allocations = room.students.filter(
         school=school,
-        active=True,
+        is_active=True,
     ).select_related(
         "student",
         "student__school_class",
+        "bed",
     )
 
     response = HttpResponse(
@@ -1281,7 +1309,7 @@ def print_hostel_room(request, id):
     p.drawString(
         50,
         y,
-        f"Hostel Block : {room.block.name}",
+        f"Hostel Block : {room.hostel_block.name}",
     )
 
     y -= 20
@@ -1398,7 +1426,7 @@ def print_hostel_room(request, id):
         p.drawString(
             450,
             y,
-            str(allocation.bed_number),
+            str(allocation.bed.bed_number),
         )
 
         y -= 18
@@ -1477,7 +1505,7 @@ def hostel_occupancy_report(request):
 
     blocks = HostelBlock.objects.filter(
         school=school,
-        active=True,
+        is_active=True,
     )
 
     selected_block = None
@@ -1495,12 +1523,12 @@ def hostel_occupancy_report(request):
             HostelBlock,
             id=request.GET["block"],
             school=school,
-            active=True,
+            is_active=True,
         )
 
         rooms = HostelRoom.objects.filter(
             school=school,
-            block=selected_block,
+            hostel_block=selected_block,
         )
 
         total_rooms = rooms.count()
@@ -1532,7 +1560,6 @@ def hostel_occupancy_report(request):
             "occupancy_rate": occupancy_rate,
         },
     )
-
 @login_required
 @admin_or_bursar
 def print_hostel_occupancy_report(request, id):
@@ -1543,12 +1570,15 @@ def print_hostel_occupancy_report(request, id):
         HostelBlock,
         id=id,
         school=school,
+        is_active=True,
     )
 
     rooms = HostelRoom.objects.filter(
         school=school,
-        block=block,
-    ).order_by("room_number")
+        hostel_block=block,
+    ).order_by(
+        "room_number"
+    )
 
     response = HttpResponse(
         content_type="application/pdf"
@@ -1560,8 +1590,6 @@ def print_hostel_occupancy_report(request, id):
 
     p = canvas.Canvas(response)
 
-    # IMPORTANT:
-    # draw_school_header requires the school argument.
     draw_school_header(
         p,
         "HOSTEL OCCUPANCY REPORT",
@@ -1731,35 +1759,11 @@ def print_hostel_occupancy_report(request, id):
                 10,
             )
 
-            p.drawString(
-                50,
-                y,
-                "Room",
-            )
-
-            p.drawString(
-                150,
-                y,
-                "Capacity",
-            )
-
-            p.drawString(
-                250,
-                y,
-                "Occupied",
-            )
-
-            p.drawString(
-                350,
-                y,
-                "Available",
-            )
-
-            p.drawString(
-                460,
-                y,
-                "Status",
-            )
+            p.drawString(50, y, "Room")
+            p.drawString(150, y, "Capacity")
+            p.drawString(250, y, "Occupied")
+            p.drawString(350, y, "Available")
+            p.drawString(460, y, "Status")
 
             y -= 10
 
@@ -1789,8 +1793,6 @@ def print_hostel_occupancy_report(request, id):
     p.save()
 
     return response
-
-
 @login_required
 @admin_or_bursar
 def hostel_bed_list(request):
@@ -1801,9 +1803,9 @@ def hostel_bed_list(request):
         school=school
     ).select_related(
         "room",
-        "room__block",
+        "room__hostel_block",
     ).order_by(
-        "room__block__name",
+        "room__hostel_block__name",
         "room__room_number",
         "bed_number",
     )
@@ -1816,17 +1818,16 @@ def hostel_bed_list(request):
         },
     )
 
-
-
 @login_required
 @admin_or_bursar
 def add_hostel_bed(request):
 
     school = request.user.school_user.school
+
     rooms = HostelRoom.objects.filter(
         school=school,
     ).select_related(
-        "block",
+        "hostel_block",
     )
 
     if request.method == "POST":
@@ -1884,13 +1885,9 @@ def add_hostel_bed(request):
             )
 
         HostelBed.objects.create(
-
             school=school,
-
             room=room,
-
             bed_number=bed_number,
-
         )
 
         messages.success(
@@ -1909,7 +1906,6 @@ def add_hostel_bed(request):
             "rooms": rooms,
         },
     )
-
 @login_required
 @admin_or_bursar
 def edit_hostel_bed(request, id):
@@ -1925,7 +1921,10 @@ def edit_hostel_bed(request, id):
     rooms = HostelRoom.objects.filter(
         school=school,
     ).select_related(
-        "block",
+        "hostel_block",
+    ).order_by(
+        "hostel_block__name",
+        "room_number",
     )
 
     if request.method == "POST":
@@ -1950,7 +1949,7 @@ def edit_hostel_bed(request, id):
                 id=bed.id,
             )
 
-        # Prevent duplicate bed numbers
+        # Prevent duplicate bed numbers in the same room
         if HostelBed.objects.filter(
             school=school,
             room=room,
@@ -1970,7 +1969,7 @@ def edit_hostel_bed(request, id):
             )
 
         # If moving the bed to another room,
-        # make sure that room has space.
+        # make sure the new room has space.
         if room.id != bed.room_id:
 
             existing_beds = HostelBed.objects.filter(
@@ -2015,7 +2014,6 @@ def edit_hostel_bed(request, id):
             "rooms": rooms,
         },
     )
-
 
 
 @login_required
@@ -2105,7 +2103,7 @@ def print_hostel_bed(request, id):
     bed = get_object_or_404(
         HostelBed.objects.select_related(
             "room",
-            "room__block",
+            "room__hostel_block",
         ),
         id=id,
         school=school,
@@ -2134,7 +2132,7 @@ def print_hostel_bed(request, id):
     p.drawString(
         50,
         y,
-        f"Hostel Block : {bed.room.block.name}",
+        f"Hostel Block : {bed.room.hostel_block.name}",
     )
 
     y -= 25
@@ -2217,7 +2215,6 @@ def hostel_dashboard(request):
         .filter(school=school)
         .prefetch_related(
             "rooms__beds",
-            "rooms__students",
             "wardens",
         )
         .order_by("name")
@@ -2240,16 +2237,12 @@ def hostel_dashboard(request):
 
         for room in block_rooms:
 
-            # Beds belonging to this school's room
             beds = room.beds.filter(
                 school=school
             ).count()
 
-            # Only active hostel allocations
-            occupied_room = room.students.filter(
-                school=school,
-                active=True,
-            ).count()
+            # TEMPORARILY remove the student calculation
+            occupied_room = 0
 
             bed_count += beds
             occupied += occupied_room
@@ -2268,19 +2261,12 @@ def hostel_dashboard(request):
             )
 
         dashboard.append({
-
             "block": block,
-
             "rooms": room_count,
-
             "beds": bed_count,
-
             "occupied": occupied,
-
             "available": available,
-
             "percentage": percentage,
-
         })
 
         total_rooms += room_count
@@ -2305,19 +2291,13 @@ def hostel_dashboard(request):
         "students/hostel_dashboard.html",
         {
             "dashboard": dashboard,
-
             "total_rooms": total_rooms,
-
             "total_beds": total_beds,
-
             "occupied_beds": occupied_beds,
-
             "available_beds": total_available,
-
             "overall": overall,
         },
     )
-
 @login_required
 @admin_or_bursar
 def print_hostel_dashboard(request):
@@ -2329,7 +2309,6 @@ def print_hostel_dashboard(request):
         .filter(school=school)
         .prefetch_related(
             "rooms__beds",
-            "rooms__students",
             "wardens",
         )
         .order_by("name")
@@ -2374,9 +2353,10 @@ def print_hostel_dashboard(request):
                 school=school
             ).count()
 
-            occupied += room.students.filter(
+            occupied += StudentHostel.objects.filter(
                 school=school,
-                active=True,
+                room=room,
+                is_active=True,
             ).count()
 
         available = max(
@@ -2492,7 +2472,7 @@ def print_hostel_dashboard(request):
     p.drawString(
         50,
         y,
-        "Block",
+        "Hostel Block",
     )
 
     p.drawString(
@@ -2614,7 +2594,7 @@ def print_hostel_dashboard(request):
             p.drawString(
                 50,
                 y,
-                "Block",
+                "Hostel Block",
             )
 
             p.drawString(

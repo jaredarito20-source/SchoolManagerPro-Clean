@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>SMS Purchase</h2>
+
+{% if school %}
+    <h3>{{ school.name }}</h3>
+{% endif %}
+
+<hr>
+
+<h3>Confirm Purchase</h3>
+
+<table border="1" cellpadding="10">
+
+<tr>
+    <th>Package</th>
+    <td>{{ purchase.package.name }}</td>
+</tr>
+
+<tr>
+    <th>SMS Credits</th>
+    <td>{{ purchase.sms_count }}</td>
+</tr>
+
+<tr>
+    <th>Amount</th>
+    <td>KSh {{ purchase.amount }}</td>
+</tr>
+
+<tr>
+    <th>Reference</th>
+    <td>{{ purchase.reference }}</td>
+</tr>
+
+<tr>
+    <th>Status</th>
+    <td>{{ purchase.get_status_display }}</td>
+</tr>
+
+</table>
+
+<br>
+
+<p>
+    Your SMS credits will only be added after the payment
+    has been successfully confirmed.
+</p>
+
+<button type="button">
+    Continue to Payment
+</button>
+
+<br><br>
+
+<a href="{% url 'sms_packages' %}">
+    ← Back to SMS Packages
+</a>
+
+{% endblock %}

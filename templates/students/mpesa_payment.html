@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>SchoolManagerPro M-PESA Payment</h2>
+
+{% if error %}
+    <p style="color: red;">{{ error }}</p>
+
+    {% if details %}
+        <pre>{{ details }}</pre>
+    {% endif %}
+{% endif %}
+
+{% if result %}
+    <h3>M-PESA Response</h3>
+    <pre>{{ result|pprint }}</pre>
+{% endif %}
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+        <label>Student</label><br>
+
+        <select name="student_id" required>
+
+            <option value="">
+                Select Student
+            </option>
+
+            {% for student in students %}
+                <option value="{{ student.id }}">
+                    {{ student.admission_number }}
+                    -
+                    {{ student.first_name }}
+                    {{ student.last_name }}
+                    ({{ student.school_class.name }})
+                </option>
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label>Phone Number</label><br>
+
+        <input
+            type="text"
+            name="phone"
+            placeholder="0712345678"
+            required
+        >
+    </p>
+
+    <p>
+        <label>Amount</label><br>
+
+        <input
+            type="number"
+            name="amount"
+            min="1"
+            step="1"
+            required
+        >
+    </p>
+
+    <button type="submit">
+        Pay with M-PESA
+    </button>
+
+</form>
+
+{% endblock %}

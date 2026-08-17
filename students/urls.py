@@ -1,8 +1,17 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
-
+from .view_modules.sms import sms_dashboard
+from .view_modules.sms_admin import sms_add_credits
+from .view_modules.sms_admin import sms_packages
+from .view_modules.mpesa import mpesa_stk_push
 from . import views
 from students.view_modules.administration import register_school
+from .view_modules.administration import assign_student_parent
+from .view_modules.sms_admin import (
+    sms_packages,
+    sms_buy_package,
+    sms_checkout,
+)
 
 
 urlpatterns = [
@@ -444,5 +453,23 @@ path('profile/', views.profile, name='profile'),
 path('timetable/generate/', views.generate_timetable, name='generate_timetable'),
 
 path('register-school/', register_school, name='register_school'),
+
+path( "users/assign-parent/",assign_student_parent,name="assign_student_parent",),
+
+path("sms/",sms_dashboard,name="sms_dashboard",),
+
+path("sms/add-credits/",sms_add_credits,name="sms_add_credits"),
+
+path("sms/packages/",sms_packages,name="sms_packages",),
+
+path("sms/buy/<int:package_id>/",sms_buy_package,name="sms_buy_package",),
+
+path("sms/checkout/<int:purchase_id>/",sms_checkout,name="sms_checkout",),
+
+path("mpesa/callback/", views.mpesa_callback, name="mpesa_callback"),
+
+path("mpesa/pay/", mpesa_stk_push, name="mpesa_stk_push"),
+
+
 
 ]

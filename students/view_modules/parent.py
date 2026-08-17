@@ -29,8 +29,14 @@ from ..models import Homework, Subject, SchoolClass, Teacher
 @login_required
 def parent_dashboard(request):
 
+    school = request.user.school_user.school
+
     children = Student.objects.filter(
-        parent_user=request.user
+        school=school,
+        parent_user=request.user,
+    ).order_by(
+        "first_name",
+        "last_name",
     )
 
     if request.method == "GET":
@@ -38,7 +44,6 @@ def parent_dashboard(request):
         child_id = request.GET.get("child")
 
         if child_id:
-
             request.session["selected_child"] = child_id
 
     selected_child = None
@@ -66,9 +71,15 @@ def parent_dashboard(request):
 @login_required
 def parent_students(request):
 
+    school = request.user.school_user.school
+
     children = Student.objects.filter(
-        parent_user=request.user
-    ).order_by("school_class", "first_name")
+        school=school,
+        parent_user=request.user,
+    ).order_by(
+        "school_class",
+        "first_name",
+    )
 
     return render(
         request,
@@ -79,19 +90,27 @@ def parent_students(request):
     )
 
 
-
 @login_required
 def parent_student_profile(request, student_id):
+
+    school = request.user.school_user.school
 
     student = get_object_or_404(
         Student,
         id=student_id,
-        parent_user=request.user
+        school=school,
+        parent_user=request.user,
     )
 
-    marks = Mark.objects.filter(student=student)
+    marks = Mark.objects.filter(
+        school=school,
+        student=student,
+    )
 
-    fee_payments = FeePayment.objects.filter(student=student)
+    fee_payments = FeePayment.objects.filter(
+        school=school,
+        student=student,
+    )
 
     context = {
         "student": student,
@@ -105,13 +124,19 @@ def parent_student_profile(request, student_id):
         context,
     )
 
-
+@login_required
 def parent_attendance(request):
 
-    children = Student.objects.filter(parent_user=request.user)
+    school = request.user.school_user.school
+
+    children = Student.objects.filter(
+        school=school,
+        parent_user=request.user,
+    )
 
     attendance = Attendance.objects.filter(
-        student__in=children
+        school=school,
+        student__in=children,
     ).order_by("-date")
 
     return render(
@@ -122,30 +147,53 @@ def parent_attendance(request):
         },
     )
 
-
-
-
-
-
 @login_required
 def parent_results(request, student_id):
+
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
 
     student = get_object_or_404(
         Student,
         id=student_id,
         parent_user=request.user,
+        school=school,
     )
 
     marks = (
         Mark.objects
-        .filter(student=student)
-        .select_related("subject", "exam")
-        .order_by("exam__name", "subject__name")
+        .filter(
+            student=student,
+            student__school=school,
+        )
+        .select_related(
+            "subject",
+            "exam",
+        )
+        .order_by(
+            "exam__name",
+            "subject__name",
+        )
     )
 
-    total = sum(mark.marks for mark in marks)
+    total = sum(
+        mark.marks
+        for mark in marks
+    )
+
     count = marks.count()
-    average = round(total / count, 2) if count else 0
+
+    average = (
+        round(total / count, 2)
+        if count
+        else 0
+    )
 
     context = {
         "student": student,
@@ -161,27 +209,45 @@ def parent_results(request, student_id):
     )
 
 
-
 @login_required
 def parent_fee_statement(request, student_id):
+
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
 
     student = get_object_or_404(
         Student,
         id=student_id,
         parent_user=request.user,
+        school=school,
     )
 
     fee_structure = FeeStructure.objects.filter(
-        school_class=student.school_class
+        school_class=student.school_class,
+        school_class__school=school,
     ).first()
 
     payments = FeePayment.objects.filter(
-        student=student
+        student=student,
+        student__school=school,
     ).order_by("-payment_date")
 
-    total_paid = sum(payment.amount_paid for payment in payments)
+    total_paid = sum(
+        payment.amount_paid
+        for payment in payments
+    )
 
-    total_fee = fee_structure.total_fee if fee_structure else 0
+    total_fee = (
+        fee_structure.total_fee
+        if fee_structure
+        else 0
+    )
 
     balance = total_fee - total_paid
 
@@ -199,7 +265,6 @@ def parent_fee_statement(request, student_id):
         "parents/fee_statement.html",
         context,
     )
-
 from django.http import HttpResponse
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph
@@ -208,65 +273,165 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph
 @login_required
 def print_fee_statement(request, student_id):
 
+    school = request.user.school_user.school
+
     student = get_object_or_404(
         Student,
         id=student_id,
+        school=school,
         parent_user=request.user,
     )
 
-    fee_structure = FeeStructure.objects.filter(
-        school_class=student.school_class
-    ).first()
+    fee_structure = (
+        FeeStructure.objects
+        .filter(
+            school=school,
+            school_class=student.school_class,
+        )
+        .first()
+    )
 
-    payments = FeePayment.objects.filter(student=student)
+    payments = (
+        FeePayment.objects
+        .filter(
+            school=school,
+            student=student,
+        )
+        .order_by("-payment_date")
+    )
 
-    total_paid = sum(payment.amount_paid for payment in payments)
+    total_paid = sum(
+        payment.amount_paid
+        for payment in payments
+    )
 
-    total_fee = fee_structure.total_fee if fee_structure else 0
+    total_fee = (
+        fee_structure.total_fee
+        if fee_structure
+        else 0
+    )
 
     balance = total_fee - total_paid
 
-    response = HttpResponse(content_type="application/pdf")
+    response = HttpResponse(
+        content_type="application/pdf"
+    )
+
     response["Content-Disposition"] = (
-        f'attachment; filename="Fee_Statement_{student.admission_number}.pdf"'
+        f'attachment; '
+        f'filename="Fee_Statement_'
+        f'{student.admission_number}.pdf"'
     )
 
     doc = SimpleDocTemplate(response)
+
     styles = getSampleStyleSheet()
+
     story = []
 
-    story.append(Paragraph("<b>FEE STATEMENT</b>", styles["Title"]))
-    story.append(Paragraph(f"Student: {student.first_name} {student.last_name}", styles["Normal"]))
-    story.append(Paragraph(f"Admission No: {student.admission_number}", styles["Normal"]))
-    story.append(Paragraph(f"Class: {student.school_class}", styles["Normal"]))
-    story.append(Paragraph("<br/>", styles["Normal"]))
+    story.append(
+        Paragraph(
+            "<b>FEE STATEMENT</b>",
+            styles["Title"],
+        )
+    )
 
-    story.append(Paragraph(f"Total Fees: Ksh {total_fee}", styles["Normal"]))
-    story.append(Paragraph(f"Total Paid: Ksh {total_paid}", styles["Normal"]))
-    story.append(Paragraph(f"Balance: Ksh {balance}", styles["Normal"]))
+    story.append(
+        Paragraph(
+            f"Student: {student.first_name} "
+            f"{student.last_name}",
+            styles["Normal"],
+        )
+    )
+
+    story.append(
+        Paragraph(
+            f"Admission No: {student.admission_number}",
+            styles["Normal"],
+        )
+    )
+
+    story.append(
+        Paragraph(
+            f"Class: {student.school_class}",
+            styles["Normal"],
+        )
+    )
+
+    story.append(
+        Paragraph(
+            "<br/>",
+            styles["Normal"],
+        )
+    )
+
+    story.append(
+        Paragraph(
+            f"Total Fees: Ksh {total_fee}",
+            styles["Normal"],
+        )
+    )
+
+    story.append(
+        Paragraph(
+            f"Total Paid: Ksh {total_paid}",
+            styles["Normal"],
+        )
+    )
+
+    story.append(
+        Paragraph(
+            f"Balance: Ksh {balance}",
+            styles["Normal"],
+        )
+    )
 
     doc.build(story)
 
     return response
-
 @login_required
 def parent_fee_balance(request):
 
-    children = Student.objects.filter(parent_user=request.user)
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    children = Student.objects.filter(
+        parent_user=request.user,
+        school=school,
+    ).select_related(
+        "school_class",
+    )
 
     fee_data = []
 
     for child in children:
 
         fee_structure = FeeStructure.objects.filter(
-            school_class=child.school_class
+            school_class=child.school_class,
+            school_class__school=school,
         ).first()
 
-        total_fee = fee_structure.total_fee if fee_structure else 0
+        total_fee = (
+            fee_structure.total_fee
+            if fee_structure
+            else 0
+        )
 
-        payments = FeePayment.objects.filter(student=child)
+        payments = FeePayment.objects.filter(
+            student=child,
+            student__school=school,
+        )
 
-        total_paid = sum(payment.amount_paid for payment in payments)
+        total_paid = sum(
+            payment.amount_paid
+            for payment in payments
+        )
 
         balance = total_fee - total_paid
 
@@ -286,15 +451,18 @@ def parent_fee_balance(request):
     )
 
 
-
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 
 @login_required
 def parent_attendance(request):
 
-    children = Student.objects.filter(parent_user=request.user)
+    school = request.user.school_user.school
+
+    children = Student.objects.filter(
+        school=school,
+        parent_user=request.user,
+    )
 
     if not children.exists():
         return render(
@@ -308,14 +476,17 @@ def parent_attendance(request):
 
     child_id = request.session.get("selected_child")
 
-    student = children.filter(id=child_id).first()
+    student = children.filter(
+        id=child_id
+    ).first()
 
     if student is None:
         student = children.first()
         request.session["selected_child"] = student.id
 
     attendance = Attendance.objects.filter(
-        student=student
+        school=school,
+        student=student,
     ).order_by("-date")
 
     return render(
@@ -326,7 +497,6 @@ def parent_attendance(request):
             "attendance": attendance,
         },
     )
-
 @login_required
 def homework_list(request):
 

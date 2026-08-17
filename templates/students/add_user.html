@@ -3,6 +3,7 @@
 {% block content %}
 
 <h2>Add User</h2>
+
 {% if messages %}
     {% for message in messages %}
         <p style="color:red;">
@@ -12,31 +13,179 @@
 {% endif %}
 
 <form method="post">
+
     {% csrf_token %}
 
     <p>
         Username<br>
-        <input type="text" name="username" required>
+        <input
+            type="text"
+            name="username"
+            required
+        >
+    </p>
+
+    <p>
+        First Name<br>
+        <input
+            type="text"
+            name="first_name"
+            required
+        >
+    </p>
+
+    <p>
+        Last Name<br>
+        <input
+            type="text"
+            name="last_name"
+            required
+        >
+    </p>
+
+    <p>
+        Email<br>
+        <input
+            type="email"
+            name="email"
+        >
     </p>
 
     <p>
         Password<br>
-        <input type="password" name="password" required>
+        <input
+            type="password"
+            name="password"
+            required
+        >
     </p>
 
     <p>
         Group<br>
-        <select name="group">
-            {% for group in groups %}
-            <option value="{{ group.name }}">
-                {{ group.name }}
+
+        <select
+            name="group"
+            id="group"
+            required
+        >
+
+            <option value="">
+                -- Select Group --
             </option>
+
+            {% for group in groups %}
+
+                <option value="{{ group.name }}">
+                    {{ group.name }}
+                </option>
+
             {% endfor %}
+
         </select>
+
     </p>
 
-    <button type="submit">Create User</button>
+    <div id="teacher-fields" style="display:none;">
+
+        <hr>
+
+        <h3>Teacher Information</h3>
+
+        <p>
+            Employee Number<br>
+            <input
+                type="text"
+                name="employee_number"
+                id="employee_number"
+            >
+        </p>
+
+        <p>
+            Gender<br>
+
+            <select
+                name="gender"
+                id="gender"
+            >
+
+                <option value="">
+                    -- Select Gender --
+                </option>
+
+                <option value="Male">
+                    Male
+                </option>
+
+                <option value="Female">
+                    Female
+                </option>
+
+            </select>
+
+        </p>
+
+        <p>
+            Phone<br>
+            <input
+                type="text"
+                name="phone"
+                id="phone"
+            >
+        </p>
+
+    </div>
+
+    <button type="submit">
+        Create User
+    </button>
 
 </form>
+
+<script>
+
+document.getElementById("group").addEventListener(
+    "change",
+    function () {
+
+        const teacherFields =
+            document.getElementById("teacher-fields");
+
+        if (this.value === "Teachers") {
+
+            teacherFields.style.display = "block";
+
+            document.getElementById(
+                "employee_number"
+            ).required = true;
+
+            document.getElementById(
+                "gender"
+            ).required = true;
+
+            document.getElementById(
+                "phone"
+            ).required = true;
+
+        } else {
+
+            teacherFields.style.display = "none";
+
+            document.getElementById(
+                "employee_number"
+            ).required = false;
+
+            document.getElementById(
+                "gender"
+            ).required = false;
+
+            document.getElementById(
+                "phone"
+            ).required = false;
+        }
+
+    }
+);
+
+</script>
 
 {% endblock %}

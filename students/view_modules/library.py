@@ -27,6 +27,7 @@ from students.decorators import (
 from students.utils import (
     draw_school_header,
     draw_school_footer,
+    get_user_school,
 )
 
 @login_required
@@ -37,7 +38,18 @@ from students.utils import (
 )
 def library_list(request):
 
-    books = Book.objects.all().order_by("title")
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    books = Book.objects.filter(
+        school=school
+    ).order_by("title")
 
     return render(
         request,
@@ -46,7 +58,6 @@ def library_list(request):
             "books": books,
         },
     )
-
 @login_required
 @in_group(
     "Administrators",
@@ -55,11 +66,22 @@ def library_list(request):
 )
 def add_book(request):
 
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
     if request.method == "POST":
 
         copies = int(request.POST["copies"])
 
         Book.objects.create(
+
+            school=school,
 
             title=request.POST["title"],
 
@@ -78,7 +100,6 @@ def add_book(request):
             available_copies=copies,
 
             shelf=request.POST["shelf"],
-
         )
 
         messages.success(
@@ -92,12 +113,24 @@ def add_book(request):
         request,
         "library/add_book.html",
     )
-
 @login_required
 @in_group("Administrators", "Librarian", "Head Teacher")
 def edit_book(request, id):
 
-    book = get_object_or_404(Book, id=id)
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    book = get_object_or_404(
+        Book,
+        id=id,
+        school=school,
+    )
 
     if request.method == "POST":
 
@@ -106,7 +139,9 @@ def edit_book(request, id):
         book.isbn = request.POST["isbn"]
         book.category = request.POST["category"]
         book.publisher = request.POST["publisher"]
-        book.publication_year = request.POST["publication_year"] or None
+        book.publication_year = (
+            request.POST["publication_year"] or None
+        )
 
         copies = int(request.POST["copies"])
 
@@ -119,7 +154,10 @@ def edit_book(request, id):
 
         book.save()
 
-        messages.success(request, "Book updated successfully.")
+        messages.success(
+            request,
+            "Book updated successfully."
+        )
 
         return redirect("library_list")
 
@@ -131,18 +169,33 @@ def edit_book(request, id):
         },
     )
 
-
 @login_required
 @in_group("Administrators", "Librarian")
 def delete_book(request, id):
 
-    book = get_object_or_404(Book, id=id)
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    book = get_object_or_404(
+        Book,
+        id=id,
+        school=school,
+    )
 
     if request.method == "POST":
 
         book.delete()
 
-        messages.success(request, "Book deleted successfully.")
+        messages.success(
+            request,
+            "Book deleted successfully."
+        )
 
         return redirect("library_list")
 
@@ -158,19 +211,55 @@ def delete_book(request, id):
 @admin_or_bursar
 def borrow_book(request):
 
-    students = Student.objects.all().order_by("admission_number")
-    books = Book.objects.filter(copies__gt=0).order_by("title")
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    students = Student.objects.filter(
+        school=school
+    ).order_by(
+        "admission_number"
+    )
+
+    books = Book.objects.filter(
+        school=school,
+        copies__gt=0,
+    ).order_by(
+        "title"
+    )
 
     if request.method == "POST":
 
-        student = Student.objects.get(id=request.POST["student"])
-        book = Book.objects.get(id=request.POST["book"])
+        student = get_object_or_404(
+            Student,
+            id=request.POST["student"],
+            school=school,
+        )
+
+        book = get_object_or_404(
+            Book,
+            id=request.POST["book"],
+            school=school,
+        )
 
         if book.copies <= 0:
-            messages.error(request, "This book is out of stock.")
-            return redirect("borrow_book")
+
+            messages.error(
+                request,
+                "This book is out of stock."
+            )
+
+            return redirect(
+                "borrow_book"
+            )
 
         BorrowBook.objects.create(
+            school=school,
             student=student,
             book=book,
             borrow_date=request.POST["borrow_date"],
@@ -179,11 +268,18 @@ def borrow_book(request):
         )
 
         book.copies -= 1
-        book.save()
+        book.save(
+            update_fields=["copies"]
+        )
 
-        messages.success(request, "Book borrowed successfully.")
+        messages.success(
+            request,
+            "Book borrowed successfully."
+        )
 
-        return redirect("borrow_list")
+        return redirect(
+            "borrow_list"
+        )
 
     return render(
         request,
@@ -194,15 +290,32 @@ def borrow_book(request):
             "today": date.today(),
         },
     )
-
 @login_required
 @admin_or_bursar
 def borrow_list(request):
 
-    borrowed_books = BorrowBook.objects.select_related(
-        "student",
-        "book"
-    ).order_by("-borrow_date")
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    borrowed_books = (
+        BorrowBook.objects
+        .filter(
+            school=school
+        )
+        .select_related(
+            "student",
+            "book",
+        )
+        .order_by(
+            "-borrow_date"
+        )
+    )
 
     return render(
         request,
@@ -211,12 +324,24 @@ def borrow_list(request):
             "borrowed_books": borrowed_books,
         },
     )
-
 @login_required
 @admin_or_bursar
 def return_book(request, id):
 
-    borrow = get_object_or_404(BorrowBook, id=id)
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    borrow = get_object_or_404(
+        BorrowBook,
+        id=id,
+        school=school,
+    )
 
     if borrow.status == "Returned":
 
@@ -225,23 +350,36 @@ def return_book(request, id):
             "This book has already been returned."
         )
 
-        return redirect("borrow_list")
+        return redirect(
+            "borrow_list"
+        )
 
     borrow.status = "Returned"
     borrow.return_date = date.today()
-    borrow.save()
+
+    borrow.save(
+        update_fields=[
+            "status",
+            "return_date",
+        ]
+    )
 
     book = borrow.book
+
     book.copies += 1
-    book.save()
+
+    book.save(
+        update_fields=["copies"]
+    )
 
     messages.success(
         request,
         "Book returned successfully."
     )
 
-    return redirect("borrow_list")
-
+    return redirect(
+        "borrow_list"
+    )
 from datetime import date
 from django.db.models import Sum
 
@@ -249,29 +387,51 @@ from django.db.models import Sum
 @admin_or_bursar
 def library_dashboard(request):
 
-    total_books = Book.objects.count()
+    school = get_user_school(request.user)
 
-    borrowed_books = BorrowBook.objects.filter(
-        status="Borrowed"
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    total_books = Book.objects.filter(
+        school=school
     ).count()
 
-    available_books = Book.objects.aggregate(
+    borrowed_books = BorrowBook.objects.filter(
+        school=school,
+        status="Borrowed",
+    ).count()
+
+    available_books = Book.objects.filter(
+        school=school
+    ).aggregate(
         total=Sum("available_copies")
     )["total"] or 0
 
     overdue_books = BorrowBook.objects.filter(
+        school=school,
         status="Borrowed",
-        due_date__lt=date.today()
+        due_date__lt=date.today(),
     ).count()
 
     active_borrowers = BorrowBook.objects.filter(
-        status="Borrowed"
-    ).values("student").distinct().count()
+        school=school,
+        status="Borrowed",
+    ).values(
+        "student"
+    ).distinct().count()
 
-    recent_borrowings = BorrowBook.objects.select_related(
+    recent_borrowings = BorrowBook.objects.filter(
+        school=school
+    ).select_related(
         "student",
         "book"
-    ).order_by("-borrow_date")[:10]
+    ).order_by(
+        "-borrow_date"
+    )[:10]
 
     context = {
         "total_books": total_books,
@@ -287,22 +447,48 @@ def library_dashboard(request):
         "students/library_dashboard.html",
         context,
     )
-
 @login_required
 @admin_or_bursar
 def library_reports(request):
 
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
     borrowed_books = BorrowBook.objects.filter(
-        status="Borrowed"
+        school=school,
+        status="Borrowed",
+    ).select_related(
+        "student",
+        "book",
+    ).order_by(
+        "-borrow_date"
     )
 
     returned_books = BorrowBook.objects.filter(
-        status="Returned"
+        school=school,
+        status="Returned",
+    ).select_related(
+        "student",
+        "book",
+    ).order_by(
+        "-return_date"
     )
 
     overdue_books = BorrowBook.objects.filter(
+        school=school,
         status="Borrowed",
-        due_date__lt=date.today()
+        due_date__lt=date.today(),
+    ).select_related(
+        "student",
+        "book",
+    ).order_by(
+        "due_date"
     )
 
     context = {
@@ -316,16 +502,26 @@ def library_reports(request):
         "students/library_reports.html",
         context,
     )
-
 @login_required
 @admin_or_bursar
 def print_library_report(request):
 
-    response = HttpResponse(content_type="application/pdf")
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("home")
+
+    response = HttpResponse(
+        content_type="application/pdf"
+    )
+
     response["Content-Disposition"] = (
-    'inline; filename="library_report.pdf"'
-)
-    
+        'inline; filename="library_report.pdf"'
+    )
 
     doc = SimpleDocTemplate(response)
 
@@ -334,15 +530,31 @@ def print_library_report(request):
     elements = []
 
     elements.append(
-        Paragraph("<b>Library Report</b>", styles["Title"])
+        Paragraph(
+            f"<b>{school.name}</b>",
+            styles["Title"]
+        )
     )
 
-    elements.append(Spacer(1, 20))
+    elements.append(
+        Paragraph(
+            "<b>Library Report</b>",
+            styles["Heading2"]
+        )
+    )
 
-    borrowed = BorrowBook.objects.select_related(
+    elements.append(
+        Spacer(1, 20)
+    )
+
+    borrowed = BorrowBook.objects.filter(
+        school=school
+    ).select_related(
         "student",
-        "book"
-    ).order_by("-borrow_date")
+        "book",
+    ).order_by(
+        "-borrow_date"
+    )
 
     data = [
         [
@@ -366,19 +578,45 @@ def print_library_report(request):
 
     table = Table(data)
 
-    table.setStyle(TableStyle([
+    table.setStyle(
+        TableStyle([
+            (
+                "BACKGROUND",
+                (0, 0),
+                (-1, 0),
+                colors.darkblue,
+            ),
 
-        ("BACKGROUND",(0,0),(-1,0),colors.darkblue),
+            (
+                "TEXTCOLOR",
+                (0, 0),
+                (-1, 0),
+                colors.white,
+            ),
 
-        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+            (
+                "GRID",
+                (0, 0),
+                (-1, -1),
+                1,
+                colors.black,
+            ),
 
-        ("GRID",(0,0),(-1,-1),1,colors.black),
+            (
+                "BACKGROUND",
+                (0, 1),
+                (-1, -1),
+                colors.beige,
+            ),
 
-        ("BACKGROUND",(0,1),(-1,-1),colors.beige),
-
-        ("ALIGN",(0,0),(-1,-1),"CENTER"),
-
-    ]))
+            (
+                "ALIGN",
+                (0, 0),
+                (-1, -1),
+                "CENTER",
+            ),
+        ])
+    )
 
     elements.append(table)
 

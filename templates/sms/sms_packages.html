@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Buy SMS Credits</h2>
+
+{% if school %}
+    <h3>{{ school.name }}</h3>
+{% endif %}
+
+<hr>
+
+<h3>Choose an SMS Package</h3>
+
+<table border="1" cellpadding="12" width="100%">
+
+    <tr>
+        <th>Package</th>
+        <th>SMS Credits</th>
+        <th>Price</th>
+        <th>Action</th>
+    </tr>
+
+    {% for package in packages %}
+
+    <tr>
+
+        <td>
+            <strong>{{ package.name }}</strong>
+        </td>
+
+        <td>
+            {{ package.sms_count|floatformat:0 }}
+        </td>
+
+        <td>
+            KSh {{ package.price }}
+        </td>
+
+        <td>
+            <a href="{% url 'sms_buy_package' package.id %}">
+                <button type="button">
+                    Buy Now
+                </button>
+            </a>
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+        <td colspan="4">
+            No SMS packages are currently available.
+        </td>
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+<br>
+
+<a href="{% url 'sms_dashboard' %}">
+    ← Back to SMS Dashboard
+</a>
+
+{% endblock %}

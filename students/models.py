@@ -1888,3 +1888,290 @@ class HostelWarden(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.hostel_block}"
+
+class SMSWallet(models.Model):
+    school = models.OneToOneField(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="sms_wallet",
+    )
+
+    balance = models.PositiveIntegerField(
+        default=0
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    def __str__(self):
+        return f"{self.school.name} - {self.balance} SMS"
+
+class SMSTransaction(models.Model):
+
+    TRANSACTION_TYPES = [
+        ("purchase", "Purchase"),
+        ("send", "SMS Sent"),
+        ("refund", "Refund"),
+        ("adjustment", "Adjustment"),
+    ]
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="sms_transactions",
+    )
+
+    transaction_type = models.CharField(
+        max_length=20,
+        choices=TRANSACTION_TYPES,
+    )
+
+    quantity = models.IntegerField()
+
+    balance_after = models.IntegerField()
+
+    description = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+        return (
+            f"{self.school.name} - "
+            f"{self.transaction_type} - "
+            f"{self.quantity}"
+        )
+
+
+class SMSMessage(models.Model):
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("sent", "Sent"),
+        ("delivered", "Delivered"),
+        ("failed", "Failed"),
+    ]
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="sms_messages",
+    )
+
+    recipient = models.CharField(
+        max_length=20
+    )
+
+    message = models.TextField()
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+    )
+
+    sms_count = models.PositiveIntegerField(
+        default=1
+    )
+
+    cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+    )
+
+    provider_message_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+
+    sent_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_sms",
+    )
+
+    sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+        return f"{self.recipient} - {self.status}"
+
+class SMSPackage(models.Model):
+
+    name = models.CharField(max_length=100)
+
+    sms_count = models.PositiveIntegerField()
+
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.sms_count:,} SMS - KSh {self.price}"
+
+    class Meta:
+        ordering = ["price"]
+
+class SMSPurchase(models.Model):
+
+    STATUS_CHOICES = [
+        ("Pending", "Pending"),
+        ("Paid", "Paid"),
+        ("Failed", "Failed"),
+        ("Cancelled", "Cancelled"),
+    ]
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="sms_purchases",
+    )
+
+    package = models.ForeignKey(
+        SMSPackage,
+        on_delete=models.PROTECT,
+        related_name="purchases",
+    )
+
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    sms_count = models.PositiveIntegerField()
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="Pending",
+    )
+
+    reference = models.CharField(
+        max_length=100,
+        unique=True,
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sms_purchases_created",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    paid_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return (
+            f"{self.school.name} - "
+            f"{self.package.name} - "
+            f"{self.status}"
+        )
+
+
+class MpesaTransaction(models.Model):
+
+    STATUS_CHOICES = [
+        ("Pending", "Pending"),
+        ("Completed", "Completed"),
+        ("Failed", "Failed"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="mpesa_transactions",
+    )
+
+    phone_number = models.CharField(
+        max_length=20
+    )
+
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    merchant_request_id = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    checkout_request_id = models.CharField(
+        max_length=100,
+        unique=True,
+    )
+
+    mpesa_receipt_number = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    transaction_date = models.CharField(
+        max_length=30,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="Pending",
+    )
+
+    result_code = models.IntegerField(
+        null=True,
+        blank=True,
+    )
+
+    result_description = models.TextField(
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    def __str__(self):
+        return (
+            f"{self.student} - "
+            f"{self.amount} - "
+            f"{self.status}"
+        )
