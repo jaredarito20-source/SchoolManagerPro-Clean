@@ -310,37 +310,70 @@ def delete_exam(request, id):
 @admin_or_teacher
 def mark_list(request):
 
+    # =====================================================
+    # BASE QUERY
+    # =====================================================
+
+    marks = Mark.objects.select_related(
+        "student",
+        "student__school",
+        "subject",
+        "subject__school",
+        "subject__teacher",
+        "exam",
+        "exam__school",
+    )
+
+    # =====================================================
+    # SUPERUSER
+    # =====================================================
+
     if request.user.is_superuser:
 
-        marks = Mark.objects.select_related(
-            "student",
-            "student__school",
-            "subject",
-            "subject__school",
-            "subject__teacher",
-            "exam",
-            "exam__school",
-        ).all()
+        marks = marks.all()
 
-    else:
+    # =====================================================
+    # SCHOOL ADMINISTRATOR
+    # =====================================================
+
+    elif hasattr(request.user, "school_user"):
+
+        school_user = request.user.school_user
+        school = school_user.school
+
+        marks = marks.filter(
+            student__school=school,
+            subject__school=school,
+            exam__school=school,
+        )
+
+    # =====================================================
+    # TEACHER
+    # =====================================================
+
+    elif hasattr(request.user, "teacher_profile"):
 
         teacher = request.user.teacher_profile
         school = teacher.school
 
-        marks = Mark.objects.select_related(
-            "student",
-            "student__school",
-            "subject",
-            "subject__school",
-            "subject__teacher",
-            "exam",
-            "exam__school",
-        ).filter(
+        marks = marks.filter(
             subject__teacher=teacher,
             student__school=school,
             subject__school=school,
             exam__school=school,
         )
+
+    # =====================================================
+    # NO VALID PROFILE
+    # =====================================================
+
+    else:
+
+        marks = Mark.objects.none()
+
+    # =====================================================
+    # DISPLAY
+    # =====================================================
 
     return render(
         request,
