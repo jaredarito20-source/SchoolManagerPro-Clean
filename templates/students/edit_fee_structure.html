@@ -1,0 +1,156 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>✏️ Edit Fee Structure</h2>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <p>
+
+        <label>Academic Year</label><br>
+
+        <input
+            type="text"
+            name="academic_year"
+            value="{{ academic_year }}"
+            required
+        >
+
+    </p>
+
+
+    <p>
+
+        <label>Term</label><br>
+
+        <select name="term" required>
+
+            <option
+                value="1"
+                {% if term == "1" %}selected{% endif %}
+            >
+                Term 1
+            </option>
+
+            <option
+                value="2"
+                {% if term == "2" %}selected{% endif %}
+            >
+                Term 2
+            </option>
+
+            <option
+                value="3"
+                {% if term == "3" %}selected{% endif %}
+            >
+                Term 3
+            </option>
+
+        </select>
+
+    </p>
+
+
+    <p>
+
+        <label>Class</label><br>
+
+        <select name="school_class" required>
+
+            {% for class in classes %}
+
+                <option
+                    value="{{ class.id }}"
+                    {% if fee.school_class_id == class.id %}
+                        selected
+                    {% endif %}
+                >
+                    {{ class.name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+
+    <p>
+
+        <label>Tuition Fee</label><br>
+
+        <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="tuition_fee"
+            value="{{ fee.tuition_fee }}"
+            required
+        >
+
+    </p>
+
+
+    <p>
+
+        <label>Activity Fee</label><br>
+
+        <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="activity_fee"
+            value="{{ fee.activity_fee }}"
+        >
+
+    </p>
+
+
+    <p>
+
+        <label>Exam Fee</label><br>
+
+        <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="exam_fee"
+            value="{{ fee.exam_fee }}"
+        >
+
+    </p>
+
+
+    <p>
+
+        <label>Other Fee</label><br>
+
+        <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="other_fee"
+            value="{{ fee.other_fee }}"
+        >
+
+    </p>
+
+
+    <button type="submit">
+        💾 Update Fee Structure
+    </button>
+
+    &nbsp;
+
+    <a href="{% url 'fee_structure_list' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}
+

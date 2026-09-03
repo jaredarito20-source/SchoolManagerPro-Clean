@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="margin-bottom: 20px;">
+
+<h2>📊 Fee Balance Report</h2>
+
+<p>
+    <strong>Academic Year:</strong> {{ academic_year }}
+    &nbsp; | &nbsp;
+    <strong>Term:</strong> {{ term }}
+</p>
+
+
+</div>
+
+<hr>
+
+<form method="GET" style="margin-bottom: 25px;">
+
+
+<label for="academic_year">
+    <strong>Academic Year:</strong>
+</label>
+
+<input
+    type="text"
+    id="academic_year"
+    name="academic_year"
+    value="{{ academic_year }}"
+    required
+>
+
+&nbsp;&nbsp;
+
+<label for="term">
+    <strong>Term:</strong>
+</label>
+
+<select
+    id="term"
+    name="term"
+    required
+>
+
+    <option
+        value="1"
+        {% if term == "1" %}selected{% endif %}
+    >
+        Term 1
+    </option>
+
+    <option
+        value="2"
+        {% if term == "2" %}selected{% endif %}
+    >
+        Term 2
+    </option>
+
+    <option
+        value="3"
+        {% if term == "3" %}selected{% endif %}
+    >
+        Term 3
+    </option>
+
+</select>
+
+&nbsp;&nbsp;
+
+<label for="school_class">
+    <strong>Class:</strong>
+</label>
+
+<select
+    id="school_class"
+    name="school_class"
+>
+
+    <option value="">
+        All Classes
+    </option>
+
+    {% for class in classes %}
+
+        <option
+            value="{{ class.id }}"
+            {% if selected_class == class.id|stringformat:"s" %}
+                selected
+            {% endif %}
+        >
+            {{ class.name }}
+        </option>
+
+    {% endfor %}
+
+</select>
+
+&nbsp;&nbsp;
+
+<button type="submit">
+    Filter
+</button>
+
+
+</form>
+
+<!-- ===================================================== -->
+
+<!-- REPORT INFORMATION -->
+
+<!-- ===================================================== -->
+
+<div style="margin-bottom: 15px;">
+
+
+<strong>
+    Fee Balance Report — {{ academic_year }} / Term {{ term }}
+</strong>
+
+
+</div>
+
+<!-- ===================================================== -->
+
+<!-- BALANCE TABLE -->
+
+<!-- ===================================================== -->
+
+<table
+    border="1"
+    cellpadding="8"
+    cellspacing="0"
+    width="100%"
+    style="border-collapse: collapse;"
+>
+
+
+<thead>
+
+    <tr>
+
+        <th>Admission No.</th>
+
+        <th>Student</th>
+
+        <th>Class</th>
+
+        <th>Carry Forward</th>
+
+        <th>Term Fee</th>
+
+        <th>Paid</th>
+
+        <th>Balance</th>
+
+        <th>Status</th>
+
+    </tr>
+
+</thead>
+
+
+<tbody>
+
+    {% for row in student_rows %}
+
+        <tr>
+
+            <!-- ADMISSION NUMBER -->
+
+            <td>
+                {{ row.student.admission_number }}
+            </td>
+
+
+            <!-- STUDENT -->
+
+            <td>
+                {{ row.student.first_name }}
+                {{ row.student.last_name }}
+            </td>
+
+
+            <!-- CLASS -->
+
+            <td>
+
+                {% if row.student.school_class %}
+
+                    {{ row.student.school_class.name }}
+
+                {% else %}
+
+                    Not Assigned
+
+                {% endif %}
+
+            </td>
+
+
+            <!-- CARRY FORWARD -->
+
+            <td>
+
+                {% if row.carry_type == "Credit" %}
+
+                    <strong>
+                        KSh {{ row.carry_amount|floatformat:2 }}
+                    </strong>
+
+                    <br>
+
+                    <small>
+                        Credit brought forward
+                    </small>
+
+
+                {% elif row.carry_type == "Outstanding" %}
+
+                    <strong>
+                        KSh {{ row.carry_amount|floatformat:2 }}
+                    </strong>
+
+                    <br>
+
+                    <small>
+                        Outstanding brought forward
+                    </small>
+
+
+                {% else %}
+
+                    KSh 0.00
+
+                    <br>
+
+                    <small>
+                        No carry forward
+                    </small>
+
+                {% endif %}
+
+            </td>
+
+
+            <!-- TERM FEE -->
+
+            <td>
+
+                {% if row.has_fee_structure %}
+
+                    KSh {{ row.term_fee|floatformat:2 }}
+
+                {% else %}
+
+                    KSh 0.00
+
+                    <br>
+
+                    <small>
+                        No fee structure
+                    </small>
+
+                {% endif %}
+
+            </td>
+
+
+            <!-- PAID -->
+
+            <td>
+                KSh {{ row.paid|floatformat:2 }}
+            </td>
+
+
+            <!-- BALANCE -->
+
+            <td>
+
+                {% if row.balance_type == "Outstanding" %}
+
+                    <strong>
+                        KSh {{ row.balance_amount|floatformat:2 }}
+                    </strong>
+
+
+                {% elif row.balance_type == "Credit" %}
+
+                    <strong>
+                        KSh {{ row.balance_amount|floatformat:2 }}
+                    </strong>
+
+                    <br>
+
+                    <small>
+                        Credit
+                    </small>
+
+
+                {% else %}
+
+                    KSh 0.00
+
+                {% endif %}
+
+            </td>
+
+
+            <!-- STATUS -->
+
+            <td>
+
+                {% if row.payment_status == "Outstanding" %}
+
+                    <strong>
+                        Outstanding
+                    </strong>
+
+
+                {% elif row.payment_status == "Credit" %}
+
+                    <strong>
+                        Credit
+                    </strong>
+
+
+                {% else %}
+
+                    <strong>
+                        Paid
+                    </strong>
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+
+    {% empty %}
+
+        <tr>
+
+            <td
+                colspan="8"
+                align="center"
+            >
+
+                No students found for the selected
+                academic year, term and class.
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+</tbody>
+
+
+</table>
+
+{% endblock %}
