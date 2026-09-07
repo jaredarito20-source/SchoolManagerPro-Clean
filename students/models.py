@@ -71,7 +71,19 @@ class Teacher(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 class SchoolClass(models.Model):
+
+    CURRICULUM_CHOICES = [
+        ("CBC", "CBC"),
+        ("8-4-4", "8-4-4"),
+    ]
+
     name = models.CharField(max_length=50)
+
+    curriculum = models.CharField(
+        max_length=10,
+        choices=CURRICULUM_CHOICES,
+        default="CBC",
+    )
 
     school = models.ForeignKey(
         SchoolProfile,
@@ -137,6 +149,16 @@ class Student(models.Model):
         related_name="students",
     )
 
+    enrollment_academic_year = models.CharField(
+        max_length=20,
+        default="",
+    )
+
+    enrollment_term = models.CharField(
+        max_length=20,
+        default="",
+    )
+
     parent_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
 
@@ -192,8 +214,8 @@ class Student(models.Model):
         ]
 
 
-def __str__(self):
-    return f"{self.admission_number} - {self.first_name} {self.last_name}"
+    def __str__(self):
+        return f"{self.admission_number} - {self.first_name} {self.last_name}"
 class Subject(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20, unique=True)
@@ -213,6 +235,7 @@ class Subject(models.Model):
         null=True,
         blank=True,
     )
+    
 
     teacher = models.ForeignKey(
         Teacher,
@@ -402,12 +425,51 @@ class FeeStructure(models.Model):
     school_class = models.ForeignKey(
         SchoolClass,
         on_delete=models.CASCADE,
+        related_name="fee_structures",
     )
 
-    tuition_fee = models.DecimalField(max_digits=10, decimal_places=2)
-    activity_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    exam_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    other_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=20,
+    )
+
+    tuition_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    activity_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+    )
+
+    exam_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+    )
+
+    other_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "school_class",
+                    "academic_year",
+                    "term",
+                ],
+                name="unique_fee_structure_per_class_year_term",
+            )
+        ]
 
     @property
     def total_fee(self):
@@ -431,7 +493,7 @@ class FeePayment(models.Model):
 
     student = models.ForeignKey(
         Student,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
     )
 
     amount = models.DecimalField(
@@ -468,11 +530,178 @@ class FeePayment(models.Model):
         blank=True,
     )
 
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=20,
+    )
+
+    is_voided = models.BooleanField(
+        default=False,
+    )
+
+    void_reason = models.TextField(
+        blank=True,
+    )
+
+    voided_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    voided_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="voided_fee_payments",
+    )
+
     def __str__(self):
         return (
             f"{self.student} - "
             f"{self.amount}"
         )
+
+class FeeLedgerEntry(models.Model):
+
+    TRANSACTION_TYPES = [
+        ("OPENING_BALANCE", "Opening Balance"),
+        ("FEE_CHARGE", "Fee Charge"),
+        ("PAYMENT", "Payment"),
+        ("CREDIT", "Credit"),
+        ("ADJUSTMENT", "Adjustment"),
+        ("REVERSAL", "Reversal"),
+        ("CARRY_FORWARD", "Carry Forward"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="fee_ledger_entries",
+    )
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="fee_ledger_entries",
+    )
+
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=20,
+    )
+
+    transaction_date = models.DateField()
+
+    transaction_type = models.CharField(
+        max_length=30,
+        choices=TRANSACTION_TYPES,
+    )
+
+    description = models.CharField(
+        max_length=255,
+    )
+
+    debit = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    credit = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    balance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    reference = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    fee_payment = models.ForeignKey(
+        FeePayment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ledger_entries",
+    )
+
+    recorded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fee_ledger_entries_recorded",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = [
+            "transaction_date",
+            "id",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=["student", "transaction_date"],
+                name="students_fe_student_5be1e5_idx",
+            ),
+            models.Index(
+                fields=["school", "academic_year", "term"],
+                name="students_fe_school__6d4a67_idx",
+            ),
+        ]
+
+
+class StudentAcademicEnrollment(models.Model):
+
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=20,
+    )
+
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.PROTECT,
+        related_name="student_enrollments",
+    )
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="academic_enrollments",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "student",
+                    "academic_year",
+                    "term",
+                ],
+                name="unique_student_academic_period",
+            )
+        ]
 
 class Attendance(models.Model):
 

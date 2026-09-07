@@ -2,109 +2,318 @@
 
 {% block content %}
 
-<h2>Receive Fee Payment</h2>
+<h2>💰 Receive Fee Payment</h2>
 
 <form method="POST">
 
-    {% csrf_token %}
 
-    <p>
+{% csrf_token %}
 
-        <label>Student</label><br>
 
-        <select name="student" required>
+{% if request.user.is_superuser %}
 
-            <option value="">
-                Select Student
-            </option>
+<p>
+    <label>School</label><br>
 
-            {% for student in students %}
+    <select name="school" id="school" required>
 
-            <option value="{{ student.id }}">
+        <option value="">Select School</option>
 
-                {{ student.admission_number }}
-                -
-                {{ student.first_name }}
-                {{ student.last_name }}
-                ({{ student.school_class.name }})
+        {% for school in schools %}
 
-            </option>
-
-            {% endfor %}
-
-        </select>a
-
-    </p>
-
-    <p>
-
-        <label>Amount Paid</label><br>
-
-        <input
-            type="number"
-            name="amount"
-            step="0.01"
-            required
+        <option
+            value="{{ school.id }}"
+            data-academic-year="{{ school.academic_year }}"
+            data-current-term="{{ school.current_term }}"
+            {% if selected_school and school.id == selected_school.id %}
+                selected
+            {% endif %}
         >
+            {{ school.name }}
+        </option>
 
-    </p>
+        {% endfor %}
 
-    <p>
+    </select>
+</p>
 
-        <label>Payment Date</label><br>
+{% endif %}
 
-        <input
-            type="date"
-            name="payment_date"
-            value="{{ today|date:'Y-m-d' }}"
-            required
+
+<!-- ================================= -->
+<!-- ACADEMIC PERIOD -->
+<!-- ================================= -->
+
+<p>
+    <label>Academic Year</label><br>
+
+    <select
+        name="academic_year"
+        id="academic_year"
+        required
+    >
+        <option value="">Select Academic Year</option>
+
+        {% for year in academic_years %}
+
+        <option
+            value="{{ year }}"
+            {% if year == academic_year %}selected{% endif %}
         >
+            {{ year }}
+        </option>
 
-    </p>
+        {% endfor %}
 
-    <p>
+    </select>
+</p>
 
-        <label>Payment Method</label><br>
 
-        <select name="payment_method">
+<p>
+    <label>Term</label><br>
 
-            <option>Cash</option>
-            <option>M-Pesa</option>
-            <option>Bank</option>
-            <option>Cheque</option>
+    <select
+        name="enrollment_term"
+        id="enrollment_term"
+        required
+    >
 
-        </select>
+        <option value="">Select Term</option>
 
-    </p>
-
-    <p>
-
-        <label>M-Pesa / Bank Reference</label><br>
-
-        <input
-            type="text"
-            name="reference"
+        <option
+            value="1"
+            {% if current_term == "1" %}selected{% endif %}
         >
+            Term 1
+        </option>
 
-    </p>
+        <option
+            value="2"
+            {% if current_term == "2" %}selected{% endif %}
+        >
+            Term 2
+        </option>
 
-    <p>
+        <option
+            value="3"
+            {% if current_term == "3" %}selected{% endif %}
+        >
+            Term 3
+        </option>
 
-        <label>Remarks</label><br>
+    </select>
+</p>
 
-        <textarea
-            name="remarks"
-            rows="3"
-        ></textarea>
 
-    </p>
+<!-- ================================= -->
+<!-- STUDENT -->
+<!-- ================================= -->
 
-    <button type="submit">
+<p>
+    <label>Student</label><br>
 
-        💰 Save Payment
+    <select name="student" required>
 
-    </button>
+        <option value="">
+            Select Student
+        </option>
+
+        {% for student in students %}
+
+        <option value="{{ student.id }}">
+
+            {{ student.first_name }}
+            {{ student.last_name }}
+
+            {% if student.school_class %}
+                — {{ student.school_class.name }}
+            {% endif %}
+
+        </option>
+
+        {% endfor %}
+
+    </select>
+</p>
+
+
+<!-- ================================= -->
+<!-- PAYMENT -->
+<!-- ================================= -->
+
+<p>
+    <label>Amount</label><br>
+
+    <input
+        type="number"
+        name="amount"
+        min="0.01"
+        step="0.01"
+        required
+    >
+</p>
+
+
+<p>
+    <label>Payment Date</label><br>
+
+    <input
+        type="date"
+        name="payment_date"
+        value="{{ today|date:'Y-m-d' }}"
+        required
+    >
+</p>
+
+
+<p>
+    <label>Payment Method</label><br>
+
+    <select name="payment_method" required>
+
+        <option value="">
+            Select Payment Method
+        </option>
+
+        <option value="Cash">
+            Cash
+        </option>
+
+        <option value="M-Pesa">
+            M-Pesa
+        </option>
+
+        <option value="Bank">
+            Bank
+        </option>
+
+        <option value="Cheque">
+            Cheque
+        </option>
+
+    </select>
+
+</p>
+
+
+<p>
+    <label>Reference</label><br>
+
+    <input
+        type="text"
+        name="reference"
+        placeholder="M-Pesa code / bank reference"
+    >
+</p>
+
+
+<p>
+    <label>Remarks</label><br>
+
+    <textarea
+        name="remarks"
+        rows="3"
+    ></textarea>
+
+</p>
+
+
+<button type="submit">
+    Receive Payment
+</button>
+```
 
 </form>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const schoolSelect =
+        document.getElementById("school");
+
+    const academicYearSelect =
+        document.getElementById("academic_year");
+
+    const termSelect =
+        document.getElementById("enrollment_term");
+
+
+    function updateSchoolPeriod() {
+
+        if (!schoolSelect) {
+            return;
+        }
+
+        const selected =
+            schoolSelect.options[
+                schoolSelect.selectedIndex
+            ];
+
+        if (!selected) {
+            return;
+        }
+
+
+        const academicYear =
+            selected.dataset.academicYear || "";
+
+        const currentTerm =
+            selected.dataset.currentTerm || "";
+
+
+        /*
+         * Select the school's academic year
+         * if that year exists in the dropdown.
+         */
+
+        if (academicYear) {
+
+            const yearOption =
+                Array.from(
+                    academicYearSelect.options
+                ).find(
+                    function (option) {
+                        return option.value === academicYear;
+                    }
+                );
+
+            if (yearOption) {
+                academicYearSelect.value =
+                    academicYear;
+            }
+        }
+
+
+        /*
+         * Select the school's current term.
+         */
+
+        if (
+            currentTerm === "1" ||
+            currentTerm === "2" ||
+            currentTerm === "3"
+        ) {
+
+            termSelect.value =
+                currentTerm;
+        }
+
+    }
+
+
+    if (schoolSelect) {
+
+        schoolSelect.addEventListener(
+            "change",
+            updateSchoolPeriod
+        );
+
+        updateSchoolPeriod();
+    }
+
+});
+
+</script>
 
 {% endblock %}

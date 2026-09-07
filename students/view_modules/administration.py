@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -9,6 +9,12 @@ from students.utils import get_user_school
 from students.models import Student
 User = get_user_model()
 import os
+from students.services.fee_ledger import (
+    record_academic_year_opening_balances,
+)
+from students.services.enrollment import (
+    create_next_period_enrollments,
+)
 import shutil
 from django.conf import settings
 from django.contrib.admin.models import LogEntry
@@ -37,6 +43,12 @@ from students.models import (
     Period,
     Timetable,
     Teacher,
+)
+from students.services.fee_ledger import (
+    record_academic_year_opening_balances,
+)
+from students.services.enrollment import (
+    create_next_period_enrollments,
 )
 
 @login_required
@@ -395,35 +407,142 @@ def school_profile(request):
 
 @login_required
 @admin_or_bursar
-def edit_school_profile(request):
-    profile = SchoolProfile.objects.first()
+def edit_school_profile(request, id):
 
-    if not profile:
-        profile = SchoolProfile.objects.create(
-            school_name="My School",
+    # -----------------------------------
+    # SYSTEM SUPERUSER ONLY
+    # -----------------------------------
+
+    if not request.user.is_superuser:
+        messages.error(
+            request,
+            "Only the system administrator can edit school profiles."
         )
+        return redirect("home")
+
+    # -----------------------------------
+    # GET THE SELECTED SCHOOL
+    # -----------------------------------
+
+    try:
+        profile = SchoolProfile.objects.get(id=id)
+    except SchoolProfile.DoesNotExist:
+        messages.error(
+            request,
+            "School not found."
+        )
+        return redirect("school_list")
+
+    # -----------------------------------
+    # SAVE CHANGES
+    # -----------------------------------
 
     if request.method == "POST":
 
-        profile.school_name = request.POST["school_name"]
-        profile.motto = request.POST["motto"]
-        profile.address = request.POST["address"]
-        profile.phone = request.POST["phone"]
-        profile.email = request.POST["email"]
-        profile.website = request.POST["website"]
-        profile.principal = request.POST["principal"]
+        old_academic_year = str(
+            profile.academic_year
+        ).strip()
 
+        old_current_term = str(
+            profile.current_term
+        ).strip()
+
+        new_academic_year = request.POST.get(
+            "academic_year",
+            ""
+        ).strip()
+
+        new_current_term = request.POST.get(
+            "current_term",
+            ""
+        ).strip()
+
+        profile.name = request.POST.get("name", "").strip()
+        profile.motto = request.POST.get("motto", "").strip()
+        profile.address = request.POST.get("address", "").strip()
+        profile.phone = request.POST.get("phone", "").strip()
+        profile.email = request.POST.get("email", "").strip()
+        profile.website = request.POST.get("website", "").strip()
+
+        profile.academic_year = new_academic_year
+        profile.current_term = new_current_term
+
+        profile.principal_name = request.POST.get(
+            "principal_name",
+            ""
+        ).strip()
         if request.FILES.get("logo"):
             profile.logo = request.FILES["logo"]
+
+        if request.FILES.get("principal_signature"):
+            profile.principal_signature = request.FILES[
+                "principal_signature"
+            ]
+
+        if request.FILES.get("school_stamp"):
+            profile.school_stamp = request.FILES[
+                "school_stamp"
+            ]
+
+        # -----------------------------------
+        # CREATE NEXT ACADEMIC ENROLLMENTS
+        # -----------------------------------
+
+        if (
+            old_academic_year
+            and old_current_term
+            and new_academic_year
+            and new_current_term
+            and (
+                old_academic_year != new_academic_year
+                or old_current_term != new_current_term
+            )
+        ):
+            try:
+                create_next_period_enrollments(
+                    school=profile,
+                    old_academic_year=old_academic_year,
+                    old_term=old_current_term,
+                    new_academic_year=new_academic_year,
+                    new_term=new_current_term,
+                )
+            except ValueError as exc:
+                messages.error(
+                    request,
+                    str(exc),
+                )
+                return redirect(
+                    "edit_school_profile",
+                    id=id,
+                )
+
+        # -----------------------------------
+        # ACADEMIC YEAR FINANCE ROLLOVER
+        # -----------------------------------
+
+        if (
+            old_academic_year
+            and new_academic_year
+            and old_academic_year != new_academic_year
+        ):
+            record_academic_year_opening_balances(
+                school=profile,
+                new_academic_year=new_academic_year,
+                recorded_by=request.user,
+            )
 
         profile.save()
 
         messages.success(
             request,
-            "School profile updated successfully.",
+            f"{profile.name} school profile updated successfully."
         )
 
-        return redirect("school_profile")
+        return redirect("school_list")
+
+    # -----------------------------------
+    # DISPLAY EDIT PAGE
+    # -----------------------------------
 
     return render(
         request,
@@ -432,6 +551,42 @@ def edit_school_profile(request):
             "profile": profile,
         },
     )
+
+
+@login_required
+def delete_school(request, id):
+    if not request.user.is_superuser:
+        messages.error(
+            request,
+            "Only the system superuser can delete a school."
+        )
+        return redirect("school_list")
+
+    school = get_object_or_404(
+        SchoolProfile,
+        id=id
+    )
+
+    if request.method == "POST":
+        school_name = school.name
+
+        school.delete()
+
+        messages.success(
+            request,
+            f"School '{school_name}' was deleted successfully."
+        )
+
+        return redirect("school_list")
+
+    return render(
+        request,
+        "students/delete_school.html",
+        {
+            "school": school,
+        },
+    )
+
 
 @login_required
 @admin_or_bursar
@@ -481,23 +636,56 @@ def system_settings(request):
 @admin_or_bursar
 def user_list(request):
 
-    school = get_user_school(request.user)
+    # -----------------------------------
+    # SYSTEM SUPERUSER
+    # -----------------------------------
 
-    if not school:
-        messages.error(
-            request,
-            "Your account is not associated with a school."
-        )
-        return redirect("home")
+    if request.user.is_superuser:
 
-    users = (
-        User.objects
-        .filter(
-            school_user__school=school
+        users = (
+            User.objects
+            .filter(
+                school_user__isnull=False
+            )
+            .select_related(
+                "school_user__school"
+            )
+            .prefetch_related(
+                "groups"
+            )
+            .order_by(
+                "school_user__school__name",
+                "username",
+            )
         )
-        .prefetch_related("groups")
-        .order_by("username")
-    )
+
+    # -----------------------------------
+    # SCHOOL USER
+    # -----------------------------------
+
+    else:
+
+        school = get_user_school(request.user)
+
+        if not school:
+            messages.error(
+                request,
+                "Your account is not associated with a school."
+            )
+            return redirect("home")
+
+        users = (
+            User.objects
+            .filter(
+                school_user__school=school
+            )
+            .prefetch_related(
+                "groups"
+            )
+            .order_by(
+                "username"
+            )
+        )
 
     return render(
         request,
@@ -521,6 +709,15 @@ def add_user(request):
 
     groups = Group.objects.all().order_by("name")
 
+    subjects = Subject.objects.filter(
+        school=school
+    ).select_related(
+        "school_class"
+    ).order_by(
+        "school_class__name",
+        "name",
+    )
+
     if request.method == "POST":
 
         username = request.POST.get("username", "").strip()
@@ -529,6 +726,10 @@ def add_user(request):
         email = request.POST.get("email", "").strip()
         password = request.POST.get("password", "")
         group_name = request.POST.get("group", "")
+
+        assigned_subject_ids = request.POST.getlist(
+            "assigned_subjects"
+        )
 
         employee_number = request.POST.get(
             "employee_number", ""
@@ -710,7 +911,7 @@ def add_user(request):
 
         if group_name == "Teachers":
 
-            Teacher.objects.create(
+            teacher = Teacher.objects.create(
                 user=user,
                 school=school,
                 employee_number=employee_number,
@@ -719,6 +920,13 @@ def add_user(request):
                 gender=gender,
                 phone=phone,
                 email=email,
+            )
+
+            Subject.objects.filter(
+                id__in=assigned_subject_ids,
+                school=school,
+            ).update(
+                teacher=teacher
             )
 
         messages.success(
@@ -733,6 +941,7 @@ def add_user(request):
         "students/add_user.html",
         {
             "groups": groups,
+            "subjects": subjects,
         },
     )
 @login_required
@@ -744,19 +953,212 @@ def edit_user(request, user_id):
         id=user_id,
     )
 
+    # -----------------------------------
+    # Determine user's school
+    # -----------------------------------
+
+    school_user = SchoolUser.objects.filter(
+        user=user
+    ).select_related(
+        "school"
+    ).first()
+
+    school = school_user.school if school_user else None
+
+    # -----------------------------------
+    # Groups
+    # -----------------------------------
+
+    groups = Group.objects.all().order_by("name")
+
+    # -----------------------------------
+    # Teacher profile
+    # -----------------------------------
+
+    teacher = Teacher.objects.filter(
+        user=user
+    ).first()
+
+    # -----------------------------------
+    # Subjects available for this school
+    # -----------------------------------
+
+    subjects = Subject.objects.none()
+
+    if school:
+
+        subjects = Subject.objects.filter(
+            school=school
+        ).select_related(
+            "school_class"
+        ).order_by(
+            "school_class__name",
+            "name",
+        )
+
     if request.method == "POST":
 
-        user.first_name = request.POST["first_name"]
-        user.last_name = request.POST["last_name"]
-        user.email = request.POST["email"]
+        # --------------------------------
+        # Basic user fields
+        # --------------------------------
 
-        if request.POST.get("password"):
+        username = request.POST.get(
+            "username",
+            ""
+        ).strip()
 
-            user.set_password(
-                request.POST["password"]
-            )
+        first_name = request.POST.get(
+            "first_name",
+            ""
+        ).strip()
+
+        last_name = request.POST.get(
+            "last_name",
+            ""
+        ).strip()
+
+        email = request.POST.get(
+            "email",
+            ""
+        ).strip()
+
+        password = request.POST.get(
+            "password",
+            ""
+        )
+
+        group_name = request.POST.get(
+            "group",
+            ""
+        )
+
+        assigned_subject_ids = request.POST.getlist(
+            "assigned_subjects"
+        )
+
+        # --------------------------------
+        # Update basic user information
+        # --------------------------------
+
+        user.username = username
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+
+        if password:
+            user.set_password(password)
 
         user.save()
+
+        # --------------------------------
+        # Update group
+        # --------------------------------
+
+        user.groups.clear()
+
+        if group_name:
+
+            group = get_object_or_404(
+                Group,
+                name=group_name,
+            )
+
+            user.groups.add(group)
+
+        # --------------------------------
+        # Teacher information
+        # --------------------------------
+
+        if group_name == "Teachers":
+
+            employee_number = request.POST.get(
+                "employee_number",
+                ""
+            ).strip()
+
+            gender = request.POST.get(
+                "gender",
+                ""
+            ).strip()
+
+            phone = request.POST.get(
+                "phone",
+                ""
+            ).strip()
+
+            # --------------------------------
+            # Create teacher profile if missing
+            # --------------------------------
+
+            if not teacher:
+
+                if not school:
+                    messages.error(
+                        request,
+                        "User is not associated with a school."
+                    )
+                    return redirect(
+                        "edit_user",
+                        user_id=user.id,
+                    )
+
+                teacher = Teacher.objects.create(
+                    user=user,
+                    school=school,
+                    employee_number=employee_number,
+                    first_name=first_name,
+                    last_name=last_name,
+                    gender=gender,
+                    phone=phone,
+                    email=email,
+                )
+
+            else:
+
+                teacher.employee_number = employee_number
+                teacher.first_name = first_name
+                teacher.last_name = last_name
+                teacher.gender = gender
+                teacher.phone = phone
+                teacher.email = email
+
+                teacher.save()
+
+            # --------------------------------
+            # Update assigned subjects
+            # --------------------------------
+
+            if school:
+
+                Subject.objects.filter(
+                    teacher=teacher,
+                    school=school,
+                ).update(
+                    teacher=None
+                )
+
+                Subject.objects.filter(
+                    id__in=assigned_subject_ids,
+                    school=school,
+                ).update(
+                    teacher=teacher
+                )
+
+        else:
+
+            # --------------------------------
+            # User is no longer a teacher
+            # --------------------------------
+
+            if teacher:
+
+                Subject.objects.filter(
+                    teacher=teacher
+                ).update(
+                    teacher=None
+                )
+
+                teacher.delete()
 
         messages.success(
             request,
@@ -765,11 +1167,30 @@ def edit_user(request, user_id):
 
         return redirect("user_list")
 
+    # -----------------------------------
+    # Current assigned subjects
+    # -----------------------------------
+
+    assigned_subjects = Subject.objects.none()
+
+    if teacher:
+
+        assigned_subjects = Subject.objects.filter(
+            teacher=teacher
+        ).values_list(
+            "id",
+            flat=True
+        )
+
     return render(
         request,
         "students/edit_user.html",
         {
-            "user": user,
+            "user_obj": user,
+            "groups": groups,
+            "teacher": teacher,
+            "subjects": subjects,
+            "assigned_subjects": assigned_subjects,
         },
     )
 @login_required
@@ -1208,3 +1629,6 @@ def reset_user_password(request, id):
             "user_account": user,
         },
     )
+
+
+

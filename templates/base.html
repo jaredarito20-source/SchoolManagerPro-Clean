@@ -33,6 +33,21 @@
         🏠 Dashboard
     </a>
 
+    {% if user.is_superuser %}
+
+        <a href="{% url 'school_list' %}">
+            🏫 Schools
+        </a>
+
+        <a href="{% url 'add_school_profile' %}">
+            🏫 Add School
+        </a>
+
+        <a href="{% url 'user_list' %}">
+            👥 School Users
+        </a>
+    {% endif %}
+
    {% if user.is_superuser or user|has_group:"Administrators" %}
 
 <!-- Academic -->

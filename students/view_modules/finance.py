@@ -1,4 +1,6 @@
 from datetime import datetime
+from students.models import FeeLedgerEntry
+from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -8,6 +10,15 @@ from django.http import HttpResponse
 from reportlab.lib import colors
 from datetime import date
 from reportlab.lib.units import inch
+from students.services.fee_ledger import (
+    get_term_opening_balance,
+    student_is_eligible_for_term,
+    record_payment,
+    record_term_fee_charges_for_class,
+    get_term_carry_forward_credit,
+    get_term_balance,
+    
+)
 
 import uuid
 from reportlab.lib.styles import getSampleStyleSheet
@@ -25,6 +36,7 @@ from students.models import (
     SchoolProfile,
     SalaryStructure,
     Payroll,
+    StudentAcademicEnrollment,
 )
 
 from reportlab.platypus import (
@@ -61,14 +73,478 @@ from students.utils import (
 
 @login_required
 @admin_or_bursar
-@in_group("Bursar")
 def fee_structure_list(request):
-    fees = FeeStructure.objects.all()
+    if request.user.is_superuser:
+        fees = FeeStructure.objects.all()
+    else:
+        school = request.user.school_user.school
+
+        fees = FeeStructure.objects.filter(
+            school_class__school=school
+        )
 
     return render(
         request,
         "students/fee_structure_list.html",
         {"fees": fees},
+    )
+
+@login_required
+@admin_or_bursar
+def edit_fee_structure(request, id):
+
+    # -----------------------------------
+    # Get fee structure
+    # -----------------------------------
+
+    try:
+        fee_structure = (
+            FeeStructure.objects
+            .select_related(
+                "school_class",
+                "school_class__school",
+            )
+            .get(id=id)
+        )
+    except FeeStructure.DoesNotExist:
+        messages.error(
+            request,
+            "Fee structure not found."
+        )
+        return redirect("fee_structure_list")
+
+    # -----------------------------------
+    # Determine school
+    # -----------------------------------
+
+    if request.user.is_superuser:
+
+        school = fee_structure.school_class.school
+
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+            return redirect("finance_dashboard")
+
+        school = school_user.school
+
+        if (
+            fee_structure.school_class.school_id
+            != school.id
+        ):
+            messages.error(
+                request,
+                "You do not have permission to edit this fee structure."
+            )
+            return redirect("fee_structure_list")
+
+    # -----------------------------------
+    # Check whether ledger charges exist
+    # -----------------------------------
+
+    has_ledger_charges = (
+        FeeLedgerEntry.objects
+        .filter(
+            school_id=school.id,
+            transaction_type="FEE_CHARGE",
+            academic_year=fee_structure.academic_year,
+            term=fee_structure.term,
+            reference__startswith="FEE-",
+        )
+        .exists()
+    )
+
+    # -----------------------------------
+    # POST
+    # -----------------------------------
+
+    if request.method == "POST":
+
+        academic_year = (
+            request.POST.get("academic_year") or ""
+        ).strip()
+
+        enrollment_term = (
+            request.POST.get("enrollment_term") or ""
+        ).strip()
+
+        school_class_id = (
+            request.POST.get("school_class") or ""
+        ).strip()
+
+        if not academic_year:
+            messages.error(
+                request,
+                "Academic year is required."
+            )
+            return redirect(
+                "edit_fee_structure",
+                id=fee_structure.id,
+            )
+
+        if enrollment_term not in {"1", "2", "3"}:
+            messages.error(
+                request,
+                "Invalid term selected."
+            )
+            return redirect(
+                "edit_fee_structure",
+                id=fee_structure.id,
+            )
+
+        # -----------------------------------
+        # Existing ledger charges
+        # -----------------------------------
+
+        if has_ledger_charges:
+
+            # Once posted, period and class cannot move.
+            academic_year = fee_structure.academic_year
+            enrollment_term = fee_structure.term
+            school_class_id = str(
+                fee_structure.school_class_id
+            )
+
+        # -----------------------------------
+        # Validate class
+        # -----------------------------------
+
+        try:
+            school_class = SchoolClass.objects.get(
+                id=school_class_id,
+                school=school,
+            )
+        except SchoolClass.DoesNotExist:
+            messages.error(
+                request,
+                "Please select a valid class."
+            )
+            return redirect(
+                "edit_fee_structure",
+                id=fee_structure.id,
+            )
+
+        # -----------------------------------
+        # Prevent duplicate
+        # -----------------------------------
+
+        duplicate_exists = (
+            FeeStructure.objects
+            .filter(
+                school_class=school_class,
+                academic_year=academic_year,
+                term=enrollment_term,
+            )
+            .exclude(id=fee_structure.id)
+            .exists()
+        )
+
+        if duplicate_exists:
+            messages.error(
+                request,
+                "A fee structure already exists for this "
+                "class, academic year and term."
+            )
+            return redirect(
+                "edit_fee_structure",
+                id=fee_structure.id,
+            )
+
+        # -----------------------------------
+        # Update
+        # -----------------------------------
+
+        fee_structure.school_class = school_class
+        fee_structure.academic_year = academic_year
+        fee_structure.term = enrollment_term
+
+        # -----------------------------------
+        # Validate fee amounts
+        # -----------------------------------
+
+        try:
+
+            tuition_fee = Decimal(
+                request.POST.get("tuition_fee") or "0"
+            )
+
+            activity_fee = Decimal(
+                request.POST.get("activity_fee") or "0"
+            )
+
+            exam_fee = Decimal(
+                request.POST.get("exam_fee") or "0"
+            )
+
+            other_fee = Decimal(
+                request.POST.get("other_fee") or "0"
+            )
+
+        except (InvalidOperation, ValueError):
+
+            messages.error(
+                request,
+                "Please enter valid fee amounts."
+            )
+
+            return redirect(
+                "edit_fee_structure",
+                id=fee_structure.id,
+            )
+
+
+        # -----------------------------------
+        # Validate individual amounts
+        # -----------------------------------
+
+        if (
+            tuition_fee < 0
+            or activity_fee < 0
+            or exam_fee < 0
+            or other_fee < 0
+        ):
+
+            messages.error(
+                request,
+                "Fee amounts cannot be negative."
+            )
+
+            return redirect(
+                "edit_fee_structure",
+                id=fee_structure.id,
+            )
+
+
+        # -----------------------------------
+        # Validate total
+        # -----------------------------------
+
+        total_fee = (
+            tuition_fee
+            + activity_fee
+            + exam_fee
+            + other_fee
+        )
+
+        if total_fee <= 0:
+
+            messages.error(
+                request,
+                "The total fee must be greater than zero."
+            )
+
+            return redirect(
+                "edit_fee_structure",
+                id=fee_structure.id,
+            )
+
+
+        # -----------------------------------
+        # Update fee structure
+        # -----------------------------------
+
+        fee_structure.tuition_fee = tuition_fee
+        fee_structure.activity_fee = activity_fee
+        fee_structure.exam_fee = exam_fee
+        fee_structure.other_fee = other_fee
+
+        fee_structure.save()
+        fee_structure.save()
+
+        # -----------------------------------
+        # Synchronize ledger charges
+        # -----------------------------------
+
+        try:
+
+            record_term_fee_charges_for_class(
+                school_class=school_class,
+                academic_year=academic_year,
+                term=enrollment_term,
+                recorded_by=request.user,
+            )
+
+        except Exception as exc:
+
+            messages.error(
+                request,
+                f"Fee structure was saved but ledger "
+                f"charges could not be synchronized: {exc}"
+            )
+
+            return redirect(
+                "edit_fee_structure",
+                id=fee_structure.id,
+            )
+
+        messages.success(
+            request,
+            "Fee structure updated successfully."
+        )
+
+        return redirect("fee_structure_list")
+
+    # -----------------------------------
+    # Academic years
+    # -----------------------------------
+
+    academic_years = (
+        FeeStructure.objects
+        .filter(
+            school_class__school=school
+        )
+        .values_list(
+            "academic_year",
+            flat=True,
+        )
+        .distinct()
+        .order_by("-academic_year")
+    )
+
+    # -----------------------------------
+    # Classes
+    # -----------------------------------
+
+    classes = (
+        SchoolClass.objects
+        .filter(school=school)
+        .order_by("name")
+    )
+
+    return render(
+        request,
+        "students/edit_fee_structure.html",
+        {
+            "fee_structure": fee_structure,
+            "schools": SchoolProfile.objects.filter(
+                id=school.id
+            ),
+            "classes": classes,
+            "academic_years": academic_years,
+            "academic_year": fee_structure.academic_year,
+            "current_term": fee_structure.term,
+            "enrollment_term": fee_structure.term,
+            "has_ledger_charges": has_ledger_charges,
+        },
+    )
+
+
+@login_required
+@admin_or_bursar
+def delete_fee_structure(request, id):
+
+    # -----------------------------------
+    # Get fee structure
+    # -----------------------------------
+
+    try:
+        fee_structure = (
+            FeeStructure.objects
+            .select_related(
+                "school_class",
+                "school_class__school",
+            )
+            .get(id=id)
+        )
+    except FeeStructure.DoesNotExist:
+        messages.error(
+            request,
+            "Fee structure not found."
+        )
+        return redirect("fee_structure_list")
+
+    # -----------------------------------
+    # Determine school
+    # -----------------------------------
+
+    if request.user.is_superuser:
+
+        school = fee_structure.school_class.school
+
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+            return redirect("finance_dashboard")
+
+        school = school_user.school
+
+        if (
+            fee_structure.school_class.school_id
+            != school.id
+        ):
+            messages.error(
+                request,
+                "You do not have permission to delete this fee structure."
+            )
+            return redirect("fee_structure_list")
+
+    # -----------------------------------
+    # Check ledger
+    # -----------------------------------
+
+    has_ledger_charges = (
+        FeeLedgerEntry.objects
+        .filter(
+            school_id=school.id,
+            transaction_type="FEE_CHARGE",
+            academic_year=fee_structure.academic_year,
+            term=fee_structure.term,
+            reference__startswith="FEE-",
+        )
+        .exists()
+    )
+
+    if has_ledger_charges:
+
+        messages.error(
+            request,
+            "This fee structure has already been posted "
+            "to the student ledger and cannot be deleted."
+        )
+
+        return redirect("fee_structure_list")
+
+    # -----------------------------------
+    # Confirm deletion
+    # -----------------------------------
+
+    if request.method == "POST":
+
+        fee_structure.delete()
+
+        messages.success(
+            request,
+            "Fee structure deleted successfully."
+        )
+
+        return redirect("fee_structure_list")
+
+    return render(
+        request,
+        "students/delete_fee_structure.html",
+        {
+            "fee_structure": fee_structure,
+        },
     )
 
 @login_required
@@ -236,34 +712,8 @@ def print_receipt(request, id):
     )
 
 
-@login_required
-@admin_or_bursar
-@in_group("Bursar")
-def add_fee_structure(request):
 
-    if request.method == "POST":
 
-        school_class = SchoolClass.objects.get(
-            id=request.POST["school_class"]
-        )
-
-        FeeStructure.objects.create(
-            school_class=school_class,
-            tuition_fee=request.POST["tuition_fee"],
-            activity_fee=request.POST["activity_fee"],
-            exam_fee=request.POST["exam_fee"],
-            other_fee=request.POST["other_fee"],
-        )
-
-        return redirect("fee_structure_list")
-
-    classes = SchoolClass.objects.all()
-
-    return render(
-        request,
-        "students/add_fee_structure.html",
-        {"classes": classes},
-    )
 
 
 # ==========================
@@ -465,17 +915,622 @@ def fee_statement(request, id):
             "balance": balance,
         },
     )
+
 @login_required
 @admin_or_bursar
-@in_group("Bursar")
 def fee_balance_list(request):
-    students = Student.objects.select_related("school_class").all()
+
+
+    # --------------------------------------------------
+    # DETERMINE SCHOOL
+    # --------------------------------------------------
+
+    if request.user.is_superuser:
+
+        schools = SchoolProfile.objects.all().order_by("name")
+
+        school_id = (
+            request.GET.get("school") or ""
+        ).strip()
+
+        if school_id:
+
+            try:
+                school = SchoolProfile.objects.get(
+                    id=school_id
+                )
+            except SchoolProfile.DoesNotExist:
+                school = None
+
+        else:
+            school = None
+
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("finance_dashboard")
+
+        school = school_user.school
+
+        schools = SchoolProfile.objects.filter(
+            id=school.id
+        )
+
+
+    # --------------------------------------------------
+    # FILTER VALUES
+    # --------------------------------------------------
+
+    academic_year = (
+        request.GET.get("academic_year") or ""
+    ).strip()
+
+    enrollment_term = (
+        request.GET.get("enrollment_term") or ""
+    ).strip()
+
+    selected_class = (
+        request.GET.get("school_class") or ""
+    ).strip()
+
+
+    # Internal ledger term
+    term = enrollment_term
+
+
+        # --------------------------------------------------
+    # ACADEMIC YEARS
+    # --------------------------------------------------
+
+    if school:
+
+        # Start with academic years already present in
+        # historical student enrollment records.
+        existing_years = (
+            StudentAcademicEnrollment.objects
+            .filter(
+                school_class__school=school
+            )
+            .values_list(
+                "academic_year",
+                flat=True,
+            )
+            .distinct()
+        )
+
+        academic_years = set(
+            str(year).strip()
+            for year in existing_years
+            if str(year).strip()
+        )
+
+        # Also provide the same year range used by
+        # Add Student:
+        #
+        # current year - 1
+        # current year
+        # current year + 1
+
+        current_academic_year = (
+            school.academic_year or ""
+        ).strip()
+
+        if current_academic_year:
+
+            try:
+                current_year = int(
+                    current_academic_year
+                )
+
+                academic_years.add(
+                    str(current_year - 1)
+                )
+
+                academic_years.add(
+                    str(current_year)
+                )
+
+                academic_years.add(
+                    str(current_year + 1)
+                )
+
+            except ValueError:
+
+                academic_years.add(
+                    current_academic_year
+                )
+
+        academic_years = sorted(
+            academic_years,
+            key=lambda value: (
+                0,
+                int(value)
+            )
+            if value.isdigit()
+            else (
+                1,
+                value
+            )
+        )
+
+        # Show newest year first.
+        academic_years = list(
+            reversed(academic_years)
+        )
+
+    else:
+
+        # Superuser with no school selected:
+        # combine all existing enrollment years
+        # and configured school years.
+
+        existing_years = (
+            StudentAcademicEnrollment.objects
+            .values_list(
+                "academic_year",
+                flat=True,
+            )
+            .distinct()
+        )
+
+        academic_years = set(
+            str(year).strip()
+            for year in existing_years
+            if str(year).strip()
+        )
+
+        configured_years = (
+            SchoolProfile.objects
+            .exclude(
+                academic_year=""
+            )
+            .values_list(
+                "academic_year",
+                flat=True,
+            )
+            .distinct()
+        )
+
+        for year in configured_years:
+
+            try:
+                year_int = int(
+                    str(year).strip()
+                )
+
+                academic_years.add(
+                    str(year_int - 1)
+                )
+
+                academic_years.add(
+                    str(year_int)
+                )
+
+                academic_years.add(
+                    str(year_int + 1)
+                )
+
+            except (TypeError, ValueError):
+
+                cleaned_year = str(
+                    year
+                ).strip()
+
+                if cleaned_year:
+                    academic_years.add(
+                        cleaned_year
+                    )
+
+        academic_years = sorted(
+            academic_years,
+            key=lambda value: (
+                0,
+                int(value)
+            )
+            if value.isdigit()
+            else (
+                1,
+                value
+            )
+        )
+
+        academic_years = list(
+            reversed(academic_years)
+        )
+
+    # --------------------------------------------------
+    # CLASSES
+    # --------------------------------------------------
+
+    if school:
+
+        classes = (
+            SchoolClass.objects
+            .filter(school=school)
+            .order_by("name")
+        )
+
+    else:
+
+        classes = (
+            SchoolClass.objects
+            .all()
+            .order_by("name")
+        )
+
+
+    # --------------------------------------------------
+    # STUDENTS
+    # --------------------------------------------------
+
+    students = Student.objects.none()
+
+
+    if (
+        academic_year
+        and enrollment_term in {"1", "2", "3"}
+        and selected_class
+    ):
+
+        enrollment_query = (
+            StudentAcademicEnrollment.objects
+            .filter(
+                academic_year=academic_year,
+                term__lte=enrollment_term,
+                school_class_id=selected_class,
+            )
+        )
+
+        if school:
+
+            enrollment_query = enrollment_query.filter(
+                school_class__school=school
+            )
+
+
+        student_ids = (
+            enrollment_query
+            .values_list(
+                "student_id",
+                flat=True,
+            )
+            .distinct()
+        )
+
+
+        students = (
+            Student.objects
+            .select_related(
+                "school",
+                "school_class",
+            )
+            .filter(
+                id__in=student_ids
+            )
+            .order_by(
+                "admission_number"
+            )
+        )
+
+
+    # --------------------------------------------------
+    # BUILD REPORT
+    # --------------------------------------------------
+
+    student_rows = []
+
+
+    if (
+        academic_year
+        and enrollment_term in {"1", "2", "3"}
+        and selected_class
+    ):
+
+        for student in students:
+
+
+            # ------------------------------------------
+            # FIND HISTORICAL ENROLLMENT
+            #
+            # Use the latest enrollment at or before
+            # the selected term.
+            #
+            # Example:
+            #
+            # T1 enrollment → student remains visible
+            # in T2 until another enrollment is recorded.
+            # ------------------------------------------
+
+            enrollment = (
+                StudentAcademicEnrollment.objects
+                .filter(
+                    student=student,
+                    academic_year=academic_year,
+                    term__lte=enrollment_term,
+                )
+                .select_related(
+                    "school_class"
+                )
+                .order_by(
+                    "-term",
+                    "-id",
+                )
+                .first()
+            )
+
+
+            # ------------------------------------------
+            # STUDENT ELIGIBILITY
+            # ------------------------------------------
+
+            if not student_is_eligible_for_term(
+                student=student,
+                academic_year=academic_year,
+                term=term,
+            ):
+                continue
+
+
+            # ------------------------------------------
+            # HISTORICAL CLASS
+            # ------------------------------------------
+
+            if enrollment:
+
+                historical_class = (
+                    enrollment.school_class
+                )
+
+            else:
+
+                historical_class = (
+                    student.school_class
+                )
+
+
+            # ------------------------------------------
+            # CLASS FILTER
+            # ------------------------------------------
+
+            if not historical_class:
+                continue
+
+            if str(
+                historical_class.id
+            ) != selected_class:
+                continue
+
+
+            # ------------------------------------------
+            # CARRY FORWARD
+            #
+            # T1 = 0
+            # T2 = T1 closing balance
+            # T3 = T2 closing balance
+            # ------------------------------------------
+
+            if term == "1":
+                try:
+                    previous_academic_year = str(
+                        int(academic_year) - 1
+                    )
+                    carry_forward = get_term_balance(
+                        student=student,
+                        academic_year=previous_academic_year,
+                        term="3",
+                    )
+                except (TypeError, ValueError):
+                    carry_forward = 0
+
+            elif term == "2":
+                carry_forward = get_term_balance(
+                    student=student,
+                    academic_year=academic_year,
+                    term="1",
+                )
+
+            else:
+                carry_forward = get_term_balance(
+                    student=student,
+                    academic_year=academic_year,
+                    term="2",
+                )
+
+            # ------------------------------------------
+            # CARRY FORWARD DISPLAY
+            # ------------------------------------------
+
+            if carry_forward > 0:
+
+                carry_type = "Outstanding"
+                carry_amount = carry_forward
+
+            elif carry_forward < 0:
+
+                carry_type = "Credit"
+                carry_amount = abs(
+                    carry_forward
+                )
+
+            else:
+
+                carry_type = ""
+                carry_amount = 0
+
+
+            # ------------------------------------------
+            # TERM FEE
+            # ------------------------------------------
+
+            fee_structure = None
+
+
+            if historical_class:
+
+                fee_structure = (
+                    FeeStructure.objects
+                    .filter(
+                        school_class=historical_class,
+                        academic_year=academic_year,
+                        term=term,
+                    )
+                    .first()
+                )
+
+
+            if fee_structure:
+
+                term_fee = (
+                    fee_structure.total_fee
+                )
+
+                has_fee_structure = True
+
+            else:
+
+                term_fee = 0
+                has_fee_structure = False
+
+
+            # ------------------------------------------
+            # CURRENT TERM PAYMENTS
+            # ------------------------------------------
+
+            payment_total = (
+                FeeLedgerEntry.objects
+                .filter(
+                    student=student,
+                    academic_year=academic_year,
+                    term=term,
+                    transaction_type="PAYMENT",
+                )
+                .aggregate(
+                    total=Sum("credit")
+                )["total"]
+                or 0
+            )
+
+
+            # ------------------------------------------
+            # CURRENT TERM BALANCE
+            #
+            # Carry Forward
+            # + Term Fee
+            # - Current Term Paid
+            # ------------------------------------------
+
+            balance = (
+                carry_forward
+                + term_fee
+                - payment_total
+            )
+
+
+            # ------------------------------------------
+            # BALANCE DISPLAY
+            # ------------------------------------------
+
+            if balance > 0:
+
+                balance_type = "Outstanding"
+                balance_amount = balance
+                payment_status = "Outstanding"
+
+            elif balance < 0:
+
+                balance_type = "Credit"
+                balance_amount = abs(balance)
+                payment_status = "Credit"
+
+            else:
+
+                balance_type = ""
+                balance_amount = 0
+                payment_status = "Paid"
+
+
+            # ------------------------------------------
+            # REPORT ROW
+            # ------------------------------------------
+
+            student_rows.append(
+                {
+                    "student": student,
+
+                    "historical_class": (
+                        historical_class
+                    ),
+
+                    "carry_type": carry_type,
+
+                    "carry_amount": carry_amount,
+
+                    "term_fee": term_fee,
+
+                    "has_fee_structure": (
+                        has_fee_structure
+                    ),
+
+                    "paid": payment_total,
+
+                    "balance_type": (
+                        balance_type
+                    ),
+
+                    "balance_amount": (
+                        balance_amount
+                    ),
+
+                    "payment_status": (
+                        payment_status
+                    ),
+                }
+            )
+
+
+    # --------------------------------------------------
+    # RENDER
+    # --------------------------------------------------
 
     return render(
         request,
         "fees/fee_balance_list.html",
-        {"students": students},
+        {
+            "schools": schools,
+
+            "academic_years": academic_years,
+
+            "academic_year": academic_year,
+
+            "current_term": enrollment_term,
+
+            "enrollment_term": enrollment_term,
+
+            "term": term,
+
+            "classes": classes,
+
+            "selected_class": selected_class,
+
+            "student_rows": student_rows,
+
+            "selected_school": school,
+        },
     )
+
+
 @login_required
 @admin_or_bursar
 def edit_payment(request, id):
@@ -524,56 +1579,729 @@ def delete_payment(request, id):
         },
     )
 
+
+
 @login_required
 @admin_or_bursar
-@in_group("Administrators", "Bursar")
-def add_fee_payment(request):
+def add_fee_structure(request):
 
-    students = Student.objects.select_related(
-        "school_class"
-    ).order_by(
-        "admission_number"
-    )
+    # -----------------------------------
+    # Determine schools
+    # -----------------------------------
+
+    if request.user.is_superuser:
+
+        schools = (
+            SchoolProfile.objects
+            .all()
+            .order_by("name")
+        )
+
+    else:
+
+        school = request.user.school_user.school
+
+        schools = SchoolProfile.objects.filter(
+            id=school.id
+        )
+
+    # -----------------------------------
+    # POST
+    # -----------------------------------
 
     if request.method == "POST":
 
-        FeePayment.objects.create(
+        # -----------------------------------
+        # Determine selected school
+        # -----------------------------------
 
-            student=Student.objects.get(
-                id=request.POST["student"]
-            ),
+        if request.user.is_superuser:
 
-            amount=request.POST["amount"],
+            school_id = request.POST.get("school")
 
-            payment_date=request.POST["payment_date"],
+            try:
+                school = SchoolProfile.objects.get(
+                    id=school_id
+                )
+            except SchoolProfile.DoesNotExist:
+                messages.error(
+                    request,
+                    "Please select a valid school."
+                )
+                return redirect("add_fee_structure")
 
-            payment_method=request.POST["payment_method"],
+        else:
 
-            receipt_number="RCPT-" + uuid.uuid4().hex[:8].upper(),
+            school = request.user.school_user.school
 
-            reference=request.POST["reference"],
+        # -----------------------------------
+        # Current academic period
+        # -----------------------------------
 
-            remarks=request.POST["remarks"],
+        current_academic_year = (
+            school.academic_year or ""
+        ).strip()
 
-            recorded_by=request.user,
+        current_term = (
+            school.current_term or ""
+        ).strip()
 
+        if not current_academic_year or not current_term:
+            messages.error(
+                request,
+                "The school's current academic year and term "
+                "must be configured before adding a fee structure."
+            )
+            return redirect("add_fee_structure")
+
+        # -----------------------------------
+        # Selected academic period
+        # -----------------------------------
+
+        academic_year = (
+            request.POST.get("academic_year") or ""
+        ).strip()
+
+        enrollment_term = (
+            request.POST.get("enrollment_term") or ""
+        ).strip()
+
+        if not academic_year:
+            messages.error(
+                request,
+                "Academic year is required."
+            )
+            return redirect("add_fee_structure")
+
+        if enrollment_term not in ["1", "2", "3"]:
+            messages.error(
+                request,
+                "Invalid enrollment term selected."
+            )
+            return redirect("add_fee_structure")
+
+        term = enrollment_term
+
+        # -----------------------------------
+        # Class
+        # -----------------------------------
+
+        school_class_id = request.POST.get(
+            "school_class"
         )
+
+        try:
+            school_class = SchoolClass.objects.get(
+                id=school_class_id,
+                school=school,
+            )
+        except SchoolClass.DoesNotExist:
+            messages.error(
+                request,
+                "Please select a valid class."
+            )
+            return redirect("add_fee_structure")
+
+        # -----------------------------------
+        # Prevent duplicate
+        # -----------------------------------
+
+        if FeeStructure.objects.filter(
+            school_class=school_class,
+            academic_year=academic_year,
+            term=term,
+        ).exists():
+
+            messages.error(
+                request,
+                "A fee structure already exists for this "
+                "class, academic year and term."
+            )
+
+            return redirect("add_fee_structure")
+
+        # -----------------------------------
+        # Create fee structure
+        # -----------------------------------
+
+        fee_structure = FeeStructure.objects.create(
+            school_class=school_class,
+            academic_year=academic_year,
+            term=term,
+            tuition_fee=request.POST.get(
+                "tuition_fee"
+            ),
+            activity_fee=request.POST.get(
+                "activity_fee"
+            ) or 0,
+            exam_fee=request.POST.get(
+                "exam_fee"
+            ) or 0,
+            other_fee=request.POST.get(
+                "other_fee"
+            ) or 0,
+        )
+
+        # -----------------------------------
+        # Create ledger charges
+        # -----------------------------------
+
+        try:
+
+            record_term_fee_charges_for_class(
+                school_class=school_class,
+                academic_year=academic_year,
+                term=term,
+                recorded_by=request.user,
+            )
+
+        except Exception as exc:
+
+            fee_structure.delete()
+
+            messages.error(
+                request,
+                f"Fee structure could not be processed: {exc}"
+            )
+
+            return redirect("add_fee_structure")
 
         messages.success(
             request,
-            "Fee payment recorded successfully."
+            "Fee structure added successfully."
         )
 
-        return redirect("fee_payment_list")
+        return redirect("fee_structure_list")
+
+    # -----------------------------------
+    # GET school / current period
+    # -----------------------------------
+
+    if request.user.is_superuser:
+
+        school = None
+        current_academic_year = ""
+        current_term = ""
+
+    else:
+
+        school = request.user.school_user.school
+
+        current_academic_year = (
+            school.academic_year or ""
+        ).strip()
+
+        current_term = (
+            school.current_term or ""
+        ).strip()
+
+
+    # -----------------------------------
+    # Academic year dropdown
+    # -----------------------------------
+    # Keep all existing historical years,
+    # but also expose current year -1, current year,
+    # and current year +1, just like Add Student.
+
+    existing_years = set(
+        FeeStructure.objects
+        .filter(
+            school_class__school=school
+        )
+        .values_list("academic_year", flat=True)
+        .distinct()
+    ) if school else set(
+        FeeStructure.objects
+        .values_list("academic_year", flat=True)
+        .distinct()
+    )
+
+    academic_years = set()
+
+    # Preserve existing historical/future fee-structure years
+    for year in existing_years:
+        try:
+            academic_years.add(int(str(year).strip()))
+        except (TypeError, ValueError):
+            pass
+
+    # Selected school: use its configured academic year
+    if school and current_academic_year:
+        try:
+            current_year = int(str(current_academic_year).strip())
+
+            academic_years.update({
+                current_year - 1,
+                current_year,
+                current_year + 1,
+            })
+        except (TypeError, ValueError):
+            pass
+
+    # Superuser without a selected school:
+    # collect configured years from all schools.
+    elif request.user.is_superuser:
+        configured_years = (
+            SchoolProfile.objects
+            .exclude(academic_year__isnull=True)
+            .exclude(academic_year="")
+            .values_list("academic_year", flat=True)
+        )
+
+        for year in configured_years:
+            try:
+                current_year = int(str(year).strip())
+
+                academic_years.update({
+                    current_year - 1,
+                    current_year,
+                    current_year + 1,
+                })
+            except (TypeError, ValueError):
+                pass
+
+    academic_years = sorted(academic_years, reverse=True)
+    # -----------------------------------
+    # Classes
+    # -----------------------------------
+
+    if school:
+
+        classes = (
+            SchoolClass.objects
+            .filter(school=school)
+            .order_by("name")
+        )
+
+    else:
+
+        classes = (
+            SchoolClass.objects
+            .all()
+            .order_by("school__name", "name")
+        )
 
     return render(
-    request,
-    "students/add_fee_payment.html",
-    {
-        "students": students,
-        "today": date.today(),
-    },
-)
+        request,
+        "students/add_fee_structure.html",
+        {
+            "schools": schools,
+            "classes": classes,
+            "academic_years": academic_years,
+            "academic_year": current_academic_year,
+            "current_term": current_term,
+        },
+    )
+
+
+@login_required
+@admin_or_bursar
+def add_fee_payment(request):
+
+    # -----------------------------------
+    # Determine school
+    # -----------------------------------
+
+    if request.user.is_superuser:
+
+        schools = (
+            SchoolProfile.objects
+            .all()
+            .order_by("name")
+        )
+
+        school_id = (
+            request.POST.get("school")
+            or request.GET.get("school")
+        )
+
+        if school_id:
+
+            try:
+                school = SchoolProfile.objects.get(
+                    id=school_id
+                )
+            except SchoolProfile.DoesNotExist:
+                school = None
+
+        else:
+
+            school = None
+
+    else:
+
+        school = request.user.school_user.school
+
+        schools = SchoolProfile.objects.filter(
+            id=school.id
+        )
+
+    # -----------------------------------
+    # Current academic period
+    # -----------------------------------
+
+    current_academic_year = ""
+    current_term = ""
+
+    if school:
+
+        current_academic_year = (
+            school.academic_year or ""
+        ).strip()
+
+        current_term = (
+            school.current_term or ""
+        ).strip()
+
+    # -----------------------------------
+    # POST
+    # -----------------------------------
+
+    if request.method == "POST":
+
+        if not school:
+
+            messages.error(
+                request,
+                "Please select a valid school."
+            )
+
+            return redirect("add_fee_payment")
+
+        # -----------------------------------
+        # Same academic-period structure
+        # as Add Student
+        # -----------------------------------
+
+        if not current_academic_year or not current_term:
+
+            messages.error(
+                request,
+                "The school's current academic year and term "
+                "must be configured before recording payments."
+            )
+
+            return redirect("add_fee_payment")
+
+        academic_year = (
+            request.POST.get("academic_year") or ""
+        ).strip()
+
+        enrollment_term = (
+            request.POST.get("enrollment_term") or ""
+        ).strip()
+
+        if not academic_year:
+
+            messages.error(
+                request,
+                "Academic year is required."
+            )
+
+            return redirect("add_fee_payment")
+
+        if enrollment_term not in ["1", "2", "3"]:
+
+            messages.error(
+                request,
+                "Invalid enrollment term selected."
+            )
+
+            return redirect("add_fee_payment")
+
+        term = enrollment_term
+
+        # -----------------------------------
+        # Student
+        # -----------------------------------
+
+        student_id = request.POST.get("student")
+
+        try:
+
+            student = (
+                Student.objects
+                .select_related(
+                    "school",
+                    "school_class",
+                )
+                .get(
+                    id=student_id,
+                    school=school,
+                )
+            )
+
+        except Student.DoesNotExist:
+
+            messages.error(
+                request,
+                "Please select a valid student."
+            )
+
+            return redirect("add_fee_payment")
+
+        # -----------------------------------
+        # Payment date
+        # -----------------------------------
+
+        payment_date = request.POST.get(
+            "payment_date"
+        )
+
+        if not payment_date:
+
+            messages.error(
+                request,
+                "Payment date is required."
+            )
+
+            return redirect("add_fee_payment")
+
+        # -----------------------------------
+        # Amount
+        # -----------------------------------
+
+        amount = request.POST.get("amount")
+
+        if not amount:
+
+            messages.error(
+                request,
+                "Payment amount is required."
+            )
+
+            return redirect("add_fee_payment")
+
+        # -----------------------------------
+        # Create payment
+        # -----------------------------------
+
+        payment = None
+
+        try:
+
+            payment = FeePayment.objects.create(
+                student=student,
+                amount=amount,
+                payment_date=payment_date,
+                payment_method=request.POST.get(
+                    "payment_method"
+                ),
+                receipt_number=(
+                    "RCPT-"
+                    + uuid.uuid4().hex[:8].upper()
+                ),
+                reference=request.POST.get(
+                    "reference",
+                    "",
+                ),
+                remarks=request.POST.get(
+                    "remarks",
+                    "",
+                ),
+                academic_year=academic_year,
+                term=term,
+                recorded_by=request.user,
+            )
+
+            # -----------------------------------
+            # Ledger
+            # -----------------------------------
+
+            record_payment(
+                student=student,
+                payment=payment,
+                academic_year=academic_year,
+                term=term,
+                recorded_by=request.user,
+            )
+
+        except Exception as exc:
+
+            if payment:
+                payment.delete()
+
+            messages.error(
+                request,
+                f"Payment could not be recorded: {exc}"
+            )
+
+            return redirect("add_fee_payment")
+
+        messages.success(
+            request,
+            f"Payment recorded successfully. "
+            f"Receipt: {payment.receipt_number}"
+        )
+
+        return redirect(
+            "fee_statement",
+            id=student.id,
+        )
+
+        # -----------------------------------
+    # Academic years
+    # -----------------------------------
+    # Preserve existing historical years
+    # and add current year -1, current year,
+    # and current year +1.
+    # -----------------------------------
+
+    if school:
+
+        existing_years = set(
+            FeeStructure.objects
+            .filter(
+                school_class__school=school
+            )
+            .values_list(
+                "academic_year",
+                flat=True
+            )
+            .distinct()
+        )
+
+        academic_years = set()
+
+        # Preserve existing years
+        for year in existing_years:
+
+            try:
+                academic_years.add(
+                    int(str(year).strip())
+                )
+            except (TypeError, ValueError):
+                pass
+
+        # Add current year -1, current year,
+        # and current year +1
+        if current_academic_year:
+
+            try:
+
+                current_year = int(
+                    str(current_academic_year).strip()
+                )
+
+                academic_years.update({
+                    current_year - 1,
+                    current_year,
+                    current_year + 1,
+                })
+
+            except (TypeError, ValueError):
+
+                pass
+
+        academic_years = sorted(
+            academic_years,
+            reverse=True
+        )
+
+        students = (
+            Student.objects
+            .filter(
+                school=school
+            )
+            .select_related(
+                "school_class"
+            )
+            .order_by(
+                "first_name",
+                "last_name",
+            )
+        )
+
+    else:
+
+        # Superuser has not selected a school yet.
+        # Preserve all existing fee-structure years
+        # and expand all configured school years by ±1.
+
+        existing_years = set(
+            FeeStructure.objects
+            .values_list(
+                "academic_year",
+                flat=True
+            )
+            .distinct()
+        )
+
+        academic_years = set()
+
+        # Existing historical years
+        for year in existing_years:
+
+            try:
+                academic_years.add(
+                    int(str(year).strip())
+                )
+            except (TypeError, ValueError):
+                pass
+
+        # Configured school years
+        configured_years = (
+            SchoolProfile.objects
+            .exclude(
+                academic_year__isnull=True
+            )
+            .exclude(
+                academic_year=""
+            )
+            .values_list(
+                "academic_year",
+                flat=True
+            )
+        )
+
+        for year in configured_years:
+
+            try:
+
+                current_year = int(
+                    str(year).strip()
+                )
+
+                academic_years.update({
+                    current_year - 1,
+                    current_year,
+                    current_year + 1,
+                })
+
+            except (TypeError, ValueError):
+
+                pass
+
+        academic_years = sorted(
+            academic_years,
+            reverse=True
+        )
+
+        students = (
+            Student.objects
+            .select_related(
+                "school_class"
+            )
+            .order_by(
+                "school__name",
+                "first_name",
+                "last_name",
+            )
+        )
+
+    return render(
+        request,
+        "students/add_fee_payment.html",
+        {
+            "schools": schools,
+            "students": students,
+            "academic_years": academic_years,
+            "academic_year": current_academic_year,
+            "current_term": current_term,
+            "today": date.today(),
+            "selected_school": school,
+        },
+    )
 
 
 @login_required

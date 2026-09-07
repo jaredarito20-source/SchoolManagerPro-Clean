@@ -19,6 +19,9 @@ from .view_modules.timetable import *
 from .view_modules.school import (
     add_school_profile,
     school_credentials,
+    school_list,
+    reset_school_password,
+
 )
 
 from .view_modules.administration import (

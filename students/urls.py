@@ -42,8 +42,11 @@ path('students/delete/<int:id>/', views.delete_student, name='delete_student'),
 
 path('schools/add/', views.add_school_profile, name='add_school_profile'),
 
+path('schools/<int:id>/edit/',views.edit_school_profile,name='edit_school_profile'),
+path('schools/<int:id>/delete/',views.delete_school,name='delete_school'),
 path('schools/credentials/', views.school_credentials, name='school_credentials'),
-
+path('schools/<int:id>/reset-password/',views.reset_school_password,name='reset_school_password'),
+path('schools/',views.school_list,name='school_list'),
 path('teachers/', views.teacher_list, name='teacher_list'),
 
 path('teachers/add/', views.add_teacher, name='add_teacher'),
@@ -97,7 +100,9 @@ path('fees/payments/', views.fee_payment_list, name='fee_payment_list'),
 path('fees/payment/edit/<int:id>/', views.edit_payment, name='edit_payment'),
 
 path('fees/payment/delete/<int:id>/', views.delete_payment, name='delete_payment'),
+path('fees/edit/<int:id>/',views.edit_fee_structure,name='edit_fee_structure',),
 
+path('fees/delete/<int:id>/',views.delete_fee_structure,name='delete_fee_structure',),
 path('payments/<int:id>/receipt/', views.print_receipt, name='print_receipt'),
 
 path('fees/balances/', views.fee_balance_list, name='fee_balance_list'),
@@ -124,9 +129,9 @@ path('users/', views.user_list, name='user_list'),
 
 path('users/add/', views.add_user, name='add_user'),
 
-path('users/edit/<int:id>/', views.edit_user, name='edit_user'),
+path('users/edit/<int:user_id>/', views.edit_user, name='edit_user'),
 
-path('users/delete/<int:id>/', views.delete_user, name='delete_user'),
+path('users/delete/<int:user_id>/', views.delete_user, name='delete_user'),
 
 path('promotion/', views.promotion_list, name='promotion_list'),
 

@@ -9,6 +9,78 @@
 
     <table>
 
+        {% if user.is_superuser %}
+        <tr>
+            <td>School</td>
+            <td>
+                <select name="school" id="school" required>
+                    <option value="">Select School</option>
+
+                    {% for school in schools %}
+                        <option
+                            value="{{ school.id }}"
+                            data-academic-year="{{ school.academic_year }}"
+                            data-current-term="{{ school.current_term }}"
+                        >
+                            {{ school.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        {% endif %}
+
+
+        <!-- ============================= -->
+        <!-- ACADEMIC YEAR -->
+        <!-- ============================= -->
+
+        <tr>
+            <td>Academic Year</td>
+            <td>
+                <select name="academic_year" id="academic_year" required>
+                    <option value="">Select Academic Year</option>
+
+                    {% for year in academic_years %}
+                        <option
+                            value="{{ year }}"
+                            {% if year == academic_year %}selected{% endif %}
+                        >
+                            {{ year }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        <!-- ============================= -->
+        <!-- TERM -->
+        <!-- ============================= -->
+
+        <tr>
+            <td>Term</td>
+            <td>
+                <select name="enrollment_term" id="enrollment_term" required>
+                    <option value="">Select Term</option>
+
+                    <option value="1" {% if current_term == "1" %}selected{% endif %}>
+                        Term 1
+                    </option>
+
+                    <option value="2" {% if current_term == "2" %}selected{% endif %}>
+                        Term 2
+                    </option>
+
+                    <option value="3" {% if current_term == "3" %}selected{% endif %}>
+                        Term 3
+                    </option>
+                </select>
+            </td>
+        </tr>
+
+        <!-- ============================= -->
+        <!-- ADMISSION NUMBER -->
+        <!-- ============================= -->
+
         <tr>
             <td>Admission Number</td>
             <td>
@@ -19,6 +91,11 @@
                 >
             </td>
         </tr>
+
+
+        <!-- ============================= -->
+        <!-- FIRST NAME -->
+        <!-- ============================= -->
 
         <tr>
             <td>First Name</td>
@@ -31,6 +108,11 @@
             </td>
         </tr>
 
+
+        <!-- ============================= -->
+        <!-- LAST NAME -->
+        <!-- ============================= -->
+
         <tr>
             <td>Last Name</td>
             <td>
@@ -42,10 +124,14 @@
             </td>
         </tr>
 
+
+        <!-- ============================= -->
+        <!-- GENDER -->
+        <!-- ============================= -->
+
         <tr>
             <td>Gender</td>
             <td>
-
                 <select name="gender" required>
 
                     <option value="">
@@ -61,9 +147,13 @@
                     </option>
 
                 </select>
-
             </td>
         </tr>
+
+
+        <!-- ============================= -->
+        <!-- DATE OF BIRTH -->
+        <!-- ============================= -->
 
         <tr>
             <td>Date of Birth</td>
@@ -76,12 +166,18 @@
             </td>
         </tr>
 
+
+        <!-- ============================= -->
+        <!-- CLASS -->
+        <!-- ============================= -->
+
         <tr>
             <td>Class</td>
             <td>
 
                 <select
                     name="school_class"
+                    id="school_class"
                     required
                 >
 
@@ -91,9 +187,19 @@
 
                     {% for class in classes %}
 
-                    <option value="{{ class.id }}">
-                        {{ class.name }}
-                    </option>
+                        <option
+                            value="{{ class.id }}"
+                            {% if user.is_superuser %}
+                                data-school="{{ class.school_id }}"
+                            {% endif %}
+                        >
+                            {{ class.name }}
+
+                            {% if user.is_superuser %}
+                                — {{ class.school.name }}
+                            {% endif %}
+
+                        </option>
 
                     {% endfor %}
 
@@ -101,6 +207,11 @@
 
             </td>
         </tr>
+
+
+        <!-- ============================= -->
+        <!-- PARENT -->
+        <!-- ============================= -->
 
         <tr>
             <td>Parent Name</td>
@@ -113,6 +224,11 @@
             </td>
         </tr>
 
+
+        <!-- ============================= -->
+        <!-- PHONE -->
+        <!-- ============================= -->
+
         <tr>
             <td>Phone Number</td>
             <td>
@@ -123,6 +239,11 @@
                 >
             </td>
         </tr>
+
+
+        <!-- ============================= -->
+        <!-- PHOTO -->
+        <!-- ============================= -->
 
         <tr>
             <td>Student Photo</td>
@@ -135,8 +256,14 @@
             </td>
         </tr>
 
+
+        <!-- ============================= -->
+        <!-- BUTTONS -->
+        <!-- ============================= -->
+
         <tr>
             <td></td>
+
             <td>
 
                 <button type="submit">
@@ -153,5 +280,204 @@
     </table>
 
 </form>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const schoolSelect = document.getElementById("school");
+    const classSelect = document.getElementById("school_class");
+    const academicYearSelect = document.getElementById("academic_year");
+    const termSelect = document.getElementById("enrollment_term");
+
+
+    function updateAcademicPeriod() {
+
+        /*
+         * Normal school user:
+         * The school dropdown does not exist.
+         * Django has already supplied the academic years
+         * and current term.
+         */
+        if (!schoolSelect) {
+            return;
+        }
+
+        const selectedOption =
+            schoolSelect.options[schoolSelect.selectedIndex];
+
+
+        /*
+         * No school selected.
+         */
+        if (!schoolSelect.value || !selectedOption) {
+            return;
+        }
+
+        /*
+         * Read the school's configured current period.
+         */
+        const academicYear =
+            selectedOption.getAttribute("data-academic-year") || "";
+
+        const currentTerm =
+            selectedOption.getAttribute("data-current-term") || "";
+
+
+        /*
+         * Rebuild Academic Year dropdown.
+         *
+         * Example:
+         * School current year = 2026
+         *
+         * Options:
+         * 2025
+         * 2026  <-- selected
+         * 2027
+         */
+        academicYearSelect.innerHTML =
+            '<option value="">Select Academic Year</option>';
+
+
+        if (academicYear) {
+
+            const currentYear =
+                parseInt(academicYear, 10);
+
+
+            if (!isNaN(currentYear)) {
+
+                const years = [
+                    currentYear - 1,
+                    currentYear,
+                    currentYear + 1
+                ];
+
+
+                years.forEach(function (year) {
+
+                    const option =
+                        document.createElement("option");
+
+                    option.value = String(year);
+                    option.textContent = String(year);
+
+
+                    if (
+                        String(year) ===
+                        String(academicYear)
+                    ) {
+                        option.selected = true;
+                    }
+
+
+                    academicYearSelect.appendChild(option);
+
+                });
+
+            } else {
+
+                /*
+                 * Fallback for non-numeric academic years.
+                 */
+                const option =
+                    document.createElement("option");
+
+                option.value = academicYear;
+                option.textContent = academicYear;
+                option.selected = true;
+
+                academicYearSelect.appendChild(option);
+            }
+        }
+
+
+        /*
+         * Set the school's current term as the default.
+         */
+        if (
+            currentTerm === "1" ||
+            currentTerm === "2" ||
+            currentTerm === "3"
+        ) {
+            termSelect.value = currentTerm;
+        } else {
+            termSelect.value = "";
+        }
+    }
+
+
+    function filterClasses() {
+
+        if (!schoolSelect || !classSelect) {
+            return;
+        }
+
+        const selectedSchool = schoolSelect.value;
+
+
+        for (
+            let i = 0;
+            i < classSelect.options.length;
+            i++
+        ) {
+
+            const option = classSelect.options[i];
+
+
+            if (!option.value) {
+                option.style.display = "";
+                continue;
+            }
+
+
+            const classSchool =
+                option.getAttribute("data-school");
+
+
+            if (
+                !selectedSchool ||
+                classSchool === selectedSchool
+            ) {
+                option.style.display = "";
+            } else {
+                option.style.display = "none";
+            }
+        }
+
+
+        classSelect.value = "";
+    }
+
+
+    /*
+     * SUPERUSER
+     *
+     * Select school first.
+     * The school's academic year and term
+     * become the defaults.
+     */
+    if (schoolSelect) {
+
+        schoolSelect.addEventListener(
+            "change",
+            function () {
+
+                updateAcademicPeriod();
+                filterClasses();
+
+            }
+        );
+
+
+        /*
+         * Run once when the page loads.
+         */
+        updateAcademicPeriod();
+        filterClasses();
+    }
+
+});
+</script>
 
 {% endblock %}

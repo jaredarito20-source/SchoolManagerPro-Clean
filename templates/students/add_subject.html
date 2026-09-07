@@ -7,24 +7,54 @@
 <form method="POST">
     {% csrf_token %}
 
-    <label>Subject Name</label><br>
-    <input type="text" name="name" required><br><br>
 
-    <label>Subject Code</label><br>
-    <input type="text" name="code" required><br><br>
+{% if request.user.is_superuser %}
+    <label>School</label><br>
+    <select name="school" required>
+        <option value="">-- Select School --</option>
 
-    <label>Teacher</label><br>
-    <select name="teacher">
-        <option value="">-- Select Teacher --</option>
-
-        {% for teacher in teachers %}
-            <option value="{{ teacher.id }}">
-                {{ teacher.employee_number }} - {{ teacher.first_name }} {{ teacher.last_name }}
+        {% for school in schools %}
+            <option value="{{ school.id }}">
+                {{ school.name }}
             </option>
         {% endfor %}
     </select><br><br>
+{% endif %}
 
-    <button type="submit">Save Subject</button>
+<label>Subject Name</label><br>
+<input type="text" name="name" required><br><br>
+
+<label>Subject Code</label><br>
+<input type="text" name="code" required><br><br>
+
+<label>Class</label><br>
+<select name="school_class" required>
+    <option value="">-- Select Class --</option>
+
+    {% for school_class in classes %}
+        <option value="{{ school_class.id }}">
+            {{ school_class.name }}
+            {% if request.user.is_superuser %}
+                - {{ school_class.school.name }}
+            {% endif %}
+        </option>
+    {% endfor %}
+</select><br><br>
+
+<label>Teacher</label><br>
+<select name="teacher">
+    <option value="">-- Select Teacher --</option>
+
+    {% for teacher in teachers %}
+        <option value="{{ teacher.id }}">
+            {{ teacher.employee_number }} -
+            {{ teacher.first_name }} {{ teacher.last_name }}
+        </option>
+    {% endfor %}
+</select><br><br>
+
+<button type="submit">Save Subject</button>
+
 
 </form>
 

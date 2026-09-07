@@ -4,29 +4,308 @@
 
 <h2>Fee Balance Report</h2>
 
-<table border="1" cellpadding="8">
-    <tr>
-        <th>Admission No</th>
-        <th>Student</th>
-        <th>Class</th>
-        <th>Total Fee</th>
-        <th>Paid</th>
-        <th>Balance</th>
-        <th>Status</th>
-    </tr>
+<!-- ================================= -->
 
-    {% for student in students %}
-    <tr>
-        <td>{{ student.admission_number }}</td>
-        <td>{{ student.first_name }} {{ student.last_name }}</td>
-        <td>{{ student.school_class }}</td>
-        <td>{{ student.total_fee }}</td>
-        <td>{{ student.total_paid }}</td>
-        <td>{{ student.balance }}</td>
-        <td>{{ student.payment_status }}</td>
-    </tr>
-    {% endfor %}
+<!-- FILTERS -->
+
+<!-- ================================= -->
+
+<form method="GET">
+
+```
+{% if request.user.is_superuser %}
+
+<p>
+    <label>School</label><br>
+
+    <select name="school" id="school">
+
+        <option value="">
+            Select School
+        </option>
+
+        {% for school in schools %}
+
+        <option
+            value="{{ school.id }}"
+            {% if selected_school and school.id == selected_school.id %}
+                selected
+            {% endif %}
+        >
+            {{ school.name }}
+        </option>
+
+        {% endfor %}
+
+    </select>
+</p>
+
+{% endif %}
+
+
+<p>
+    <label>Academic Year</label><br>
+
+    <select
+        name="academic_year"
+        id="academic_year"
+        required
+    >
+
+        <option value="">
+            Select Academic Year
+        </option>
+
+        {% for year in academic_years %}
+
+        <option
+            value="{{ year }}"
+            {% if year == academic_year %}
+                selected
+            {% endif %}
+        >
+            {{ year }}
+        </option>
+
+        {% endfor %}
+
+    </select>
+</p>
+
+
+<p>
+    <label>Term</label><br>
+
+    <select
+        name="enrollment_term"
+        id="enrollment_term"
+        required
+    >
+
+        <option value="">
+            Select Term
+        </option>
+
+        <option
+            value="1"
+            {% if enrollment_term == "1" %}
+                selected
+            {% endif %}
+        >
+            Term 1
+        </option>
+
+        <option
+            value="2"
+            {% if enrollment_term == "2" %}
+                selected
+            {% endif %}
+        >
+            Term 2
+        </option>
+
+        <option
+            value="3"
+            {% if enrollment_term == "3" %}
+                selected
+            {% endif %}
+        >
+            Term 3
+        </option>
+
+    </select>
+</p>
+
+
+<p>
+    <label>Class</label><br>
+
+    <select
+        name="school_class"
+        id="school_class"
+        required
+    >
+
+        <option value="">
+            Select Class
+        </option>
+
+        {% for school_class in classes %}
+
+        <option
+            value="{{ school_class.id }}"
+            {% if selected_class == school_class.id|stringformat:"s" %}
+                selected
+            {% endif %}
+        >
+            {{ school_class.name }}
+        </option>
+
+        {% endfor %}
+
+    </select>
+</p>
+
+
+<button type="submit">
+    🔍 Filter
+</button>
+
+<a
+    href="{% url 'fee_balance_list' %}"
+>
+    Clear
+</a>
+```
+
+</form>
+
+<hr>
+
+<!-- ================================= -->
+
+<!-- REPORT -->
+
+<!-- ================================= -->
+
+{% if academic_year and enrollment_term and selected_class %}
+
+<h3>
+    Fee Balances —
+    {{ academic_year }} —
+    Term {{ enrollment_term }}
+</h3>
+
+<table border="1" cellpadding="8">
+
+```
+<tr>
+
+    <th>Admission No</th>
+    <th>Student</th>
+    <th>Class</th>
+    <th>Carry Forward</th>
+    <th>Term Fee</th>
+    <th>Paid</th>
+    <th>Balance</th>
+    <th>Status</th>
+
+</tr>
+
+
+{% for row in student_rows %}
+
+<tr>
+
+    <td>
+        {{ row.student.admission_number }}
+    </td>
+
+
+    <td>
+        {{ row.student.first_name }}
+        {{ row.student.last_name }}
+    </td>
+
+
+    <td>
+        {% if row.historical_class %}
+            {{ row.historical_class.name }}
+        {% else %}
+            Not Assigned
+        {% endif %}
+    </td>
+
+
+    <td>
+
+        {% if row.carry_amount %}
+
+            {{ row.carry_type }}:
+            {{ row.carry_amount|floatformat:2 }}
+
+        {% else %}
+
+            0.00
+
+        {% endif %}
+
+    </td>
+
+
+    <td>
+        {{ row.term_fee|floatformat:2 }}
+    </td>
+
+
+    <td>
+        {{ row.paid|floatformat:2 }}
+    </td>
+
+
+    <td>
+
+        {{ row.balance_type }}
+
+        {% if row.balance_amount %}
+
+            {{ row.balance_amount|floatformat:2 }}
+
+        {% else %}
+
+            0.00
+
+        {% endif %}
+
+    </td>
+
+
+    <td>
+
+        {% if row.payment_status == "Paid" %}
+
+            Paid
+
+        {% elif row.payment_status == "Credit" %}
+
+            Credit
+
+        {% else %}
+
+            Outstanding
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+
+{% empty %}
+
+<tr>
+
+    <td colspan="8">
+
+        No students found for the selected
+        academic year, term and class.
+
+    </td>
+
+</tr>
+
+{% endfor %}
+```
 
 </table>
+
+{% else %}
+
+<p>
+    Select an academic year, term and class,
+    then click <strong>Filter</strong>.
+</p>
+
+{% endif %}
 
 {% endblock %}

@@ -2,55 +2,318 @@
 
 {% block content %}
 
-<h2>Add Fee Structure</h2>
+<h2>💰 Add Fee Structure</h2>
 
 <form method="POST">
 
-    {% csrf_token %}
 
-    <p>
-        <label>Class</label><br>
+{% csrf_token %}
 
-        <select name="school_class" required>
+{% if request.user.is_superuser %}
 
-            <option value="">Select Class</option>
+<p>
+    <label>School</label><br>
 
-            {% for class in classes %}
+    <select name="school" id="school" required>
+        <option value="">Select School</option>
 
-                <option value="{{ class.id }}">
-                    {{ class.name }}
-                </option>
+        {% for school in schools %}
+        <option
+            value="{{ school.id }}"
+            data-academic-year="{{ school.academic_year }}"
+            data-current-term="{{ school.current_term }}"
+        >
+            {{ school.name }}
+        </option>
+        {% endfor %}
 
-            {% endfor %}
+    </select>
+</p>
 
-        </select>
+{% endif %}
 
-    </p>
 
-    <p>
-        <label>Tuition Fee</label><br>
-        <input type="number" step="0.01" name="tuition_fee" required>
-    </p>
+<!-- ================================= -->
+<!-- ACADEMIC PERIOD -->
+<!-- ================================= -->
 
-    <p>
-        <label>Activity Fee</label><br>
-        <input type="number" step="0.01" name="activity_fee" value="0">
-    </p>
+<p>
+    <label>Academic Year</label><br>
 
-    <p>
-        <label>Exam Fee</label><br>
-        <input type="number" step="0.01" name="exam_fee" value="0">
-    </p>
+    <select
+        name="academic_year"
+        id="academic_year"
+        required
+    >
+        <option value="">Select Academic Year</option>
 
-    <p>
-        <label>Other Fee</label><br>
-        <input type="number" step="0.01" name="other_fee" value="0">
-    </p>
+        {% for year in academic_years %}
+        <option
+            value="{{ year }}"
+            {% if year == academic_year %}selected{% endif %}
+        >
+            {{ year }}
+        </option>
+        {% endfor %}
 
-    <button type="submit">
-        Save Fee Structure
-    </button>
+    </select>
+</p>
+
+
+<p>
+    <label>Term</label><br>
+
+    <select
+        name="enrollment_term"
+        id="enrollment_term"
+        required
+    >
+        <option value="">Select Term</option>
+
+        <option
+            value="1"
+            {% if current_term == "1" %}selected{% endif %}
+        >
+            Term 1
+        </option>
+
+        <option
+            value="2"
+            {% if current_term == "2" %}selected{% endif %}
+        >
+            Term 2
+        </option>
+
+        <option
+            value="3"
+            {% if current_term == "3" %}selected{% endif %}
+        >
+            Term 3
+        </option>
+
+    </select>
+</p>
+
+
+<!-- ================================= -->
+<!-- CLASS -->
+<!-- ================================= -->
+
+<p>
+    <label>Class</label><br>
+
+    <select
+        name="school_class"
+        id="school_class"
+        required
+    >
+        <option value="">Select Class</option>
+
+        {% for school_class in classes %}
+        <option
+            value="{{ school_class.id }}"
+            data-school="{{ school_class.school_id }}"
+        >
+            {{ school_class.name }}
+        </option>
+        {% endfor %}
+
+    </select>
+</p>
+
+
+<!-- ================================= -->
+<!-- FEES -->
+<!-- ================================= -->
+
+<p>
+    <label>Tuition Fee</label><br>
+
+    <input
+        type="number"
+        name="tuition_fee"
+        min="0"
+        step="0.01"
+        required
+    >
+</p>
+
+
+<p>
+    <label>Activity Fee</label><br>
+
+    <input
+        type="number"
+        name="activity_fee"
+        min="0"
+        step="0.01"
+        value="0"
+    >
+</p>
+
+
+<p>
+    <label>Exam Fee</label><br>
+
+    <input
+        type="number"
+        name="exam_fee"
+        min="0"
+        step="0.01"
+        value="0"
+    >
+</p>
+
+
+<p>
+    <label>Other Fee</label><br>
+
+    <input
+        type="number"
+        name="other_fee"
+        min="0"
+        step="0.01"
+        value="0"
+    >
+</p>
+
+
+<button type="submit">
+    Add Fee Structure
+</button>
+```
 
 </form>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const schoolSelect =
+        document.getElementById("school");
+
+    const academicYearSelect =
+        document.getElementById("academic_year");
+
+    const termSelect =
+        document.getElementById("enrollment_term");
+
+    const classSelect =
+        document.getElementById("school_class");
+
+
+    function updateSchoolPeriod() {
+
+        if (!schoolSelect) {
+            return;
+        }
+
+        const selected =
+            schoolSelect.options[
+                schoolSelect.selectedIndex
+            ];
+
+        if (!selected) {
+            return;
+        }
+
+
+        const academicYear =
+            selected.dataset.academicYear || "";
+
+        const currentTerm =
+            selected.dataset.currentTerm || "";
+
+
+        /*
+         * Set Academic Year only if that year
+         * exists in the dropdown.
+         */
+
+        if (academicYear) {
+
+            const yearOption =
+                Array.from(
+                    academicYearSelect.options
+                ).find(
+                    function (option) {
+                        return option.value === academicYear;
+                    }
+                );
+
+            if (yearOption) {
+                academicYearSelect.value =
+                    academicYear;
+            }
+        }
+
+
+        /*
+         * Set current term.
+         */
+
+        if (
+            currentTerm === "1" ||
+            currentTerm === "2" ||
+            currentTerm === "3"
+        ) {
+            termSelect.value = currentTerm;
+        }
+
+
+        updateClasses();
+    }
+
+
+    function updateClasses() {
+
+        if (!schoolSelect || !classSelect) {
+            return;
+        }
+
+        const schoolId =
+            schoolSelect.value;
+
+
+        Array.from(
+            classSelect.options
+        ).forEach(
+            function (option) {
+
+                if (!option.value) {
+                    option.hidden = false;
+                    return;
+                }
+
+                option.hidden =
+                    option.dataset.school !== schoolId;
+            }
+        );
+
+
+        if (
+            classSelect.value &&
+            classSelect.options[
+                classSelect.selectedIndex
+            ].hidden
+        ) {
+            classSelect.value = "";
+        }
+    }
+
+
+    if (schoolSelect) {
+
+        schoolSelect.addEventListener(
+            "change",
+            updateSchoolPeriod
+        );
+
+        updateSchoolPeriod();
+    }
+
+});
+
+</script>
 
 {% endblock %}

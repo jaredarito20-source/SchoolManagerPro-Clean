@@ -6,7 +6,33 @@ import secrets
 import string
 
 from ..models import SchoolProfile, SchoolUser
+@login_required
+def school_list(request):
 
+    # -----------------------------------
+    # SYSTEM SUPERUSER ONLY
+    # -----------------------------------
+
+    if not request.user.is_superuser:
+        messages.error(
+            request,
+            "Only the system administrator can view all schools."
+        )
+        return redirect("home")
+
+    schools = (
+        SchoolProfile.objects
+        .all()
+        .order_by("name")
+    )
+
+    return render(
+        request,
+        "students/school_list.html",
+        {
+            "schools": schools,
+        },
+    )
 
 @login_required
 def add_school_profile(request):
@@ -289,3 +315,137 @@ def school_credentials(request):
             "credentials": credentials,
         },
     )
+
+@login_required
+def delete_school(request, id):
+
+    # Only the system superuser can delete schools
+    if not request.user.is_superuser:
+        messages.error(
+            request,
+            "Only the system administrator can delete a school."
+        )
+        return redirect("home")
+
+    try:
+        school = SchoolProfile.objects.get(id=id)
+    except SchoolProfile.DoesNotExist:
+        messages.error(
+            request,
+            "School not found."
+        )
+        return redirect("school_list")
+
+    # -----------------------------------
+    # PROTECT SCHOOLS WITH EXISTING DATA
+    # -----------------------------------
+
+    related_data = {
+        "students": school.students.exists(),
+        "teachers": school.teachers.exists(),
+        "classes": school.classes.exists(),
+        "users": school.users.exists(),
+        "subjects": school.subjects.exists(),
+        "fee ledger entries": school.fee_ledger_entries.exists(),
+    }
+
+    existing_data = [
+        name for name, exists in related_data.items()
+        if exists
+    ]
+
+    if existing_data:
+        messages.error(
+            request,
+            f"Cannot delete {school.name}. "
+            f"The school has existing data: "
+            f"{', '.join(existing_data)}."
+        )
+        return redirect("school_list")
+
+    # -----------------------------------
+    # DELETE EMPTY SCHOOL
+    # -----------------------------------
+
+    school_name = school.name
+    school.delete()
+
+    messages.success(
+        request,
+        f"{school_name} was deleted successfully."
+    )
+
+    return redirect("school_list")
+@login_required
+def reset_school_password(request, id):
+
+    # -----------------------------------
+    # SYSTEM SUPERUSER ONLY
+    # -----------------------------------
+
+    if not request.user.is_superuser:
+        messages.error(
+            request,
+            "Only the system administrator can reset school passwords."
+        )
+        return redirect("home")
+
+    # -----------------------------------
+    # GET SCHOOL
+    # -----------------------------------
+
+    try:
+        school = SchoolProfile.objects.get(id=id)
+    except SchoolProfile.DoesNotExist:
+        messages.error(
+            request,
+            "School not found."
+        )
+        return redirect("school_list")
+
+    # -----------------------------------
+    # GET SCHOOL ADMINISTRATOR
+    # -----------------------------------
+
+    school_user = (
+        SchoolUser.objects
+        .select_related("user")
+        .filter(school=school)
+        .first()
+    )
+
+    if not school_user:
+        messages.error(
+            request,
+            f"No school user is associated with {school.name}."
+        )
+        return redirect("school_list")
+
+    admin_user = school_user.user
+
+    # -----------------------------------
+    # RESET PASSWORD
+    # -----------------------------------
+
+    alphabet = string.ascii_letters + string.digits
+
+    password = "".join(
+        secrets.choice(alphabet)
+        for _ in range(10)
+    )
+
+    admin_user.set_password(password)
+    admin_user.save()
+
+    # -----------------------------------
+    # SHOW NEW CREDENTIALS
+    # -----------------------------------
+
+    request.session["new_school_credentials"] = {
+        "school_name": school.name,
+        "username": admin_user.username,
+        "password": password,
+        "email": admin_user.email,
+    }
+
+    return redirect("school_credentials")

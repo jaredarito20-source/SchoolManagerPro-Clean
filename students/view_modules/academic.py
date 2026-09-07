@@ -1,9 +1,11 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from io import BytesIO
+
+from django.db import transaction
 from django.db.models import Count
 from students.utils import get_user_school
 from students.models import SchoolClass, SchoolProfile, Teacher,Student
@@ -14,7 +16,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor, black, white
-
+from students.services.fee_ledger import record_term_fee_charge
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -31,7 +33,10 @@ from students.models import (
     ExamTimetable,
     Subject,
     Teacher,
+    Student,
+    StudentAcademicEnrollment,
 )
+
 
 
 from django.contrib.auth.models import User, Group
@@ -256,18 +261,96 @@ def add_student(request):
         # Create student
         # -----------------------------------
 
-        Student.objects.create(
-            admission_number=admission_number,
-            first_name=first_name,
-            last_name=last_name,
-            gender=gender,
-            date_of_birth=date_of_birth,
-            school=school,
-            school_class=school_class,
-            parent_name=parent_name,
-            phone=phone,
-        )
+               # -----------------------------------
+        # Determine current academic period
+        # -----------------------------------
 
+        current_academic_year = (
+            school.academic_year or ""
+        ).strip()
+
+        current_term = (
+            school.current_term or ""
+        ).strip()
+
+        if not current_academic_year or not current_term:
+            messages.error(
+                request,
+                "The school's current academic year and term "
+                "must be configured before enrolling a student."
+            )
+            return redirect("add_student")
+
+        # -----------------------------------
+        # Validate selected academic period
+        # -----------------------------------
+
+        academic_year = (
+            request.POST.get("academic_year")
+            or current_academic_year
+        ).strip()
+
+        enrollment_term = (
+            request.POST.get("enrollment_term")
+            or current_term
+        ).strip()
+        if not academic_year:
+            messages.error(
+                request,
+                "Academic year is required."
+            )
+            return redirect("add_student")
+
+        if enrollment_term not in ["1", "2", "3"]:
+            messages.error(
+                request,
+                "Invalid enrollment term selected."
+            )
+            return redirect("add_student")
+        # -----------------------------------
+        # Create student + academic enrollment
+        # -----------------------------------
+
+        with transaction.atomic():
+
+            student = Student.objects.create(
+                admission_number=admission_number,
+                first_name=first_name,
+                last_name=last_name,
+                gender=gender,
+                date_of_birth=date_of_birth,
+                school=school,
+                school_class=school_class,
+                parent_name=parent_name,
+                phone=phone,
+                enrollment_academic_year=academic_year,
+                enrollment_term=enrollment_term,
+            )
+
+            StudentAcademicEnrollment.objects.create(
+                student=student,
+                academic_year=academic_year,
+                term=enrollment_term,
+                school_class=school_class,
+            )
+
+            # -----------------------------------
+            # Create initial fee charge
+            # -----------------------------------
+
+            fee_structure = FeeStructure.objects.filter(
+                school_class=school_class,
+                academic_year=academic_year,
+                term=enrollment_term,
+            ).first()
+
+            if fee_structure:
+                record_term_fee_charge(
+                    student=student,
+                    fee_structure=fee_structure,
+                    transaction_date=date.today(),
+                    recorded_by=request.user,
+                )
         messages.success(
             request,
             f"{first_name} {last_name} has been "
@@ -276,9 +359,70 @@ def add_student(request):
 
         return redirect("student_list")
 
+
+        
+    # GET - Enrollment period options
     # -----------------------------------
-    # GET
-    # -----------------------------------
+
+    if request.user.is_superuser:
+
+        academic_year = ""
+        current_term = ""
+
+        # Build available academic years from configured schools.
+        configured_years = (
+            SchoolProfile.objects
+            .exclude(academic_year="")
+            .values_list("academic_year", flat=True)
+            .distinct()
+        )
+
+        academic_years = set()
+
+        for year in configured_years:
+            try:
+                year_int = int(str(year).strip())
+
+                academic_years.add(str(year_int - 1))
+                academic_years.add(str(year_int))
+                academic_years.add(str(year_int + 1))
+
+            except (TypeError, ValueError):
+                academic_years.add(str(year).strip())
+
+        academic_years = sorted(
+            academic_years,
+            key=lambda value: (
+                0,
+                int(value)
+            ) if value.isdigit() else (
+                1,
+                value
+            )
+        )
+    else:
+        academic_year = (
+            school.academic_year or ""
+        ).strip()
+
+        current_term = (
+            school.current_term or ""
+        ).strip()
+
+        academic_years = []
+
+        if academic_year:
+            try:
+                current_year = int(academic_year)
+
+                academic_years = [
+                    str(current_year - 1),
+                    str(current_year),
+                    str(current_year + 1),
+                ]
+
+            except ValueError:
+                academic_years = [academic_year]
 
     return render(
         request,
@@ -286,45 +430,184 @@ def add_student(request):
         {
             "schools": schools,
             "classes": classes,
+            "academic_year": academic_year,
+            "current_term": current_term,
+            "academic_years": academic_years,
         },
     )
+
+
 
 @login_required
 @admin_or_bursar
 def student_list(request):
 
+    # -----------------------------------
+    # Determine school
+    # -----------------------------------
+
     if request.user.is_superuser:
 
-        students = Student.objects.select_related(
-            "school",
-            "school_class",
-        ).all().order_by(
-            "school__name",
-            "school_class__name",
-            "first_name",
-        )
+        schools = SchoolProfile.objects.all().order_by("name")
+
+        school_id = request.GET.get("school")
+
+        if school_id:
+            try:
+                school = SchoolProfile.objects.get(
+                    id=school_id
+                )
+            except SchoolProfile.DoesNotExist:
+                school = None
+        else:
+            school = None
 
     else:
 
         school = request.user.school_user.school
 
-        students = Student.objects.select_related(
-            "school",
-            "school_class",
-        ).filter(
-            school=school
-        ).order_by(
-            "school_class__name",
-            "first_name",
+        schools = SchoolProfile.objects.filter(
+            id=school.id
         )
+
+    # -----------------------------------
+    # Academic year and term
+    # -----------------------------------
+
+    academic_year = (
+        request.GET.get("academic_year") or ""
+    ).strip()
+
+    enrollment_term = (
+        request.GET.get("enrollment_term") or ""
+    ).strip()
+
+    school_class_id = (
+        request.GET.get("school_class") or ""
+    ).strip()
+
+    # -----------------------------------
+    # Academic years
+    # -----------------------------------
+
+    if school:
+
+        configured_year = (
+            school.academic_year or ""
+        ).strip()
+
+        academic_years = []
+
+        if configured_year:
+            try:
+                current_year = int(configured_year)
+
+                academic_years = [
+                    str(current_year - 1),
+                    str(current_year),
+                    str(current_year + 1),
+                ]
+
+            except ValueError:
+                academic_years = [configured_year]
+
+        classes = (
+            SchoolClass.objects
+            .filter(school=school)
+            .order_by("name")
+        )
+
+    else:
+
+        academic_years = (
+            SchoolProfile.objects
+            .exclude(academic_year="")
+            .values_list(
+                "academic_year",
+                flat=True
+            )
+            .distinct()
+            .order_by("-academic_year")
+        )
+
+        classes = (
+            SchoolClass.objects
+            .all()
+            .order_by("name")
+        )
+    # -----------------------------------
+    # Students
+    # -----------------------------------
+
+    students = Student.objects.none()
+
+    # -----------------------------------
+    # Filter by academic year + term
+    # + class
+    # -----------------------------------
+
+    if (
+        academic_year
+        and enrollment_term in ["1", "2", "3"]
+        and school_class_id
+    ):
+
+        enrollment_query = StudentAcademicEnrollment.objects.filter(
+            academic_year=academic_year,
+            term=enrollment_term,
+            school_class_id=school_class_id,
+        )
+
+        if school:
+            enrollment_query = enrollment_query.filter(
+                school_class__school=school
+            )
+
+        student_ids = (
+            enrollment_query
+            .values_list(
+                "student_id",
+                flat=True
+            )
+            .distinct()
+        )
+
+        students = (
+            Student.objects
+            .select_related(
+                "school",
+                "school_class",
+            )
+            .filter(
+                id__in=student_ids
+            )
+            .order_by(
+                "first_name",
+                "last_name",
+            )
+        )
+
+    # -----------------------------------
+    # Render
+    # -----------------------------------
 
     return render(
         request,
         "students/student_list.html",
         {
             "students": students,
+            "schools": schools,
+            "classes": classes,
+            "academic_years": academic_years,
+            "academic_year": academic_year,
+            "current_term": enrollment_term,
+            "enrollment_term": enrollment_term,
+            "school_class_id": school_class_id,
         },
     )
+
+
+
 
 @login_required
 def edit_student(request, id):
@@ -444,18 +727,10 @@ def edit_student(request, id):
 )
 def promotion_list(request):
 
-    # ==========================================
-    # GET USER'S SCHOOL
-    # ==========================================
-
     if request.user.is_superuser:
-
-        classes = SchoolClass.objects.all().order_by(
-            "name"
-        )
-
+        school = None
+        classes = SchoolClass.objects.all().order_by("name")
     else:
-
         school_user = getattr(
             request.user,
             "school_user",
@@ -463,35 +738,54 @@ def promotion_list(request):
         )
 
         if not school_user:
-
             messages.error(
                 request,
                 "Your account is not linked to a school."
             )
-
             return redirect("home")
 
         school = school_user.school
 
-        # ======================================
-        # ONLY THIS SCHOOL'S CLASSES
-        # ======================================
-
         classes = SchoolClass.objects.filter(
             school=school
-        ).order_by(
-            "name"
-        )
+        ).order_by("name")
 
-    # ==========================================
-    # RENDER
-    # ==========================================
+    from_class_id = (
+        request.GET.get("from_class") or ""
+    ).strip()
+
+    to_class_id = (
+        request.GET.get("to_class") or ""
+    ).strip()
+
+    students = Student.objects.none()
+
+    if from_class_id:
+
+        if request.user.is_superuser:
+            students = Student.objects.filter(
+                school_class_id=from_class_id
+            ).order_by(
+                "first_name",
+                "last_name",
+            )
+        else:
+            students = Student.objects.filter(
+                school=school,
+                school_class_id=from_class_id,
+            ).order_by(
+                "first_name",
+                "last_name",
+            )
 
     return render(
         request,
         "students/promotion_list.html",
         {
             "classes": classes,
+            "students": students,
+            "from_class_id": from_class_id,
+            "to_class_id": to_class_id,
         },
     )
 
@@ -502,16 +796,9 @@ def promotion_list(request):
 )
 def promote_students(request):
 
-    # ==========================================
-    # GET USER'S SCHOOL
-    # ==========================================
-
     if request.user.is_superuser:
-
         school = None
-
     else:
-
         school_user = getattr(
             request.user,
             "school_user",
@@ -519,128 +806,180 @@ def promote_students(request):
         )
 
         if not school_user:
-
             messages.error(
                 request,
                 "Your account is not linked to a school."
             )
-
             return redirect("home")
 
         school = school_user.school
 
-    # ==========================================
-    # PROMOTE STUDENTS
-    # ==========================================
+    if request.method != "POST":
+        return redirect("promotion_list")
 
-    if request.method == "POST":
+    from_class_id = (
+        request.POST.get("from_class") or ""
+    ).strip()
 
-        from_class_id = request.POST.get(
-            "from_class"
-        )
+    to_class_id = (
+        request.POST.get("to_class") or ""
+    ).strip()
 
-        to_class_id = request.POST.get(
-            "to_class"
-        )
+    promotion_mode = (
+        request.POST.get("promotion_mode") or "all"
+    ).strip()
 
-        if not from_class_id or not to_class_id:
-
-            messages.error(
-                request,
-                "Please select both the current class and the destination class."
-            )
-
-            return redirect(
-                "promotion_list"
-            )
-
-        # ======================================
-        # GET CLASSES SECURELY
-        # ======================================
-
-        if request.user.is_superuser:
-
-            from_class = get_object_or_404(
-                SchoolClass,
-                id=from_class_id,
-            )
-
-            to_class = get_object_or_404(
-                SchoolClass,
-                id=to_class_id,
-            )
-
-        else:
-
-            from_class = get_object_or_404(
-                SchoolClass,
-                id=from_class_id,
-                school=school,
-            )
-
-            to_class = get_object_or_404(
-                SchoolClass,
-                id=to_class_id,
-                school=school,
-            )
-
-        # ======================================
-        # PREVENT SAME CLASS
-        # ======================================
-
-        if from_class.id == to_class.id:
-
-            messages.error(
-                request,
-                "Students cannot be promoted to the same class."
-            )
-
-            return redirect(
-                "promotion_list"
-            )
-
-        # ======================================
-        # GET STUDENTS
-        # ======================================
-
-        if request.user.is_superuser:
-
-            students = Student.objects.filter(
-                school_class=from_class
-            )
-
-        else:
-
-            students = Student.objects.filter(
-                school=school,
-                school_class=from_class,
-            )
-
-        # ======================================
-        # PROMOTE
-        # ======================================
-
-        count = students.update(
-            school_class=to_class
-        )
-
-        # ======================================
-        # SUCCESS MESSAGE
-        # ======================================
-
-        messages.success(
+    if not from_class_id or not to_class_id:
+        messages.error(
             request,
-            f"{count} students promoted from "
-            f"{from_class.name} to {to_class.name}."
+            "Please select both the current class and destination class."
+        )
+        return redirect("promotion_list")
+
+    if request.user.is_superuser:
+
+        from_class = get_object_or_404(
+            SchoolClass,
+            id=from_class_id,
         )
 
-        return redirect(
-            "promotion_list"
+        to_class = get_object_or_404(
+            SchoolClass,
+            id=to_class_id,
         )
 
-    return redirect(
-        "promotion_list"
+    else:
+
+        from_class = get_object_or_404(
+            SchoolClass,
+            id=from_class_id,
+            school=school,
+        )
+
+        to_class = get_object_or_404(
+            SchoolClass,
+            id=to_class_id,
+            school=school,
+        )
+
+    if from_class.id == to_class.id:
+        messages.error(
+            request,
+            "Students cannot be promoted to the same class."
+        )
+        return redirect("promotion_list")
+
+    # -----------------------------------
+    # GET STUDENTS
+    # -----------------------------------
+
+    if request.user.is_superuser:
+
+        students = Student.objects.filter(
+            school_class=from_class
+        )
+
+    else:
+
+        students = Student.objects.filter(
+            school=school,
+            school_class=from_class,
+        )
+
+    # -----------------------------------
+    # SELECT PROMOTION TARGETS
+    # -----------------------------------
+
+    if promotion_mode == "individual":
+
+        student_ids = request.POST.getlist(
+            "student_ids"
+        )
+
+        if not student_ids:
+            messages.error(
+                request,
+                "Please select at least one student."
+            )
+            return redirect(
+                f"/promotion/?from_class={from_class.id}&to_class={to_class.id}"
+            )
+
+        students = students.filter(
+            id__in=student_ids
+        )
+
+    elif promotion_mode != "all":
+
+        messages.error(
+            request,
+            "Invalid promotion mode."
+        )
+        return redirect("promotion_list")
+
+    # -----------------------------------
+    # CURRENT ACADEMIC PERIOD
+    # -----------------------------------
+
+    if school is not None:
+
+        current_academic_year = str(
+            school.academic_year
+        ).strip()
+
+        current_term = str(
+            school.current_term
+        ).strip()
+
+    else:
+
+        profile = SchoolProfile.objects.first()
+
+        current_academic_year = str(
+            profile.academic_year
+        ).strip()
+
+        current_term = str(
+            profile.current_term
+        ).strip()
+
+    # -----------------------------------
+    # PROMOTE
+    # -----------------------------------
+
+    with transaction.atomic():
+
+        count = 0
+
+        for student in students:
+
+            # Current Student class
+            student.school_class = to_class
+            student.save(
+                update_fields=[
+                    "school_class"
+                ]
+            )
+
+            # Current academic-period class
+            StudentAcademicEnrollment.objects.update_or_create(
+                student=student,
+                academic_year=current_academic_year,
+                term=current_term,
+                defaults={
+                    "school_class": to_class,
+                },
+            )
+
+            count += 1
+
+    messages.success(
+        request,
+        f"{count} student(s) promoted from "
+        f"{from_class.name} to {to_class.name}."
     )
+
+    return redirect("promotion_list")
 @login_required
 @admin_or_bursar
 def delete_student(request, id):

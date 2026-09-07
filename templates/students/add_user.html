@@ -5,139 +5,165 @@
 <h2>Add User</h2>
 
 {% if messages %}
-    {% for message in messages %}
-        <p style="color:red;">
-            {{ message }}
-        </p>
-    {% endfor %}
+{% for message in messages %} <p style="color:red;">
+{{ message }} </p>
+{% endfor %}
 {% endif %}
 
 <form method="post">
 
-    {% csrf_token %}
+
+{% csrf_token %}
+
+<p>
+    Username<br>
+    <input
+        type="text"
+        name="username"
+        required
+    >
+</p>
+
+<p>
+    First Name<br>
+    <input
+        type="text"
+        name="first_name"
+        required
+    >
+</p>
+
+<p>
+    Last Name<br>
+    <input
+        type="text"
+        name="last_name"
+        required
+    >
+</p>
+
+<p>
+    Email<br>
+    <input
+        type="email"
+        name="email"
+    >
+</p>
+
+<p>
+    Password<br>
+    <input
+        type="password"
+        name="password"
+        required
+    >
+</p>
+
+<p>
+    Group<br>
+
+    <select
+        name="group"
+        id="group"
+        required
+    >
+
+        <option value="">
+            -- Select Group --
+        </option>
+
+        {% for group in groups %}
+
+            <option value="{{ group.name }}">
+                {{ group.name }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+</p>
+
+<div id="teacher-fields" style="display:none;">
+
+    <hr>
+
+    <h3>Teacher Information</h3>
 
     <p>
-        Username<br>
+        Employee Number<br>
         <input
             type="text"
-            name="username"
-            required
+            name="employee_number"
+            id="employee_number"
         >
     </p>
 
     <p>
-        First Name<br>
-        <input
-            type="text"
-            name="first_name"
-            required
-        >
-    </p>
-
-    <p>
-        Last Name<br>
-        <input
-            type="text"
-            name="last_name"
-            required
-        >
-    </p>
-
-    <p>
-        Email<br>
-        <input
-            type="email"
-            name="email"
-        >
-    </p>
-
-    <p>
-        Password<br>
-        <input
-            type="password"
-            name="password"
-            required
-        >
-    </p>
-
-    <p>
-        Group<br>
+        Gender<br>
 
         <select
-            name="group"
-            id="group"
-            required
+            name="gender"
+            id="gender"
         >
 
             <option value="">
-                -- Select Group --
+                -- Select Gender --
             </option>
 
-            {% for group in groups %}
+            <option value="Male">
+                Male
+            </option>
 
-                <option value="{{ group.name }}">
-                    {{ group.name }}
-                </option>
-
-            {% endfor %}
+            <option value="Female">
+                Female
+            </option>
 
         </select>
 
     </p>
 
-    <div id="teacher-fields" style="display:none;">
+    <p>
+        Phone<br>
+        <input
+            type="text"
+            name="phone"
+            id="phone"
+        >
+    </p>
 
-        <hr>
+    <p>
+        Assigned Subjects<br>
 
-        <h3>Teacher Information</h3>
+        <select
+            name="assigned_subjects"
+            id="assigned_subjects"
+            multiple
+            size="8"
+        >
 
-        <p>
-            Employee Number<br>
-            <input
-                type="text"
-                name="employee_number"
-                id="employee_number"
-            >
-        </p>
+            {% for subject in subjects %}
 
-        <p>
-            Gender<br>
-
-            <select
-                name="gender"
-                id="gender"
-            >
-
-                <option value="">
-                    -- Select Gender --
+                <option value="{{ subject.id }}">
+                    {{ subject.school_class.name }} -
+                    {{ subject.name }}
                 </option>
 
-                <option value="Male">
-                    Male
-                </option>
+            {% endfor %}
 
-                <option value="Female">
-                    Female
-                </option>
+        </select>
+    </p>
 
-            </select>
+    <small>
+        Hold Ctrl while clicking to select multiple subjects.
+    </small>
 
-        </p>
+</div>
 
-        <p>
-            Phone<br>
-            <input
-                type="text"
-                name="phone"
-                id="phone"
-            >
-        </p>
+<button type="submit">
+    Create User
+</button>
 
-    </div>
-
-    <button type="submit">
-        Create User
-    </button>
 
 </form>
 

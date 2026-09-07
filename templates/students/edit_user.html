@@ -23,6 +23,7 @@
             type="text"
             name="first_name"
             value="{{ user_obj.first_name }}"
+            required
         >
     </p>
 
@@ -32,6 +33,7 @@
             type="text"
             name="last_name"
             value="{{ user_obj.last_name }}"
+            required
         >
     </p>
 
@@ -46,33 +48,180 @@
 
     <p>
         New Password (leave blank to keep current password)<br>
-        <input type="password" name="password">
+        <input
+            type="password"
+            name="password"
+        >
     </p>
 
     <p>
         Group<br>
-        <select name="group">
+
+        <select
+            name="group"
+            id="group"
+            onchange="toggleTeacherFields()"
+        >
 
             {% for group in groups %}
 
-            <option
-                value="{{ group.name }}"
-                {% if user_obj.groups.first and user_obj.groups.first.id == group.id %}
-                selected
-                {% endif %}
-            >
-                {{ group.name }}
-            </option>
+                <option
+                    value="{{ group.name }}"
+                    {% if user_obj.groups.first and user_obj.groups.first.id == group.id %}
+                        selected
+                    {% endif %}
+                >
+                    {{ group.name }}
+                </option>
 
             {% endfor %}
 
         </select>
     </p>
 
+
+    <!-- =============================== -->
+    <!-- TEACHER FIELDS -->
+    <!-- =============================== -->
+
+    <div id="teacher-fields" style="display: none;">
+
+        <hr>
+
+        <h3>Teacher Information</h3>
+
+        <p>
+            Employee Number<br>
+            <input
+                type="text"
+                name="employee_number"
+                value="{% if teacher %}{{ teacher.employee_number }}{% endif %}"
+            >
+        </p>
+
+        <p>
+            Gender<br>
+
+            <select name="gender">
+
+                <option value="">
+                    -- Select Gender --
+                </option>
+
+                <option
+                    value="Male"
+                    {% if teacher and teacher.gender == "Male" %}
+                        selected
+                    {% endif %}
+                >
+                    Male
+                </option>
+
+                <option
+                    value="Female"
+                    {% if teacher and teacher.gender == "Female" %}
+                        selected
+                    {% endif %}
+                >
+                    Female
+                </option>
+
+            </select>
+        </p>
+
+        <p>
+            Phone<br>
+            <input
+                type="text"
+                name="phone"
+                value="{% if teacher %}{{ teacher.phone }}{% endif %}"
+            >
+        </p>
+
+
+        <!-- =============================== -->
+        <!-- ASSIGNED SUBJECTS -->
+        <!-- =============================== -->
+
+        <p>
+            Assigned Subjects<br>
+
+            <select
+                name="assigned_subjects"
+                id="assigned_subjects"
+                multiple
+                size="8"
+            >
+
+                {% for subject in subjects %}
+
+                    <option
+                        value="{{ subject.id }}"
+                        {% if subject.id in assigned_subjects %}
+                            selected
+                        {% endif %}
+                    >
+
+                        {% if subject.school_class %}
+                            {{ subject.school_class.name }} -
+                        {% endif %}
+
+                        {{ subject.name }}
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+        </p>
+
+        <small>
+            Hold Ctrl while clicking to select multiple subjects.
+        </small>
+
+    </div>
+
+
+    <br>
+
     <button type="submit">
         Save Changes
     </button>
 
 </form>
+
+
+<script>
+
+function toggleTeacherFields() {
+
+    const group = document.getElementById("group").value;
+
+    const teacherFields =
+        document.getElementById("teacher-fields");
+
+    if (group === "Teachers") {
+
+        teacherFields.style.display = "block";
+
+    } else {
+
+        teacherFields.style.display = "none";
+
+    }
+}
+
+
+// Show teacher fields automatically
+// when editing an existing teacher.
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+        toggleTeacherFields();
+    }
+);
+
+</script>
 
 {% endblock %}

@@ -44,6 +44,45 @@
     </p>
 
     <p>
+        <label>Academic Year</label><br>
+
+        <input
+            type="text"
+            name="academic_year"
+            placeholder="2026"
+            value="{{ academic_year|default:'' }}"
+            required
+        >
+    </p>
+
+    <p>
+        <label>Term</label><br>
+
+        <select name="term" required>
+
+            <option value="">
+                Select Term
+            </option>
+
+            <option value="1"
+                {% if term == "1" %}selected{% endif %}>
+                Term 1
+            </option>
+
+            <option value="2"
+                {% if term == "2" %}selected{% endif %}>
+                Term 2
+            </option>
+
+            <option value="3"
+                {% if term == "3" %}selected{% endif %}>
+                Term 3
+            </option>
+
+        </select>
+    </p>
+
+    <p>
         <label>Phone Number</label><br>
 
         <input

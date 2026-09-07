@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 
 from students.models import (
@@ -373,19 +374,20 @@ def record_term_fee_charge(
     recorded_by=None,
 ):
     """
-    Create or synchronize the student's fee charge
-    for a specific academic year and term.
+    Create or synchronize the student's fee charge for a
+    specific academic year and term.
 
-    The FeeStructure is the charge definition.
+    The student's StudentAcademicEnrollment is the authoritative
+    source for the student's class during that academic period.
 
-    The student's ledger contains the actual accounting
-    transaction.
+    Student.school_class represents the student's CURRENT class and
+    must not be used to determine historical fee charges.
 
-    One student + one class + one academic year + one term
-    must have one FEE_CHARGE entry for this fee structure.
+    One student + academic year + term must have one FEE_CHARGE
+    for the applicable fee structure.
 
-    If the fee structure amount changes, the existing
-    FEE_CHARGE is adjusted rather than creating a duplicate.
+    If the fee structure amount changes, the existing FEE_CHARGE
+    is synchronized rather than duplicated.
     """
 
     if student is None:
@@ -403,30 +405,9 @@ def record_term_fee_charge(
             "Student is not linked to a school."
         )
 
-    if (
-        fee_structure.school_class_id
-        != student.school_class_id
-    ):
-        raise ValueError(
-            "Fee structure does not belong to the student's class."
-        )
-
-    if (
-        fee_structure.school_class.school_id
-        != student.school_id
-    ):
-        raise ValueError(
-            "Fee structure belongs to a different school."
-        )
-
-    amount = _decimal(
-        fee_structure.total_fee
-    )
-
-    if amount <= ZERO:
-        raise ValueError(
-            "Fee structure total must be greater than zero."
-        )
+    # --------------------------------------------------------
+    # Determine the fee period
+    # --------------------------------------------------------
 
     academic_year = str(
         fee_structure.academic_year
@@ -441,9 +422,80 @@ def record_term_fee_charge(
             "Fee structure academic year is required."
         )
 
-    if not term:
+    if term not in {"1", "2", "3"}:
         raise ValueError(
-            "Fee structure term is required."
+            f"Invalid fee structure term: {term}."
+        )
+
+        # --------------------------------------------------------
+    # Verify student was admitted by this academic period
+    # --------------------------------------------------------
+
+    student_year = str(
+        student.enrollment_academic_year or ""
+    ).strip()
+
+    student_term = str(
+        student.enrollment_term or ""
+    ).strip()
+
+    if not student_year:
+        raise ValueError(
+            "Student admission academic year is required."
+        )
+
+    if student_term not in {"1", "2", "3"}:
+        raise ValueError(
+            "Student admission term is invalid."
+        )
+
+    try:
+        student_year_number = int(student_year)
+        academic_year_number = int(academic_year)
+    except ValueError:
+        raise ValueError(
+            "Academic year must be numeric."
+        )
+
+    # Student had not yet been admitted at this period.
+    if student_year_number > academic_year_number:
+        raise ValueError(
+            "Student was not yet admitted "
+            "for this academic period."
+        )
+
+    # Student joined later in the same academic year.
+    if (
+        student_year_number == academic_year_number
+        and int(student_term) > int(term)
+    ):
+        raise ValueError(
+            "Student was not yet admitted "
+            "for this academic period."
+        )
+    # --------------------------------------------------------
+    # Verify school ownership
+    # --------------------------------------------------------
+
+    if (
+        fee_structure.school_class.school_id
+        != student.school_id
+    ):
+        raise ValueError(
+            "Fee structure belongs to a different school."
+        )
+
+    # --------------------------------------------------------
+    # Determine amount
+    # --------------------------------------------------------
+
+    amount = _decimal(
+        fee_structure.total_fee
+    )
+
+    if amount <= ZERO:
+        raise ValueError(
+            "Fee structure total must be greater than zero."
         )
 
     if transaction_date is None:
@@ -453,6 +505,10 @@ def record_term_fee_charge(
         f"FEE-{student.id}-"
         f"{academic_year}-T{term}"
     )
+
+    # --------------------------------------------------------
+    # Find existing charge
+    # --------------------------------------------------------
 
     existing = (
         FeeLedgerEntry.objects
@@ -520,7 +576,6 @@ def record_term_fee_charge(
     existing.refresh_from_db()
 
     return existing
-
 @transaction.atomic
 def record_term_fee_charges_for_class(
     *,
@@ -531,16 +586,50 @@ def record_term_fee_charges_for_class(
     recorded_by=None,
 ):
     """
-    Apply the term fee structure to every student
-    in a class.
+    Apply the term fee structure to students who were actually
+    enrolled in this class for the specified academic year and term.
 
-    Returns the number of students charged.
+    StudentAcademicEnrollment is the authoritative historical
+    enrollment source.
+
+    This means promotion does not alter historical fee charges.
+
+    Example:
+
+        2026 T1 -> Grade 1
+        2026 T2 -> Grade 1
+        2026 T3 -> Grade 2
+
+    A Grade 1 T1 fee structure will still charge the student for
+    T1 even though Student.school_class is now Grade 2.
     """
 
     if school_class is None:
         raise ValueError(
             "School class is required."
         )
+
+    academic_year = str(
+        academic_year
+    ).strip()
+
+    term = str(
+        term
+    ).strip()
+
+    if not academic_year:
+        raise ValueError(
+            "Academic year is required."
+        )
+
+    if term not in {"1", "2", "3"}:
+        raise ValueError(
+            f"Invalid term: {term}."
+        )
+
+    # --------------------------------------------------------
+    # Find the fee structure
+    # --------------------------------------------------------
 
     fee_structure = (
         FeeStructure.objects
@@ -550,8 +639,8 @@ def record_term_fee_charges_for_class(
         )
         .filter(
             school_class=school_class,
-            academic_year=str(academic_year),
-            term=str(term),
+            academic_year=academic_year,
+            term=term,
         )
         .first()
     )
@@ -562,6 +651,11 @@ def record_term_fee_charges_for_class(
             f"{school_class.name}, "
             f"{academic_year}, Term {term}."
         )
+
+        # --------------------------------------------------------
+    # Find students who had already been admitted
+    # by this academic year and term.
+    # --------------------------------------------------------
 
     students = (
         Student.objects
@@ -579,10 +673,31 @@ def record_term_fee_charges_for_class(
 
     for student in students:
 
-        if not student_is_eligible_for_term(
-            student=student,
-            academic_year=academic_year,
-            term=term,
+        student_year = str(
+            student.enrollment_academic_year or ""
+        ).strip()
+
+        student_term = str(
+            student.enrollment_term or ""
+        ).strip()
+
+        if not student_year or student_term not in {"1", "2", "3"}:
+            continue
+
+        try:
+            student_year_number = int(student_year)
+            academic_year_number = int(academic_year)
+        except ValueError:
+            continue
+
+        # Student has not yet been admitted at this period.
+        if student_year_number > academic_year_number:
+            continue
+
+        # Student joined in a later term of the same year.
+        if (
+            student_year_number == academic_year_number
+            and int(student_term) > int(term)
         ):
             continue
 
@@ -595,11 +710,7 @@ def record_term_fee_charges_for_class(
 
         count += 1
 
-        
-
     return count
-
-
 # ============================================================
 # PAYMENTS
 # ============================================================
@@ -663,16 +774,8 @@ def record_payment(
         debit=ZERO,
         credit=amount,
         transaction_date=payment.payment_date,
-        academic_year=(
-            academic_year
-            if academic_year is not None
-            else payment.academic_year
-        ),
-        term=(
-            term
-            if term is not None
-            else payment.term
-        ),
+        academic_year=(academic_year or payment.academic_year or get_current_period(get_student_school(student))[0]),
+        term=(term or payment.term or get_current_period(get_student_school(student))[1]),
         reference=(
             payment.reference
             or payment.receipt_number
@@ -1291,6 +1394,68 @@ def get_term_opening_balance(
         academic_year=academic_year,
         term="2",
     )
+
+def get_term_carry_forward_credit(
+    *,
+    student,
+    academic_year,
+    term,
+):
+    """
+    Return the credit amount carried into the selected term
+    from the immediately preceding term.
+
+    This is a REPORTING concept and is intentionally separate
+    from the ledger's opening balance.
+
+    Term 1 has no previous term, so carry forward is zero.
+    """
+
+    academic_year = str(
+        academic_year
+    ).strip()
+
+    term = str(
+        term
+    ).strip()
+
+    if not academic_year:
+        raise ValueError(
+            "Academic year is required."
+        )
+
+    if term not in {"1", "2", "3"}:
+        raise ValueError(
+            f"Invalid term: {term}. "
+            "The school operates three terms."
+        )
+
+    if term == "1":
+        return ZERO
+
+    previous_term = str(
+        int(term) - 1
+    )
+
+    previous_term_payments = (
+        FeeLedgerEntry.objects
+        .filter(
+            student=student,
+            school_id=student.school_id,
+            academic_year=academic_year,
+            term=previous_term,
+            transaction_type="PAYMENT",
+        )
+        .exclude(
+            fee_payment__is_voided=True
+        )
+        .aggregate(
+            total=Sum("credit")
+        )["total"]
+        or ZERO
+    )
+
+    return previous_term_payments
 # ============================================================
 # LEDGER QUERY
 # ============================================================
@@ -1752,3 +1917,143 @@ def student_is_eligible_for_term(
     # --------------------------------------------------------
 
     return enrollment_term_int <= charge_term_int
+
+# ============================================================
+# ACADEMIC YEAR ROLLOVER
+# ============================================================
+
+@transaction.atomic
+def record_academic_year_opening_balances(
+    *,
+    school,
+    new_academic_year,
+    transaction_date=None,
+    recorded_by=None,
+):
+    """
+    Create T1 opening balances for students continuing
+    from the previous academic year.
+
+    Example:
+
+        2026 T3 closing balance = KSh 10,000 owed
+
+        Academic year rollover
+
+        2027 T1:
+            OPENING_BALANCE debit = KSh 10,000
+
+    Rules:
+
+        - Only students enrolled in the previous academic
+          year are considered continuing students.
+        - Previous year's Term 3 closing balance becomes
+          the new year's Term 1 opening balance.
+        - Zero balances create no ledger entry.
+        - Positive balances become debits.
+        - Negative balances become credits.
+        - New students do not inherit previous balances.
+        - Running the rollover repeatedly is safe.
+        - This does NOT create CARRY_FORWARD entries.
+    """
+
+    if school is None:
+        raise ValueError(
+            "School is required."
+        )
+
+    new_academic_year = str(
+        new_academic_year
+    ).strip()
+
+    if not new_academic_year:
+        raise ValueError(
+            "New academic year is required."
+        )
+
+    try:
+        previous_academic_year = str(
+            int(new_academic_year) - 1
+        )
+    except (TypeError, ValueError):
+        raise ValueError(
+            "Academic year must be numeric."
+        )
+
+    if transaction_date is None:
+        transaction_date = date.today()
+
+    students = (
+        Student.objects
+        .filter(
+            school=school,
+            academic_enrollments__academic_year=previous_academic_year,
+        )
+        .distinct()
+        .order_by("id")
+    )
+
+    created_count = 0
+    skipped_count = 0
+
+    for student in students:
+
+        previous_balance = _decimal(
+            get_term_balance(
+                student=student,
+                academic_year=previous_academic_year,
+                term="3",
+            )
+        )
+
+        # Nothing to bring into the new academic year.
+        if previous_balance == ZERO:
+            skipped_count += 1
+            continue
+
+        reference = (
+            f"OPENING-{student.id}-"
+            f"{new_academic_year}-T1"
+        )
+
+        # Idempotency: do not create the same
+        # academic-year opening more than once.
+        existing = (
+            FeeLedgerEntry.objects
+            .filter(
+                student=student,
+                school_id=school.id,
+                academic_year=new_academic_year,
+                term="1",
+                transaction_type="OPENING_BALANCE",
+                reference=reference,
+            )
+            .first()
+        )
+
+        if existing:
+            skipped_count += 1
+            continue
+
+        record_opening_balance(
+            student=student,
+            amount=previous_balance,
+            description=(
+                f"Opening balance brought forward "
+                f"from {previous_academic_year} T3"
+            ),
+            transaction_date=transaction_date,
+            academic_year=new_academic_year,
+            term="1",
+            reference=reference,
+            recorded_by=recorded_by,
+        )
+
+        created_count += 1
+
+    return {
+        "created": created_count,
+        "skipped": skipped_count,
+    }
+
+

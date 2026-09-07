@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete School</h2>
+
+<p>
+    Are you sure you want to permanently delete
+    <strong>{{ school.name }}</strong>?
+</p>
+
+<p>
+    <strong>Warning:</strong> This will also delete data associated
+    with this school because many of the school's records use
+    cascade deletion.
+</p>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <button type="submit">
+        🗑️ Yes, Delete School
+    </button>
+
+    <a href="{% url 'school_list' %}">
+        Cancel
+    </a>
+</form>
+
+{% endblock %}

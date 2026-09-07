@@ -4,6 +4,7 @@
 
 <h2>Fee Structure</h2>
 
+
 <p>
     <a href="{% url 'add_fee_structure' %}">
         ➕ Add Fee Structure
@@ -12,33 +13,81 @@
 
 <table border="1" cellpadding="10" cellspacing="0" width="100%">
 
+
 <tr>
+    <th>Academic Year</th>
+    <th>Term</th>
     <th>Class</th>
     <th>Tuition</th>
     <th>Activity</th>
     <th>Exam</th>
     <th>Other</th>
     <th>Total</th>
+    <th>Actions</th>
 </tr>
 
 {% for fee in fees %}
 
 <tr>
-    <td>{{ fee.school_class.name }}</td>
-    <td>{{ fee.tuition_fee }}</td>
-    <td>{{ fee.activity_fee }}</td>
-    <td>{{ fee.exam_fee }}</td>
-    <td>{{ fee.other_fee }}</td>
-    <td>{{ fee.total_fee }}</td>
+
+    <td>
+        {{ fee.academic_year }}
+    </td>
+
+    <td>
+        Term {{ fee.term }}
+    </td>
+
+    <td>
+        {{ fee.school_class.name }}
+    </td>
+
+    <td>
+        {{ fee.tuition_fee|floatformat:2 }}
+    </td>
+
+    <td>
+        {{ fee.activity_fee|floatformat:2 }}
+    </td>
+
+    <td>
+        {{ fee.exam_fee|floatformat:2 }}
+    </td>
+
+    <td>
+        {{ fee.other_fee|floatformat:2 }}
+    </td>
+
+    <td>
+        <strong>
+            {{ fee.total_fee|floatformat:2 }}
+        </strong>
+    </td>
+
+    <td>
+        <a href="{% url 'edit_fee_structure' fee.id %}">
+            Edit
+        </a>
+
+        &nbsp;|&nbsp;
+
+        <a href="{% url 'delete_fee_structure' fee.id %}">
+            Delete
+        </a>
+    </td>
+
 </tr>
 
 {% empty %}
 
 <tr>
-    <td colspan="6">No fee structures available.</td>
+    <td colspan="9">
+        No fee structures available.
+    </td>
 </tr>
 
 {% endfor %}
+
 
 </table>
 
