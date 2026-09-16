@@ -232,9 +232,7 @@ def add_vehicle(request):
             "Vehicle added successfully."
         )
 
-        return redirect(
-            "vehicle_list"
-        )
+        return redirect("students:vehicle_list")
 
     # -----------------------------------------
     # SCHOOLS FOR SUPERUSER
@@ -370,9 +368,7 @@ def edit_vehicle(request, id):
             "Vehicle updated successfully."
         )
 
-        return redirect(
-            "vehicle_list"
-        )
+        return redirect("students:vehicle_list")
 
     # -----------------------------------------
     # SCHOOLS FOR SUPERUSER
@@ -450,9 +446,7 @@ def delete_vehicle(request, id):
             "Vehicle deleted successfully."
         )
 
-        return redirect(
-            "vehicle_list"
-        )
+        return redirect("students:vehicle_list")
 
     return render(
         request,
@@ -1022,9 +1016,7 @@ def add_transport_route(request):
             "Transport route added successfully."
         )
 
-        return redirect(
-            "transport_route_list"
-        )
+        return redirect("students:transport_route_list")
 
     # -----------------------------------------
     # RENDER
@@ -1225,9 +1217,7 @@ def edit_transport_route(request, id):
             "Transport route updated successfully."
         )
 
-        return redirect(
-            "transport_route_list"
-        )
+        return redirect("students:transport_route_list")
 
     # -----------------------------------------
     # RENDER
@@ -1301,9 +1291,7 @@ def delete_transport_route(request, id):
             "Transport route deleted successfully."
         )
 
-        return redirect(
-            "transport_route_list"
-        )
+        return redirect("students:transport_route_list")
 
     # -----------------------------------------
     # CONFIRMATION PAGE
@@ -1560,7 +1548,7 @@ def add_student_transport(request):
         )
 
         return redirect(
-            "student_transport_list"
+            "students:student_transport_list"
         )
 
     # -----------------------------------------
@@ -1739,7 +1727,7 @@ def edit_student_transport(request, id):
         )
 
         return redirect(
-            "student_transport_list"
+            "students:student_transport_list"
         )
 
     # -----------------------------------------
@@ -1810,7 +1798,7 @@ def delete_student_transport(request, id):
         )
 
         return redirect(
-            "student_transport_list"
+            "students:student_transport_list"
         )
 
     # -----------------------------------------
@@ -2502,7 +2490,7 @@ def add_driver(request):
             "Driver added successfully."
         )
 
-        return redirect("driver_list")
+        return redirect("students:driver_list")
 
     # -----------------------------------------
     # SCHOOLS FOR SUPERUSER
@@ -2602,7 +2590,7 @@ def edit_driver(request, id):
             "Driver updated successfully."
         )
 
-        return redirect("driver_list")
+        return redirect("students:driver_list")
 
     # -----------------------------------------
     # DISPLAY FORM
@@ -2659,7 +2647,7 @@ def delete_driver(request, id):
             "Driver deleted successfully."
         )
 
-        return redirect("driver_list")
+        return redirect("students:driver_list")
 
     return render(
         request,

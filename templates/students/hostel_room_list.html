@@ -6,7 +6,7 @@
 
 <p>
 
-<a href="{% url 'add_hostel_room' %}">
+<a href="{% url 'students:add_hostel_room' %}">
     <button>Add Room</button>
 </a>
 
@@ -41,24 +41,24 @@
 
     <td>
 
-        <a href="{% url 'edit_hostel_room' room.id %}">
+        <a href="{% url 'students:edit_hostel_room' room.id %}">
             ✏ Edit
         </a>
 
         |
 
-        <a href="{% url 'delete_hostel_room' room.id %}">
+        <a href="{% url 'students:delete_hostel_room' room.id %}">
             🗑 Delete
         </a>
 
-         <a href="{% url 'generate_hostel_beds' room.id %}">
+         <a href="{% url 'students:generate_hostel_beds' room.id %}">
             ⚡ Generate Beds
         </a>
 
 
         |
 
-        <a href="{% url 'print_hostel_room' room.id %}">
+        <a href="{% url 'students:print_hostel_room' room.id %}">
             🖨 Print
         </a>
 

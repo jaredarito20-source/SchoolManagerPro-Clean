@@ -189,9 +189,7 @@ def add_salary_structure(request):
                     "for a teacher from another school."
                 )
 
-                return redirect(
-                    "salary_structure_list"
-                )
+                return redirect("students:salary_structure_list")
 
         SalaryStructure.objects.create(
 
@@ -250,9 +248,7 @@ def add_salary_structure(request):
             "Salary structure added successfully."
         )
 
-        return redirect(
-            "salary_structure_list"
-        )
+        return redirect("students:salary_structure_list")
 
     return render(
         request,
@@ -289,7 +285,7 @@ def edit_salary_structure(request, id):
 
         salary.save()
 
-        return redirect("salary_structure_list")
+        return redirect("students:salary_structure_list")
 
     teachers = Teacher.objects.all()
 
@@ -318,9 +314,7 @@ def delete_salary_structure(request, id):
 
         salary.delete()
 
-        return redirect(
-            "salary_structure_list"
-        )
+        return redirect("students:salary_structure_list")
 
     return render(
         request,
@@ -492,7 +486,7 @@ def generate_payroll(request):
             f"Payroll for {month} {year} generated successfully."
         )
 
-        return redirect("payroll_list")
+        return redirect("students:payroll_list")
 
     # -----------------------------------------
     # SCHOOLS FOR SUPERUSER
@@ -619,7 +613,7 @@ def print_payslip(request, id):
                 "You do not have permission to view this payslip."
             )
 
-            return redirect("payroll_list")
+            return redirect("students:payroll_list")
 
     else:
 
@@ -1005,7 +999,7 @@ def print_salary_structure(request, id):
                 "belonging to another school."
             )
 
-            return redirect("salary_structure_list")
+            return redirect("students:salary_structure_list")
 
     buffer = BytesIO()
 

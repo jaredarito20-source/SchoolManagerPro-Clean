@@ -6,7 +6,7 @@
 
 <p>
 
-<a href="{% url 'add_hostel_block' %}">
+<a href="{% url 'students:add_hostel_block' %}">
     <button>Add Hostel Block</button>
 </a>
 
@@ -50,19 +50,19 @@
 
     <td>
 
-        <a href="{% url 'edit_hostel_block' block.id %}">
+        <a href="{% url 'students:edit_hostel_block' block.id %}">
             ✏ Edit
         </a>
 
         |
 
-        <a href="{% url 'delete_hostel_block' block.id %}">
+        <a href="{% url 'students:delete_hostel_block' block.id %}">
             🗑 Delete
         </a>
 
         |
 
-        <a href="{% url 'print_hostel_block' block.id %}">
+        <a href="{% url 'students:print_hostel_block' block.id %}">
             🖨 Print
         </a>
 

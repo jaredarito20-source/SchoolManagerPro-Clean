@@ -79,7 +79,7 @@ def add_inventory_item(request):
             "Inventory item added successfully."
         )
 
-        return redirect("inventory_list")
+        return redirect("students:inventory_list")
 
     return render(
         request,
@@ -125,7 +125,7 @@ def edit_inventory_item(request, id):
             "Inventory item updated successfully."
         )
 
-        return redirect("inventory_list")
+        return redirect("students:inventory_list")
 
     return render(
         request,
@@ -158,7 +158,7 @@ def delete_inventory_item(request, id):
             "Inventory item deleted successfully."
         )
 
-        return redirect("inventory_list")
+        return redirect("students:inventory_list")
 
     return render(
         request,
@@ -205,7 +205,7 @@ def add_inventory_category(request):
             "Inventory category added successfully."
         )
 
-        return redirect("inventory_category_list")
+        return redirect("students:inventory_category_list")
 
     return render(
         request,
@@ -254,7 +254,7 @@ def receive_stock(request, id):
             "Stock received successfully."
         )
 
-        return redirect("inventory_list")
+        return redirect("students:inventory_list")
 
     return render(
         request,
@@ -319,7 +319,7 @@ def issue_stock(request, id):
             "Stock issued successfully."
         )
 
-        return redirect("inventory_list")
+        return redirect("students:inventory_list")
 
     return render(
         request,

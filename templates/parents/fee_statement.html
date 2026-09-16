@@ -127,11 +127,11 @@
 
 <br>
 
-<a href="{% url 'print_fee_statement' student.id %}" class="btn btn-primary">
+<a href="{% url 'students:print_fee_statement' student.id %}" class="btn btn-primary">
     🖨 Print Fee Statement
 </a>
 
-<a href="{% url 'parent_students' %}" class="btn btn-secondary">
+<a href="{% url 'students:parent_students' %}" class="btn btn-secondary">
     ⬅ Back to My Children
 </a>
 

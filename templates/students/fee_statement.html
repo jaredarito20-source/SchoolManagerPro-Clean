@@ -79,13 +79,13 @@
 
 <br><br>
 
-<a href="{% url 'print_fee_statement' student.id %}" target="_blank">
+<a href="{% url 'students:print_fee_statement' student.id %}" target="_blank">
     🖨 Print PDF Statement
 </a>
 
 &nbsp;&nbsp;
 
-<a href="{% url 'fee_payment_list' %}">
+<a href="{% url 'students:fee_payment_list' %}">
     ⬅ Back to Payments
 </a>
 

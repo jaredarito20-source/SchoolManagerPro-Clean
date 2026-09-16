@@ -5,7 +5,7 @@
 <h2>📚 Homework</h2>
 
 <p>
-    <a href="{% url 'add_homework' %}" class="btn btn-primary">
+    <a href="{% url 'students:add_homework' %}" class="btn btn-primary">
         ➕ Add Homework
     </a>
 </p>
@@ -40,19 +40,19 @@
 
         <td>
 
-            <a href="{% url 'edit_homework' work.id %}">
+            <a href="{% url 'students:edit_homework' work.id %}">
                 ✏ Edit
             </a>
 
 
-            <a href="{% url 'homework_submissions' work.id %}">
+            <a href="{% url 'students:homework_submissions' work.id %}">
                 📥 Submissions
             </a>
 
 
             |
 
-            <a href="{% url 'delete_homework' work.id %}">
+            <a href="{% url 'students:delete_homework' work.id %}">
                 🗑 Delete
             </a>
 

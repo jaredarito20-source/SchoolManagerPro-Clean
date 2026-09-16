@@ -38,17 +38,17 @@
 
         <td>
 
-            <a href="{% url 'parent_student_profile' child.id %}">
+            <a href="{% url 'students:parent_student_profile' child.id %}">
                 👤 Profile
             </a>
 
             |
 
-            <a href="{% url 'parent_results' child.id %}">
+            <a href="{% url 'students:parent_results' child.id %}">
                 📊 Results
             </a>
 
-            <a href="{% url 'parent_fee_statement' child.id %}">
+            <a href="{% url 'students:parent_fee_statement' child.id %}">
                 💰 Fee Statement
             </a>
         </td>

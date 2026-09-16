@@ -50,6 +50,7 @@ def add_school_profile(request):
         # --------------------------------
         # SCHOOL DETAILS
         # --------------------------------
+        
 
         name = request.POST.get("name", "").strip()
         motto = request.POST.get("motto", "").strip()
@@ -61,6 +62,24 @@ def add_school_profile(request):
             "current_term",
             ""
         ).strip()
+
+        curriculum_system = request.POST.get(
+                    "curriculum_system",
+                    "CBC"
+                    ).strip()
+
+        valid_curriculum_systems = {
+            "CBC",
+            "8-4-4",
+            "BOTH",
+        }
+
+        if curriculum_system not in valid_curriculum_systems:
+            messages.error(
+                request,
+                "Please select a valid curriculum system."
+            )
+            return redirect("students:add_school_profile")
         academic_year = request.POST.get(
             "academic_year",
             ""
@@ -68,6 +87,8 @@ def add_school_profile(request):
         principal_name = request.POST.get(
             "principal_name",
             ""
+
+        
         ).strip()
 
         # --------------------------------
@@ -98,28 +119,28 @@ def add_school_profile(request):
                 request,
                 "School name is required."
             )
-            return redirect("add_school_profile")
+            return redirect("students:add_school_profile")
 
         if not admin_first_name:
             messages.error(
                 request,
                 "Administrator first name is required."
             )
-            return redirect("add_school_profile")
+            return redirect("students:add_school_profile")
 
         if not admin_last_name:
             messages.error(
                 request,
                 "Administrator last name is required."
             )
-            return redirect("add_school_profile")
+            return redirect("students:add_school_profile")
 
         if not admin_email:
             messages.error(
                 request,
                 "Administrator email is required."
             )
-            return redirect("add_school_profile")
+            return redirect("students:add_school_profile")
 
         # --------------------------------
         # CHECK SCHOOL
@@ -169,6 +190,7 @@ def add_school_profile(request):
             current_term=current_term,
             academic_year=academic_year,
             principal_name=principal_name,
+            curriculum_system=curriculum_system,
 
             principal_signature=request.FILES.get(
                 "principal_signature"
@@ -271,10 +293,7 @@ def add_school_profile(request):
             "email": admin_email,
         }
 
-        return redirect(
-            "school_credentials"
-        )
-
+        return redirect("students:school_credentials")
     # --------------------------------
     # FORM
     # --------------------------------
@@ -334,7 +353,7 @@ def delete_school(request, id):
             request,
             "School not found."
         )
-        return redirect("school_list")
+        return redirect("students:school_list")
 
     # -----------------------------------
     # PROTECT SCHOOLS WITH EXISTING DATA
@@ -346,7 +365,7 @@ def delete_school(request, id):
         "classes": school.classes.exists(),
         "users": school.users.exists(),
         "subjects": school.subjects.exists(),
-        "fee ledger entries": school.fee_ledger_entries.exists(),
+        "fee ledger entries": school.ledger_entries.exists(),
     }
 
     existing_data = [
@@ -361,7 +380,7 @@ def delete_school(request, id):
             f"The school has existing data: "
             f"{', '.join(existing_data)}."
         )
-        return redirect("school_list")
+        return redirect("students:school_list")
 
     # -----------------------------------
     # DELETE EMPTY SCHOOL
@@ -375,7 +394,7 @@ def delete_school(request, id):
         f"{school_name} was deleted successfully."
     )
 
-    return redirect("school_list")
+    return redirect("students:school_list")
 @login_required
 def reset_school_password(request, id):
 
@@ -401,7 +420,7 @@ def reset_school_password(request, id):
             request,
             "School not found."
         )
-        return redirect("school_list")
+        return redirect("students:school_list")
 
     # -----------------------------------
     # GET SCHOOL ADMINISTRATOR
@@ -419,7 +438,7 @@ def reset_school_password(request, id):
             request,
             f"No school user is associated with {school.name}."
         )
-        return redirect("school_list")
+        return redirect("students:school_list")
 
     admin_user = school_user.user
 
@@ -448,4 +467,4 @@ def reset_school_password(request, id):
         "email": admin_user.email,
     }
 
-    return redirect("school_credentials")
+    return redirect("students:school_credentials")

@@ -9,6 +9,9 @@
 
 {% csrf_token %}
 
+<!-- ================================= -->
+<!-- SCHOOL -->
+<!-- ================================= -->
 
 {% if request.user.is_superuser %}
 
@@ -41,10 +44,11 @@
 
 
 <!-- ================================= -->
-<!-- ACADEMIC PERIOD -->
+<!-- ACADEMIC YEAR -->
 <!-- ================================= -->
 
 <p>
+
     <label>Academic Year</label><br>
 
     <select
@@ -52,13 +56,18 @@
         id="academic_year"
         required
     >
-        <option value="">Select Academic Year</option>
+
+        <option value="">
+            Select Academic Year
+        </option>
 
         {% for year in academic_years %}
 
         <option
             value="{{ year }}"
-            {% if year == academic_year %}selected{% endif %}
+            {% if year|stringformat:"s" == academic_year|stringformat:"s" %}
+                selected
+            {% endif %}
         >
             {{ year }}
         </option>
@@ -66,10 +75,16 @@
         {% endfor %}
 
     </select>
+
 </p>
 
 
+<!-- ================================= -->
+<!-- TERM -->
+<!-- ================================= -->
+
 <p>
+
     <label>Term</label><br>
 
     <select
@@ -78,30 +93,75 @@
         required
     >
 
-        <option value="">Select Term</option>
+        <option value="">
+            Select Term
+        </option>
 
         <option
             value="1"
-            {% if current_term == "1" %}selected{% endif %}
+            {% if current_term == "1" %}
+                selected
+            {% endif %}
         >
             Term 1
         </option>
 
         <option
             value="2"
-            {% if current_term == "2" %}selected{% endif %}
+            {% if current_term == "2" %}
+                selected
+            {% endif %}
         >
             Term 2
         </option>
 
         <option
             value="3"
-            {% if current_term == "3" %}selected{% endif %}
+            {% if current_term == "3" %}
+                selected
+            {% endif %}
         >
             Term 3
         </option>
 
     </select>
+
+</p>
+
+
+<!-- ================================= -->
+<!-- CLASS -->
+<!-- ================================= -->
+
+<p>
+
+    <label>Class</label><br>
+
+    <select
+        name="school_class"
+        id="school_class"
+        required
+    >
+
+        <option value="">
+            Select Class
+        </option>
+
+        {% for school_class in classes %}
+
+        <option
+            value="{{ school_class.id }}"
+            {% if selected_class and school_class.id == selected_class.id %}
+                selected
+            {% endif %}
+        >
+            {{ school_class.name }}
+        </option>
+
+        {% endfor %}
+
+    </select>
+
 </p>
 
 
@@ -110,9 +170,14 @@
 <!-- ================================= -->
 
 <p>
+
     <label>Student</label><br>
 
-    <select name="student" required>
+    <select
+        name="student"
+        id="student"
+        required
+    >
 
         <option value="">
             Select Student
@@ -120,7 +185,10 @@
 
         {% for student in students %}
 
-        <option value="{{ student.id }}">
+        <option
+            value="{{ student.id }}"
+            data-class-id="{% if student.school_class %}{{ student.school_class.id }}{% endif %}"
+        >
 
             {{ student.first_name }}
             {{ student.last_name }}
@@ -134,6 +202,7 @@
         {% endfor %}
 
     </select>
+
 </p>
 
 
@@ -142,6 +211,7 @@
 <!-- ================================= -->
 
 <p>
+
     <label>Amount</label><br>
 
     <input
@@ -151,10 +221,12 @@
         step="0.01"
         required
     >
+
 </p>
 
 
 <p>
+
     <label>Payment Date</label><br>
 
     <input
@@ -163,13 +235,22 @@
         value="{{ today|date:'Y-m-d' }}"
         required
     >
+
 </p>
 
 
+<!-- ================================= -->
+<!-- PAYMENT METHOD -->
+<!-- ================================= -->
+
 <p>
+
     <label>Payment Method</label><br>
 
-    <select name="payment_method" required>
+    <select
+        name="payment_method"
+        required
+    >
 
         <option value="">
             Select Payment Method
@@ -196,7 +277,12 @@
 </p>
 
 
+<!-- ================================= -->
+<!-- REFERENCE -->
+<!-- ================================= -->
+
 <p>
+
     <label>Reference</label><br>
 
     <input
@@ -204,10 +290,16 @@
         name="reference"
         placeholder="M-Pesa code / bank reference"
     >
+
 </p>
 
 
+<!-- ================================= -->
+<!-- REMARKS -->
+<!-- ================================= -->
+
 <p>
+
     <label>Remarks</label><br>
 
     <textarea
@@ -238,6 +330,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const termSelect =
         document.getElementById("enrollment_term");
 
+    const classSelect =
+        document.getElementById("school_class");
+
+    const studentSelect =
+        document.getElementById("student");
+
+
+    // =================================
+    // SCHOOL PERIOD
+    // =================================
 
     function updateSchoolPeriod() {
 
@@ -254,7 +356,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-
         const academicYear =
             selected.dataset.academicYear || "";
 
@@ -262,32 +363,29 @@ document.addEventListener("DOMContentLoaded", function () {
             selected.dataset.currentTerm || "";
 
 
-        /*
-         * Select the school's academic year
-         * if that year exists in the dropdown.
-         */
+        // Select school's academic year
 
         if (academicYear) {
 
             const yearOption =
                 Array.from(
                     academicYearSelect.options
-                ).find(
-                    function (option) {
-                        return option.value === academicYear;
-                    }
-                );
+                ).find(function (option) {
+
+                    return option.value === academicYear;
+
+                });
 
             if (yearOption) {
+
                 academicYearSelect.value =
                     academicYear;
+
             }
         }
 
 
-        /*
-         * Select the school's current term.
-         */
+        // Select school's current term
 
         if (
             currentTerm === "1" ||
@@ -297,20 +395,125 @@ document.addEventListener("DOMContentLoaded", function () {
 
             termSelect.value =
                 currentTerm;
+
         }
 
     }
 
 
+    // =================================
+    // FILTER STUDENTS BY CLASS
+    // =================================
+
+    function filterStudentsByClass() {
+
+        if (!classSelect || !studentSelect) {
+            return;
+        }
+
+        const selectedClass =
+            classSelect.value;
+
+
+        // Reset student selection
+
+        studentSelect.value = "";
+
+
+        Array.from(
+            studentSelect.options
+        ).forEach(function (option) {
+
+            // Always keep "Select Student"
+
+            if (!option.value) {
+
+                option.hidden = false;
+                return;
+
+            }
+
+
+            const studentClass =
+                option.dataset.classId || "";
+
+
+            if (
+                selectedClass &&
+                studentClass === selectedClass
+            ) {
+
+                option.hidden = false;
+
+            } else {
+
+                option.hidden = true;
+
+            }
+
+        });
+
+    }
+
+
+    // =================================
+    // SCHOOL CHANGE
+    // =================================
+
     if (schoolSelect) {
 
         schoolSelect.addEventListener(
             "change",
-            updateSchoolPeriod
+            function () {
+
+                /*
+                 * Reload the page for the selected school.
+                 *
+                 * This causes the backend to load:
+                 * - that school's classes
+                 * - that school's students
+                 * - that school's academic years
+                 */
+
+                const schoolId =
+                    schoolSelect.value;
+
+                if (!schoolId) {
+                    return;
+                }
+
+                window.location.href =
+                    "?school=" + encodeURIComponent(
+                        schoolId
+                    );
+
+            }
         );
 
         updateSchoolPeriod();
+
     }
+
+
+    // =================================
+    // CLASS CHANGE
+    // =================================
+
+    if (classSelect) {
+
+        classSelect.addEventListener(
+            "change",
+            filterStudentsByClass
+        );
+
+    }
+
+
+    // =================================
+    // INITIAL STUDENT FILTER
+    // =================================
+
+    filterStudentsByClass();
 
 });
 

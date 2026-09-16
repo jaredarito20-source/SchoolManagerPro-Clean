@@ -5,7 +5,7 @@
 <h2>📅 Examination Timetable</h2>
 
 <p>
-    <a href="{% url 'add_exam_timetable' %}">
+    <a href="{% url 'students:add_exam_timetable' %}">
         ➕ Add Exam Timetable
     </a>
 </p>
@@ -86,13 +86,13 @@
 
         <td>
 
-            <a href="{% url 'edit_exam_timetable' timetable.id %}">
+            <a href="{% url 'students:edit_exam_timetable' timetable.id %}">
                 ✏ Edit
             </a>
 
             |
 
-            <a href="{% url 'delete_exam_timetable' timetable.id %}">
+            <a href="{% url 'students:delete_exam_timetable' timetable.id %}">
                 🗑 Delete
             </a>
 

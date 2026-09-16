@@ -5,7 +5,7 @@
 <h2>Mark Submissions</h2>
 
 <p>
-    <a href="{% url 'add_mark' %}" class="btn btn-primary">
+    <a href="{% url 'students:add_mark' %}" class="btn btn-primary">
         ➕ Enter Marks
     </a>
 </p>
@@ -88,7 +88,7 @@
                 {% if submission.status == "DRAFT" %}
 
                     <a
-                        href="{% url 'submit_mark_submission' submission.id %}"
+                        href="{% url 'students:submit_mark_submission' submission.id %}"
                         class="btn btn-success btn-sm">
                         📤 Submit
                     </a>
@@ -96,7 +96,7 @@
                 {% elif submission.status == "REJECTED" %}
 
                     <a
-                        href="{% url 'continue_mark_entry' submission.id %}"
+                        href="{% url 'students:continue_mark_entry' submission.id %}"
                         class="btn btn-warning btn-sm">
                         ✏️ Correct Marks
                     </a>

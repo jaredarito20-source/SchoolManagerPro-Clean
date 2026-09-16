@@ -5,13 +5,13 @@
 <h2>School Timetable</h2>
 
 <p>
-    <a href="{% url 'add_timetable' %}">
+    <a href="{% url 'students:add_timetable' %}">
         ➕ Add Timetable
     </a>
 
     |
 
-    <a href="{% url 'print_timetable' %}" class="btn btn-success">
+    <a href="{% url 'students:print_timetable' %}" class="btn btn-success">
         🖨 Print Timetable
     </a>
 </p>
@@ -40,11 +40,11 @@
     <td>{{ timetable.end_time }}</td>
 
     <td>
-        <a href="{% url 'edit_timetable' timetable.id %}">
+        <a href="{% url 'students:edit_timetable' timetable.id %}">
             ✏ Edit
         </a>
         |
-        <a href="{% url 'delete_timetable' timetable.id %}">
+        <a href="{% url 'students:delete_timetable' timetable.id %}">
             🗑 Delete
         </a>
     </td>

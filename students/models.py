@@ -31,6 +31,17 @@ class SchoolProfile(models.Model):
         blank=True,
         null=True,
     )
+    CURRICULUM_SYSTEM_CHOICES = [
+        ("CBC", "CBC"),
+        ("8-4-4", "8-4-4"),
+        ("BOTH", "Both CBC & 8-4-4"),
+    ]
+
+    curriculum_system = models.CharField(
+        max_length=10,
+        choices=CURRICULUM_SYSTEM_CHOICES,
+        default="CBC",
+    )
     closing_date = models.DateField(null=True, blank=True)
     opening_date = models.DateField(null=True, blank=True)
     school_stamp = models.ImageField(
@@ -181,10 +192,9 @@ class Student(models.Model):
         ).first()
 
         if fee:
-            return fee.total_fee()
+            return fee.total_fee
 
         return 0
-
     def total_paid(self):
         total = self.feepayment_set.aggregate(
             total=Sum("amount")
@@ -580,13 +590,13 @@ class FeeLedgerEntry(models.Model):
     student = models.ForeignKey(
         Student,
         on_delete=models.CASCADE,
-        related_name="fee_ledger_entries",
+        related_name="ledger_entries",
     )
 
     school = models.ForeignKey(
         SchoolProfile,
         on_delete=models.CASCADE,
-        related_name="fee_ledger_entries",
+        related_name="ledger_entries",
     )
 
     academic_year = models.CharField(
@@ -644,7 +654,7 @@ class FeeLedgerEntry(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="fee_ledger_entries_recorded",
+        related_name="ledger_entries_recorded",
     )
 
     created_at = models.DateTimeField(
@@ -2404,3 +2414,1361 @@ class MpesaTransaction(models.Model):
             f"{self.amount} - "
             f"{self.status}"
         )
+
+# ============================================================
+# CBC CURRICULUM AND ASSESSMENT MODELS
+# ============================================================
+
+class CurriculumVersion(models.Model):
+    name = models.CharField(
+        max_length=100,
+        help_text="Example: CBC 2026"
+    )
+    code = models.CharField(
+        max_length=30,
+        unique=True,
+        help_text="Example: CBC-2026"
+    )
+    academic_year = models.CharField(
+        max_length=20,
+        help_text="Academic year this curriculum version applies from."
+    )
+    description = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-academic_year", "-id"]
+
+    def __str__(self):
+        return self.name
+
+
+class CurriculumGrade(models.Model):
+    GRADE_CHOICES = [
+        ("PP1", "PP1"),
+        ("PP2", "PP2"),
+        ("GRADE1", "Grade 1"),
+        ("GRADE2", "Grade 2"),
+        ("GRADE3", "Grade 3"),
+        ("GRADE4", "Grade 4"),
+        ("GRADE5", "Grade 5"),
+        ("GRADE6", "Grade 6"),
+        ("GRADE7", "Grade 7"),
+        ("GRADE8", "Grade 8"),
+        ("GRADE9", "Grade 9"),
+        ("GRADE10", "Grade 10"),
+        ("GRADE11", "Grade 11"),
+        ("GRADE12", "Grade 12"),
+    ]
+
+    curriculum_version = models.ForeignKey(
+        CurriculumVersion,
+        on_delete=models.CASCADE,
+        related_name="grades",
+    )
+
+    grade = models.CharField(
+        max_length=20,
+        choices=GRADE_CHOICES,
+    )
+
+    display_name = models.CharField(max_length=50)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["curriculum_version", "grade"],
+                name="unique_curriculum_grade_version",
+            )
+        ]
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.curriculum_version} - {self.display_name}"
+
+
+class CurriculumPathway(models.Model):
+    PATHWAY_CHOICES = [
+        ("ARTS_SPORTS", "Arts & Sports"),
+        ("STEM", "STEM"),
+        ("SOCIAL_SCIENCES", "Social Sciences"),
+    ]
+
+    curriculum_grade = models.ForeignKey(
+        CurriculumGrade,
+        on_delete=models.CASCADE,
+        related_name="pathways",
+    )
+
+    name = models.CharField(
+        max_length=30,
+        choices=PATHWAY_CHOICES,
+    )
+
+    description = models.TextField(blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["curriculum_grade", "name"],
+                name="unique_grade_pathway",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.curriculum_grade} - {self.get_name_display()}"
+
+
+class CurriculumLearningArea(models.Model):
+    curriculum_grade = models.ForeignKey(
+        CurriculumGrade,
+        on_delete=models.CASCADE,
+        related_name="learning_areas",
+    )
+
+    # NULL means this is a normal learning area for PP1–Grade 9.
+    # Grade 10–12 learning areas must belong to a pathway.
+    pathway = models.ForeignKey(
+        CurriculumPathway,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="learning_areas",
+    )
+
+    name = models.CharField(max_length=150)
+
+    code = models.CharField(max_length=50)
+
+    description = models.TextField(blank=True)
+
+    assessment_enabled = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["id"]
+
+        constraints = [
+            # For PP1–Grade 9, pathway is NULL.
+            # Prevent duplicate learning areas within a grade.
+            models.UniqueConstraint(
+                fields=[
+                    "curriculum_grade",
+                    "name",
+                ],
+                condition=models.Q(pathway__isnull=True),
+                name="unique_lower_grade_learning_area",
+            ),
+
+            # For Grade 10–12, the same learning area name can exist
+            # under different pathways, but not twice within one pathway.
+            models.UniqueConstraint(
+                fields=[
+                    "curriculum_grade",
+                    "pathway",
+                    "name",
+                ],
+                name="unique_pathway_learning_area",
+            ),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        errors = {}
+
+        if self.curriculum_grade_id:
+            grade_code = self.curriculum_grade.grade
+
+            lower_grades = {
+                "PP1",
+                "PP2",
+                "GRADE1",
+                "GRADE2",
+                "GRADE3",
+                "GRADE4",
+                "GRADE5",
+                "GRADE6",
+                "GRADE7",
+                "GRADE8",
+                "GRADE9",
+            }
+
+            senior_grades = {
+                "GRADE10",
+                "GRADE11",
+                "GRADE12",
+            }
+
+            # PP1–Grade 9 must NOT have a pathway.
+            if grade_code in lower_grades and self.pathway_id:
+                errors["pathway"] = (
+                    "PP1 to Grade 9 learning areas do not use "
+                    "CBC pathways."
+                )
+
+            # Grade 10–12 MUST have a pathway.
+            if grade_code in senior_grades and not self.pathway_id:
+                errors["pathway"] = (
+                    "Grade 10 to Grade 12 learning areas must "
+                    "belong to a CBC pathway."
+                )
+
+        # A pathway must belong to this exact curriculum grade.
+        if (
+            self.pathway_id
+            and self.curriculum_grade_id
+            and self.pathway.curriculum_grade_id
+            != self.curriculum_grade_id
+        ):
+            errors["pathway"] = (
+                "The selected pathway does not belong to the "
+                "selected curriculum grade."
+            )
+
+        # The grade itself belongs to a curriculum version.
+        # Therefore the pathway/learning-area relationship remains
+        # inside the same curriculum version through the grade.
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        if self.pathway:
+            return (
+                f"{self.name} "
+                f"({self.pathway.get_name_display()})"
+            )
+
+        return self.name
+
+class CurriculumStrand(models.Model):
+    learning_area = models.ForeignKey(
+        CurriculumLearningArea,
+        on_delete=models.CASCADE,
+        related_name="strands",
+    )
+
+    name = models.CharField(max_length=200)
+
+    code = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    order = models.PositiveIntegerField(default=1)
+
+    description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "learning_area",
+                    "code",
+                ],
+                condition=~models.Q(code=""),
+                name="unique_strand_code_per_learning_area",
+            ),
+        ]
+    def __str__(self):
+        return f"{self.learning_area.name} - {self.name}"
+
+class CurriculumSubStrand(models.Model):
+    strand = models.ForeignKey(
+        CurriculumStrand,
+        on_delete=models.CASCADE,
+        related_name="sub_strands",
+    )
+
+    name = models.CharField(max_length=250)
+
+    code = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    order = models.PositiveIntegerField(default=1)
+
+    description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "strand",
+                    "code",
+                ],
+                condition=~models.Q(code=""),
+                name="unique_substrand_code_per_strand",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.strand.name} - {self.name}"
+class CurriculumAssessmentItem(models.Model):
+    TERM_CHOICES = [
+        ("1", "Term 1"),
+        ("2", "Term 2"),
+        ("3", "Term 3"),
+    ]
+
+    sub_strand = models.ForeignKey(
+        CurriculumSubStrand,
+        on_delete=models.PROTECT,
+        related_name="assessment_items",
+    )
+
+    term = models.CharField(
+        max_length=20,
+        choices=TERM_CHOICES,
+    )
+
+    name = models.CharField(max_length=300)
+
+    description = models.TextField(blank=True)
+
+    maximum_score = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=100,
+    )
+
+    order = models.PositiveIntegerField(default=1)
+
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["term", "order", "id"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "sub_strand",
+                    "term",
+                    "name",
+                ],
+                name="unique_assessment_item_per_substrand_term",
+            ),
+        ]
+    def __str__(self):
+        return (
+            f"{self.sub_strand} - "
+            f"{self.name}"
+        )
+
+    
+
+class SchoolClassCurriculum(models.Model):
+    """
+    Connects a school's class to the exact CBC curriculum version,
+    grade and, where applicable, pathway for an academic year.
+    """
+
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE,
+        related_name="curriculum_assignments",
+    )
+
+    curriculum_version = models.ForeignKey(
+        CurriculumVersion,
+        on_delete=models.PROTECT,
+        related_name="school_class_assignments",
+    )
+
+    curriculum_grade = models.ForeignKey(
+        CurriculumGrade,
+        on_delete=models.PROTECT,
+        related_name="school_class_assignments",
+    )
+
+    pathway = models.ForeignKey(
+        CurriculumPathway,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="school_class_assignments",
+    )
+
+    academic_year = models.CharField(max_length=20)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["academic_year", "school_class__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "school_class",
+                    "academic_year",
+                ],
+                name="unique_class_curriculum_year",
+            ),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        errors = {}
+
+        # ---------------------------------------------------------
+        # 1. Grade must belong to the selected curriculum version
+        # ---------------------------------------------------------
+        if (
+            self.curriculum_version_id
+            and self.curriculum_grade_id
+            and self.curriculum_grade.curriculum_version_id
+            != self.curriculum_version_id
+        ):
+            errors["curriculum_grade"] = (
+                "The selected grade does not belong to the selected "
+                "curriculum version."
+            )
+
+        # ---------------------------------------------------------
+        # 2. Pathway must belong to the selected grade
+        # ---------------------------------------------------------
+        if (
+            self.pathway_id
+            and self.curriculum_grade_id
+            and self.pathway.curriculum_grade_id
+            != self.curriculum_grade_id
+        ):
+            errors["pathway"] = (
+                "The selected pathway does not belong to the "
+                "selected curriculum grade."
+            )
+
+        # ---------------------------------------------------------
+        # 3. PP1–Grade 9 do NOT have pathways
+        # ---------------------------------------------------------
+        lower_grades = {
+            "PP1",
+            "PP2",
+            "GRADE1",
+            "GRADE2",
+            "GRADE3",
+            "GRADE4",
+            "GRADE5",
+            "GRADE6",
+            "GRADE7",
+            "GRADE8",
+            "GRADE9",
+        }
+
+        # ---------------------------------------------------------
+        # 4. Grade 10–12 MUST have a pathway
+        # ---------------------------------------------------------
+        senior_grades = {
+            "GRADE10",
+            "GRADE11",
+            "GRADE12",
+        }
+
+        if self.curriculum_grade_id:
+            grade_code = self.curriculum_grade.grade
+
+            if grade_code in lower_grades and self.pathway_id:
+                errors["pathway"] = (
+                    "PP1 to Grade 9 do not use CBC pathways."
+                )
+
+            if grade_code in senior_grades and not self.pathway_id:
+                errors["pathway"] = (
+                    "Grade 10 to Grade 12 must have a CBC pathway."
+                )
+
+        # ---------------------------------------------------------
+        # 5. Class must belong to a school
+        # ---------------------------------------------------------
+        if self.school_class_id and not self.school_class.school_id:
+            errors["school_class"] = (
+                "The class must belong to a school."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        pathway_name = self.pathway.name if self.pathway else "No Pathway"
+
+        return (
+            f"{self.school_class} - "
+            f"{self.curriculum_grade.display_name} - "
+            f"{pathway_name} - "
+            f"{self.academic_year}"
+        )
+
+class TeacherAssessmentAssignment(models.Model):
+    """
+    Determines which teacher is responsible for a learning area
+    within a class, academic year and term.
+    """
+
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name="cbc_assessment_assignments",
+    )
+
+    school_class_curriculum = models.ForeignKey(
+        SchoolClassCurriculum,
+        on_delete=models.CASCADE,
+        related_name="teacher_assignments",
+    )
+
+    learning_area = models.ForeignKey(
+        CurriculumLearningArea,
+        on_delete=models.PROTECT,
+        related_name="teacher_assignments",
+    )
+
+    academic_year = models.CharField(max_length=20)
+
+    term = models.CharField(
+        max_length=1,
+        choices=[
+            ("1", "Term 1"),
+            ("2", "Term 2"),
+            ("3", "Term 3"),
+        ],
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = [
+            "academic_year",
+            "term",
+            "school_class_curriculum",
+            "learning_area",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "teacher",
+                    "school_class_curriculum",
+                    "learning_area",
+                    "academic_year",
+                    "term",
+                ],
+                name="unique_teacher_cbc_assignment",
+            ),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        errors = {}
+
+        if self.school_class_curriculum_id:
+            class_curriculum = self.school_class_curriculum
+
+            # Assignment year must match the class curriculum year.
+            if (
+                self.academic_year
+                and class_curriculum.academic_year
+                and self.academic_year != class_curriculum.academic_year
+            ):
+                errors["academic_year"] = (
+                    "The assignment academic year must match "
+                    "the class curriculum academic year."
+                )
+
+            # Teacher and class must belong to the same school.
+            if (
+                self.teacher_id
+                and self.teacher.school_id
+                and class_curriculum.school_class_id
+                and class_curriculum.school_class.school_id
+                and self.teacher.school_id
+                != class_curriculum.school_class.school_id
+            ):
+                errors["teacher"] = (
+                    "The teacher must belong to the same school "
+                    "as the assigned class."
+                )
+
+            grade = class_curriculum.curriculum_grade
+            pathway = class_curriculum.pathway
+
+            if self.learning_area_id:
+                learning_area = self.learning_area
+
+                # Learning area must belong to the same curriculum grade.
+                if (
+                    learning_area.curriculum_grade_id
+                    != grade.id
+                ):
+                    errors["learning_area"] = (
+                        "The learning area must belong to "
+                        "the assigned curriculum grade."
+                    )
+
+                # Senior grades require the learning area to belong
+                # to the class pathway.
+                if grade.grade in {
+                    "GRADE10",
+                    "GRADE11",
+                    "GRADE12",
+                }:
+                    if not pathway:
+                        errors["learning_area"] = (
+                            "Grade 10 to Grade 12 assignments "
+                            "must have a CBC pathway."
+                        )
+                    elif learning_area.pathway_id != pathway.id:
+                        errors["learning_area"] = (
+                            "The learning area must belong to "
+                            "the assigned CBC pathway."
+                        )
+
+                # PP1 to Grade 9 must not use pathways.
+                elif pathway:
+                    errors["school_class_curriculum"] = (
+                        "PP1 to Grade 9 do not use CBC pathways."
+                    )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return (
+            f"{self.teacher} - "
+            f"{self.learning_area.name} - "
+            f"{self.school_class_curriculum.school_class} - "
+            f"T{self.term}"
+        )
+
+
+class CBCAssessmentRecord(models.Model):
+    """
+    Individual learner assessment record.
+
+    The assessment item is tied to the exact curriculum version through:
+    CurriculumAssessmentItem
+        -> CurriculumSubStrand
+        -> CurriculumStrand
+        -> CurriculumLearningArea
+        -> CurriculumGrade
+        -> CurriculumVersion
+    """
+
+    ASSESSMENT_COMPONENTS = [
+        ("CAT1", "CAT 1"),
+        ("MID", "Mid Term"),
+        ("END", "End Term"),
+    ]
+
+    PERFORMANCE_LEVELS = [
+        ("EE", "Exceeds Expectations"),
+        ("ME", "Meets Expectations"),
+        ("AE", "Approaches Expectations"),
+        ("BE", "Below Expectations"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="cbc_assessment_records",
+    )
+
+    assessment_item = models.ForeignKey(
+        CurriculumAssessmentItem,
+        on_delete=models.PROTECT,
+        related_name="assessment_records",
+    )
+
+    academic_year = models.CharField(max_length=20)
+
+    term = models.CharField(
+        max_length=1,
+        choices=[
+            ("1", "Term 1"),
+            ("2", "Term 2"),
+            ("3", "Term 3"),
+        ],
+    )
+
+    assessment_component = models.CharField(
+        max_length=10,
+        choices=ASSESSMENT_COMPONENTS,
+    )
+
+    mark = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    performance_level = models.CharField(
+        max_length=10,
+        blank=True,
+    )
+
+    points = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    points = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    teacher_comment = models.TextField(
+        blank=True,
+    )
+
+    entered_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="cbc_assessment_records_entered",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "academic_year",
+            "term",
+            "student",
+            "assessment_item",
+            "assessment_component",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "student",
+                    "assessment_item",
+                    "academic_year",
+                    "term",
+                    "assessment_component",
+                ],
+                name="unique_cbc_student_item_component",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.student} - "
+            f"{self.assessment_item.name} - "
+            f"{self.assessment_component}"
+        )
+
+
+class CBCEndYearLearnerProfile(models.Model):
+    """
+    End-year learner assessment profile for transition.
+    """
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="cbc_end_year_profiles",
+    )
+
+    academic_year = models.CharField(max_length=20)
+
+    core_competencies_achieved = models.TextField(
+        blank=True,
+    )
+
+    skills_acquired = models.TextField(
+        blank=True,
+    )
+
+    weaknesses_observed = models.TextField(
+        blank=True,
+    )
+
+    learner_strengths = models.TextField(
+        blank=True,
+    )
+
+    areas_of_improvement = models.TextField(
+        blank=True,
+    )
+
+    assessor = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="cbc_end_year_profiles_assessed",
+    )
+
+    assessment_date = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    assessor_signature = models.TextField(
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "student",
+                    "academic_year",
+                ],
+                name="unique_cbc_end_year_profile",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.student} - "
+            f"CBC End Year Profile - "
+            f"{self.academic_year}"
+        )
+
+class CBCAssessmentSubmission(models.Model):
+
+    STATUS_CHOICES = [
+        ("DRAFT", "Draft"),
+        ("SUBMITTED", "Submitted"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]
+
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name="cbc_assessment_submissions",
+    )
+
+    school_class_curriculum = models.ForeignKey(
+        SchoolClassCurriculum,
+        on_delete=models.CASCADE,
+        related_name="assessment_submissions",
+    )
+
+    learning_area = models.ForeignKey(
+        CurriculumLearningArea,
+        on_delete=models.PROTECT,
+        related_name="assessment_submissions",
+    )
+
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=1,
+        choices=[
+            ("1", "Term 1"),
+            ("2", "Term 2"),
+            ("3", "Term 3"),
+        ],
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="DRAFT",
+    )
+
+    submitted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_cbc_assessment_submissions",
+    )
+
+    rejection_reason = models.TextField(
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "academic_year",
+            "term",
+            "school_class_curriculum",
+            "learning_area",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "school_class_curriculum",
+                    "learning_area",
+                    "academic_year",
+                    "term",
+                ],
+                name="unique_cbc_assessment_submission",
+            ),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        errors = {}
+
+        if self.school_class_curriculum_id:
+
+            class_curriculum = (
+                self.school_class_curriculum
+            )
+
+            if (
+                self.academic_year
+                and class_curriculum.academic_year
+                and self.academic_year
+                != class_curriculum.academic_year
+            ):
+                errors["academic_year"] = (
+                    "The academic year must match "
+                    "the class curriculum year."
+                )
+
+            if self.learning_area_id:
+
+                learning_area = self.learning_area
+
+                if (
+                    learning_area.curriculum_grade_id
+                    != class_curriculum.curriculum_grade_id
+                ):
+                    errors["learning_area"] = (
+                        "The learning area does not belong "
+                        "to the class curriculum grade."
+                    )
+
+                if (
+                    class_curriculum.curriculum_grade.grade
+                    in {
+                        "GRADE10",
+                        "GRADE11",
+                        "GRADE12",
+                    }
+                ):
+                    if (
+                        learning_area.pathway_id
+                        != class_curriculum.pathway_id
+                    ):
+                        errors["learning_area"] = (
+                            "The learning area does not belong "
+                            "to the class pathway."
+                        )
+
+        if self.teacher_id and self.school_class_curriculum_id:
+
+            teacher_school = self.teacher.school_id
+            class_school = (
+                self.school_class_curriculum
+                .school_class
+                .school_id
+            )
+
+            if (
+                teacher_school
+                and class_school
+                and teacher_school != class_school
+            ):
+                errors["teacher"] = (
+                    "The teacher must belong to the "
+                    "same school as the class."
+                )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return (
+            f"{self.school_class_curriculum.school_class} - "
+            f"{self.learning_area.name} - "
+            f"T{self.term} - "
+            f"{self.academic_year}"
+        )
+
+
+class CBCPerformanceLevel(models.Model):
+    """
+    Defines the mark range, actual performance level and points
+    used by CBC assessment for a particular curriculum grade.
+    """
+
+    CATEGORY_CHOICES = [
+        ("EE", "Exceeding Expectation"),
+        ("ME", "Meeting Expectation"),
+        ("AE", "Approaching Expectation"),
+        ("BE", "Below Expectation"),
+    ]
+
+    curriculum_grade = models.ForeignKey(
+        CurriculumGrade,
+        on_delete=models.CASCADE,
+        related_name="performance_levels",
+    )
+
+    category = models.CharField(
+        max_length=2,
+        choices=CATEGORY_CHOICES,
+    )
+
+    code = models.CharField(
+        max_length=10,
+    )
+
+    minimum_mark = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+    )
+
+    maximum_mark = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+    )
+
+    points = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+    )
+
+    order = models.PositiveIntegerField(
+        default=1,
+    )
+
+    class Meta:
+        ordering = ["order"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "curriculum_grade",
+                    "code",
+                ],
+                name="unique_cbc_performance_code_per_grade",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.curriculum_grade.display_name} - "
+            f"{self.code}"
+        )
+
+class CBCSubStrandAssessment(models.Model):
+    """
+    Stores a learner's CBC assessment at Sub-Strand level.
+
+    Teachers enter the learner's mark against the Sub-Strand.
+    The system determines the applicable CBC performance level
+    and points automatically.
+    """
+
+    ASSESSMENT_COMPONENT_CHOICES = [
+        ("CAT1", "CAT 1"),
+        ("MID", "Mid-Term"),
+        ("END", "End-Term"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="cbc_substrand_assessments",
+    )
+
+    submission = models.ForeignKey(
+        CBCAssessmentSubmission,
+        on_delete=models.CASCADE,
+        related_name="assessments",
+        null=True,
+        blank=True,
+    )
+
+    sub_strand = models.ForeignKey(
+        CurriculumSubStrand,
+        on_delete=models.PROTECT,
+        related_name="cbc_assessments",
+    )
+
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=1,
+        choices=[
+            ("1", "Term 1"),
+            ("2", "Term 2"),
+            ("3", "Term 3"),
+        ],
+    )
+
+    assessment_component = models.CharField(
+        max_length=10,
+        choices=ASSESSMENT_COMPONENT_CHOICES,
+    )
+    legacy_performance_level = models.CharField(
+        max_length=2,
+        blank=True,
+        editable=False,
+    )
+
+    performance_level = models.ForeignKey(
+        CBCPerformanceLevel,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assessments",
+    )
+
+    mark = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    points = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    teacher_comment = models.TextField(
+        blank=True,
+    )
+
+    entered_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="cbc_substrand_assessments_entered",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "student",
+                    "sub_strand",
+                    "academic_year",
+                    "term",
+                    "assessment_component",
+                ],
+                name="unique_cbc_substrand_assessment",
+            ),
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "student",
+                    "academic_year",
+                    "term",
+                ],
+                name="cbc_assess_student_period_idx",
+            ),
+            models.Index(
+                fields=[
+                    "sub_strand",
+                    "academic_year",
+                    "term",
+                ],
+                name="cbc_assess_substrand_idx",
+            ),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        errors = {}
+
+        # ---------------------------------------------------------
+        # 1. Basic student/class school consistency
+        # ---------------------------------------------------------
+        if self.student_id:
+            student = self.student
+
+            if not student.school_id:
+                errors["student"] = (
+                    "The student must belong to a school."
+                )
+
+            if (
+                student.school_class_id
+                and student.school_class.school_id
+                and student.school_id
+                and student.school_class.school_id
+                != student.school_id
+            ):
+                errors["student"] = (
+                    "The student's class must belong to "
+                    "the same school as the student."
+                )
+
+        # ---------------------------------------------------------
+        # 2. Find the student's academic class for this
+        #    academic year and term.
+        # ---------------------------------------------------------
+        academic_class = None
+
+        if (
+            self.student_id
+            and self.academic_year
+            and self.term
+        ):
+            enrollment = (
+                self.student.academic_enrollments
+                .filter(
+                    academic_year=self.academic_year,
+                    term=self.term,
+                )
+                .select_related(
+                    "school_class",
+                    "school_class__school",
+                )
+                .first()
+            )
+
+            if enrollment:
+                academic_class = enrollment.school_class
+
+            elif self.student.school_class_id:
+                # Compatibility with existing/legacy students
+                # that do not yet have a historical enrollment row.
+                academic_class = self.student.school_class
+
+        # ---------------------------------------------------------
+        # 3. The class must have a CBC curriculum assignment
+        #    for this academic year.
+        # ---------------------------------------------------------
+        class_curriculum = None
+
+        if academic_class:
+            class_curriculum = (
+                academic_class.curriculum_assignments
+                .filter(
+                    academic_year=self.academic_year,
+                )
+                .select_related(
+                    "curriculum_grade",
+                    "curriculum_grade__curriculum_version",
+                    "pathway",
+                )
+                .first()
+            )
+
+            if not class_curriculum:
+                errors["student"] = (
+                    "The student's class does not have a CBC "
+                    "curriculum assignment for this academic year."
+                )
+
+        # ---------------------------------------------------------
+        # 4. The assessment sub-strand must belong to the
+        #    student's assigned curriculum grade.
+        # ---------------------------------------------------------
+        if self.sub_strand_id and class_curriculum:
+            sub_strand = self.sub_strand
+
+            strand = sub_strand.strand
+            learning_area = strand.learning_area
+            curriculum_grade = class_curriculum.curriculum_grade
+
+            if (
+                learning_area.curriculum_grade_id
+                != curriculum_grade.id
+            ):
+                errors["sub_strand"] = (
+                    "The assessment sub-strand does not belong "
+                    "to the student's assigned curriculum grade."
+                )
+
+            # -----------------------------------------------------
+            # 5. Grade 10–12 pathway validation
+            # -----------------------------------------------------
+            if curriculum_grade.grade in {
+                "GRADE10",
+                "GRADE11",
+                "GRADE12",
+            }:
+                if not class_curriculum.pathway_id:
+                    errors["sub_strand"] = (
+                        "Grade 10 to Grade 12 assessments must "
+                        "have a CBC pathway."
+                    )
+
+                elif (
+                    learning_area.pathway_id
+                    != class_curriculum.pathway_id
+                ):
+                    errors["sub_strand"] = (
+                        "The assessment sub-strand does not belong "
+                        "to the student's assigned CBC pathway."
+                    )
+
+            # -----------------------------------------------------
+            # 6. PP1–Grade 9 must not use pathways
+            # -----------------------------------------------------
+            else:
+                if class_curriculum.pathway_id:
+                    errors["sub_strand"] = (
+                        "PP1 to Grade 9 assessments must not "
+                        "use CBC pathways."
+                    )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return (
+            f"{self.student} - "
+            f"{self.sub_strand} - "
+            f"{self.academic_year} T{self.term} "
+            f"{self.assessment_component}"
+        )
+

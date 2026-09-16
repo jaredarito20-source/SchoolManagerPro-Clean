@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <h2>➕ Add CBC Teacher Assignment</h2>
+
+    <p>
+        Assign a teacher to a CBC learning area for a specific class and term.
+    </p>
+
+    <hr>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        {% if request.user.is_superuser %}
+
+            <label>
+                School
+            </label>
+
+            <select
+                name="school"
+                id="school"
+            >
+
+                <option value="">
+                    All Schools
+                </option>
+
+                {% for item in schools %}
+
+                    <option value="{{ item.id }}">
+                        {{ item.school_name }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+            <br><br>
+
+        {% endif %}
+
+
+        <label>
+            CBC Class
+        </label>
+
+        <select
+            name="school_class_curriculum"
+            id="school_class_curriculum"
+            required
+        >
+
+            <option value="">
+                -- Select CBC Class --
+            </option>
+
+            {% for item in class_curricula %}
+
+                <option
+                    value="{{ item.id }}"
+                    data-grade="{{ item.curriculum_grade.grade }}"
+                    data-pathway="{% if item.pathway %}{{ item.pathway.id }}{% endif %}"
+                    data-year="{{ item.academic_year }}"
+                    data-school="{{ item.school_class.school.id }}"
+                >
+
+                    {{ item.school_class.name }}
+                    —
+                    {{ item.curriculum_grade.display_name }}
+
+                    {% if item.pathway %}
+                        —
+                        {{ item.pathway.get_name_display }}
+                    {% endif %}
+
+                    —
+                    {{ item.academic_year }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+
+        <label>
+            Teacher
+        </label>
+
+        <select
+            name="teacher"
+            id="teacher"
+            required
+        >
+
+            <option value="">
+                -- Select Teacher --
+            </option>
+
+            {% for teacher in teachers %}
+
+                <option
+                    value="{{ teacher.id }}"
+                    data-school="{{ teacher.school.id }}"
+                >
+
+                    {{ teacher.user.get_full_name|default:teacher.user.username }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+
+        <label>
+            Learning Area
+        </label>
+
+        <select
+            name="learning_area"
+            id="learning_area"
+            required
+        >
+
+            <option value="">
+                -- Select Learning Area --
+            </option>
+
+            {% for area in learning_areas %}
+
+                <option
+                    value="{{ area.id }}"
+                    data-grade="{{ area.curriculum_grade.grade }}"
+                    data-pathway="{% if area.pathway %}{{ area.pathway.id }}{% endif %}"
+                >
+
+                    {{ area.name }}
+
+                    —
+                    {{ area.curriculum_grade.display_name }}
+
+                    {% if area.pathway %}
+                        —
+                        {{ area.pathway.get_name_display }}
+                    {% endif %}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+
+        <label>
+            Term
+        </label>
+
+        <select
+            name="term"
+            required
+        >
+
+            <option value="">
+                -- Select Term --
+            </option>
+
+            <option value="1">
+                Term 1
+            </option>
+
+            <option value="2">
+                Term 2
+            </option>
+
+            <option value="3">
+                Term 3
+            </option>
+
+        </select>
+
+        <br><br>
+
+
+        <button type="submit">
+            💾 Save Assignment
+        </button>
+
+        <a href="{% url 'students:cbc_teacher_assignment_list' %}">
+            Cancel
+        </a>
+
+    </form>
+
+</div>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const classSelect =
+        document.getElementById("school_class_curriculum");
+
+    const teacherSelect =
+        document.getElementById("teacher");
+
+    const learningAreaSelect =
+        document.getElementById("learning_area");
+
+
+    function filterTeachers() {
+
+        if (!classSelect.value) {
+            return;
+        }
+
+        const selectedClass =
+            classSelect.options[classSelect.selectedIndex];
+
+        const schoolId =
+            selectedClass.dataset.school;
+
+        Array.from(
+            teacherSelect.options
+        ).forEach(function (option) {
+
+            if (!option.value) {
+                option.hidden = false;
+                return;
+            }
+
+            option.hidden =
+                option.dataset.school !== schoolId;
+
+        });
+
+        teacherSelect.value = "";
+
+    }
+
+
+    function filterLearningAreas() {
+
+        if (!classSelect.value) {
+            return;
+        }
+
+        const selectedClass =
+            classSelect.options[classSelect.selectedIndex];
+
+        const grade =
+            selectedClass.dataset.grade;
+
+        const pathway =
+            selectedClass.dataset.pathway;
+
+        Array.from(
+            learningAreaSelect.options
+        ).forEach(function (option) {
+
+            if (!option.value) {
+                option.hidden = false;
+                return;
+            }
+
+            const sameGrade =
+                option.dataset.grade === grade;
+
+            const samePathway =
+                option.dataset.pathway === pathway;
+
+            option.hidden =
+                !(sameGrade && samePathway);
+
+        });
+
+        learningAreaSelect.value = "";
+
+    }
+
+
+    classSelect.addEventListener(
+        "change",
+        function () {
+
+            filterTeachers();
+            filterLearningAreas();
+
+        }
+    );
+
+});
+
+</script>
+
+{% endblock %}

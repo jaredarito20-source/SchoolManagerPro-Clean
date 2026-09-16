@@ -5,7 +5,7 @@
 <h2>Payroll - Salary Structure</h2>
 
 <p>
-    <a href="{% url 'add_salary_structure' %}">
+    <a href="{% url 'students:add_salary_structure' %}">
         <button type="button">➕ Add Salary Structure</button>
     </a>
 </p>
@@ -78,17 +78,17 @@
 
             <td>
 
-                 <a href="{% url 'print_salary_structure' salary.id %}">
+                 <a href="{% url 'students:print_salary_structure' salary.id %}">
                     🖨 Print
                 </a>
 
-                <a href="{% url 'edit_salary_structure' salary.id %}">
+                <a href="{% url 'students:edit_salary_structure' salary.id %}">
                     ✏ Edit
                 </a>
 
                 |
 
-                <a href="{% url 'delete_salary_structure' salary.id %}">
+                <a href="{% url 'students:delete_salary_structure' salary.id %}">
                     🗑 Delete
                 </a>
 

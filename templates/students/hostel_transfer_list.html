@@ -5,7 +5,7 @@
 <h2>Hostel Room Transfers</h2>
 
 <p>
-    <a href="{% url 'add_hostel_transfer' %}">
+    <a href="{% url 'students:add_hostel_transfer' %}">
         <button>🔄 Transfer Student</button>
     </a>
 </p>
@@ -42,7 +42,7 @@
 
     <td>
 
-        <a href="{% url 'print_hostel_transfer' transfer.id %}">
+        <a href="{% url 'students:print_hostel_transfer' transfer.id %}">
             🖨 Print
         </a>
 

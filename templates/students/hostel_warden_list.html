@@ -5,7 +5,7 @@
 <h2>Hostel Wardens</h2>
 
 <p>
-    <a href="{% url 'add_hostel_warden' %}">
+    <a href="{% url 'students:add_hostel_warden' %}">
         <button>➕ Add Hostel Warden</button>
     </a>
 </p>
@@ -61,19 +61,19 @@
 
         <td>
 
-            <a href="{% url 'edit_hostel_warden' warden.id %}">
+            <a href="{% url 'students:edit_hostel_warden' warden.id %}">
                 ✏ Edit
             </a>
 
             |
 
-            <a href="{% url 'delete_hostel_warden' warden.id %}">
+            <a href="{% url 'students:delete_hostel_warden' warden.id %}">
                 🗑 Delete
             </a>
 
             |
 
-            <a href="{% url 'print_hostel_warden' warden.id %}">
+            <a href="{% url 'students:print_hostel_warden' warden.id %}">
                 🖨 Print
             </a>
 

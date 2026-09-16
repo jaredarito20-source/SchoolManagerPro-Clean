@@ -1,0 +1,173 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .cbc-page {
+        max-width: 1200px;
+        margin: 25px auto;
+        padding: 0 15px;
+    }
+
+    .cbc-header {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    .class-card {
+        background: #fff;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        padding: 18px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    .class-card h3 {
+        margin-top: 0;
+    }
+
+    .assignment-list {
+        margin-top: 15px;
+    }
+
+    .assignment {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        padding: 12px;
+        border-top: 1px solid #eee;
+    }
+
+    .assignment-info {
+        flex: 1;
+    }
+
+    .assignment-info strong {
+        display: block;
+        font-size: 16px;
+    }
+
+    .assignment-info small {
+        color: #666;
+    }
+
+    .open-button {
+        display: inline-block;
+        background: #198754;
+        color: white;
+        text-decoration: none;
+        padding: 8px 15px;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+
+    .open-button:hover {
+        opacity: .9;
+    }
+
+    .empty-message {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    @media (max-width: 700px) {
+        .assignment {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+
+<div class="cbc-page">
+
+    <div class="cbc-header">
+
+        <h2>CBC Assessment</h2>
+
+        <p>
+            Select one of your assigned classes and learning areas
+            to open the Assessment Book.
+        </p>
+
+    </div>
+
+    {% if assignments %}
+
+        {% regroup assignments by school_class_curriculum.school_class as class_groups %}
+
+        {% for class_group in class_groups %}
+
+            <div class="class-card">
+
+                <h3>
+                    {{ class_group.grouper.name }}
+                </h3>
+
+                <div class="assignment-list">
+
+                    {% for assignment in class_group.list %}
+
+                        <div class="assignment">
+
+                            <div class="assignment-info">
+
+                                <strong>
+                                    {{ assignment.learning_area.name }}
+                                </strong>
+
+                                <small>
+                                    Academic Year:
+                                    {{ assignment.academic_year }}
+
+                                    &nbsp; | &nbsp;
+
+                                    Term:
+                                    {{ assignment.term }}
+                                </small>
+
+                            </div>
+
+                            <div>
+
+                                <a
+                                    href="{% url 'cbc_assessment_book' assignment.id %}"
+                                    class="open-button"
+                                >
+                                    Open Assessment Book
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="empty-message">
+
+            <h3>No CBC Assignments</h3>
+
+            <p>
+                You currently have no CBC assessment assignments.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

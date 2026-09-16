@@ -5,7 +5,7 @@
 <h2>User Management</h2>
 
 <p>
-    <a href="{% url 'add_user' %}">
+    <a href="{% url 'students:add_user' %}">
         ➕ Add User
     </a>
 </p>
@@ -54,19 +54,19 @@
 
         <td>
 
-            <a href="{% url 'edit_user' user.id %}">
+            <a href="{% url 'students:edit_user' user.id %}">
                 ✏ Edit
             </a>
 
             |
 
-            <a href="{% url 'delete_user' user.id %}">
+            <a href="{% url 'students:delete_user' user.id %}">
                 🗑 Delete
             </a>
 
             |
 
-            <a href="{% url 'reset_user_password' user.id %}">
+            <a href="{% url 'students:reset_user_password' user.id %}">
                 🔐 Reset Password
             </a>
 

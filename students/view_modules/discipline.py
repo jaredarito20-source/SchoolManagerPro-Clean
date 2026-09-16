@@ -114,7 +114,7 @@ def add_discipline_case(request):
         )
 
         return redirect(
-            "discipline_case_list"
+            "students:discipline_case_list"
         )
 
     return render(
@@ -200,7 +200,7 @@ def edit_discipline_case(request, id):
         )
 
         return redirect(
-            "discipline_case_list"
+            "students:discipline_case_list"
         )
 
     return render(
@@ -235,7 +235,7 @@ def delete_discipline_case(request, id):
         )
 
         return redirect(
-            "discipline_case_list"
+            "students:discipline_case_list"
         )
 
     return render(
@@ -442,7 +442,7 @@ def edit_discipline_category(request, id):
         )
 
         return redirect(
-            "discipline_category_list"
+            "students:discipline_category_list"
         )
 
     return render(
@@ -474,7 +474,7 @@ def delete_discipline_category(request, id):
         )
 
         return redirect(
-            "discipline_category_list"
+            "students:discipline_category_list"
         )
 
     return render(
@@ -510,7 +510,7 @@ def add_discipline_category(request):
         )
 
         return redirect(
-            "discipline_category_list",
+            "students:discipline_category_list",
         )
 
     return render(

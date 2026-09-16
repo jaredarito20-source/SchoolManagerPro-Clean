@@ -5,7 +5,7 @@
 <h2>🚗 Drivers</h2>
 
 <p>
-    <a href="{% url 'add_driver' %}">
+    <a href="{% url 'students:add_driver' %}">
         <button>➕ Add Driver</button>
     </a>
 </p>
@@ -61,16 +61,16 @@
         </td>
 
         <td>
-            <a href="{% url 'edit_driver' driver.id %}">
+            <a href="{% url 'students:edit_driver' driver.id %}">
                 ✏ Edit
             </a>
 
             |
 
-            <a href="{% url 'delete_driver' driver.id %}">
+            <a href="{% url 'students:delete_driver' driver.id %}">
                 🗑 Delete
             </a>
-            <a href="{% url 'print_driver' driver.id %}">
+            <a href="{% url 'students:print_driver' driver.id %}">
                 🖨 Print
             </a>
         </td>

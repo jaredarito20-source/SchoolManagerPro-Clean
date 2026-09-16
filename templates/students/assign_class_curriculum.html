@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Assign Curriculum</h2>
+
+<p>
+    <strong>Class:</strong> {{ school_class.name }}
+</p>
+
+<p>
+    <strong>School:</strong> {{ school_class.school.name }}
+</p>
+
+{% if assignments %}
+
+<h3>Existing Curriculum Assignments</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Academic Year</th>
+            <th>Curriculum</th>
+            <th>Grade</th>
+            <th>Pathway</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        {% for assignment in assignments %}
+
+        <tr>
+            <td>{{ assignment.academic_year }}</td>
+
+            <td>
+                {{ assignment.curriculum_version.name }}
+            </td>
+
+            <td>
+                {{ assignment.curriculum_grade.display_name }}
+            </td>
+
+            <td>
+                {% if assignment.pathway %}
+                    {{ assignment.pathway.get_name_display }}
+                {% else %}
+                    Not applicable
+                {% endif %}
+            </td>
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+</table>
+
+<br>
+
+{% endif %}
+
+<h3>Assign / Update Curriculum</h3>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <label>Academic Year</label><br>
+
+    <input
+        type="text"
+        name="academic_year"
+        placeholder="Example: 2026"
+        required
+    >
+
+    <br><br>
+
+    <label>Curriculum Version</label><br>
+
+    <select name="curriculum_version" required>
+
+        <option value="">
+            -- Select Curriculum Version --
+        </option>
+
+        {% for version in curriculum_versions %}
+
+        <option value="{{ version.id }}">
+            {{ version.name }} - {{ version.academic_year }}
+        </option>
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Curriculum Grade</label><br>
+
+    <select name="curriculum_grade" required>
+
+        <option value="">
+            -- Select Curriculum Grade --
+        </option>
+
+        {% for version in curriculum_versions %}
+
+            {% for grade in version.grades.all %}
+
+            <option value="{{ grade.id }}">
+                {{ grade.display_name }}
+            </option>
+
+            {% endfor %}
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Pathway</label><br>
+
+    <select name="pathway">
+
+        <option value="">
+            -- Not Applicable --
+        </option>
+
+        {% for version in curriculum_versions %}
+
+            {% for grade in version.grades.all %}
+
+                {% for pathway in grade.pathways.all %}
+
+                <option value="{{ pathway.id }}">
+                    {{ grade.display_name }} -
+                    {{ pathway.get_name_display }}
+                </option>
+
+                {% endfor %}
+
+            {% endfor %}
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <button type="submit">
+        Save Curriculum
+    </button>
+
+    <a href="{% url 'students:class_list' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

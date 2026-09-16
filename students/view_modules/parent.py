@@ -717,7 +717,7 @@ def add_homework(request):
             "Homework added successfully."
         )
 
-        return redirect("homework_list")
+        return redirect("students:homework_list")
 
     return render(
         request,
@@ -842,7 +842,7 @@ def edit_homework(request, pk):
             "Homework updated successfully."
         )
 
-        return redirect("homework_list")
+        return redirect("students:homework_list")
 
     return render(
         request,
@@ -882,7 +882,7 @@ def delete_homework(request, pk):
             "Homework deleted successfully."
         )
 
-        return redirect("homework_list")
+        return redirect("students:homework_list")
 
     return render(
         request,
@@ -1077,7 +1077,7 @@ def homework_submissions(request, homework_id):
                 request,
                 "You are not allowed to view these submissions."
             )
-            return redirect("homework_list")
+            return redirect("students:homework_list")
 
     submissions = HomeworkSubmission.objects.filter(
         homework=homework,
@@ -1141,7 +1141,7 @@ def mark_homework(request, submission_id):
                 request,
                 "Teacher profile not found."
             )
-            return redirect("homework_list")
+            return redirect("students:homework_list")
 
         if submission.homework.teacher_id != teacher.id:
             messages.error(

@@ -4,7 +4,7 @@
 
 <h1>Classes</h1>
 
-<a href="{% url 'add_class' %}" class="btn">
+<a href="{% url 'students:add_class' %}" class="btn">
     ➕ Add Class
 </a>
 
@@ -63,13 +63,18 @@
 
             <!-- Actions -->
             <td>
-                <a href="{% url 'edit_class' school_class.id %}">
+                <a href="{% url 'students:assign_class_curriculum' school_class.id %}">
+                    📚 Curriculum
+                </a>
+                |
+
+                <a href="{% url 'students:edit_class' school_class.id %}">
                     ✏ Edit
                 </a>
 
                 |
 
-                <a href="{% url 'delete_class' school_class.id %}">
+                <a href="{% url 'students:delete_class' school_class.id %}">
                     🗑 Delete
                 </a>
             </td>

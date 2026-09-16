@@ -4,7 +4,7 @@
 
 <h1>Subjects</h1>
 
-<a href="{% url 'add_subject' %}">
+<a href="{% url 'students:add_subject' %}">
     ➕ Add Subject
 </a>
 
@@ -60,13 +60,13 @@
             </td>
 
             <td>
-                <a href="{% url 'edit_subject' subject.id %}">
+                <a href="{% url 'students:edit_subject' subject.id %}">
                     ✏ Edit
                 </a>
 
                 |
 
-                <a href="{% url 'delete_subject' subject.id %}">
+                <a href="{% url 'students:delete_subject' subject.id %}">
                     🗑 Delete
                 </a>
             </td>

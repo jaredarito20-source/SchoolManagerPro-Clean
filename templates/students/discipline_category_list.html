@@ -5,7 +5,7 @@
 <h2>Discipline Categories</h2>
 
 <p>
-    <a href="{% url 'add_discipline_category' %}">
+    <a href="{% url 'students:add_discipline_category' %}">
         <button>➕ Add Category</button>
     </a>
 </p>
@@ -44,13 +44,13 @@
 
         <td>
 
-            <a href="{% url 'edit_discipline_category' category.id %}">
+            <a href="{% url 'students:edit_discipline_category' category.id %}">
                 ✏ Edit
             </a>
 
             |
 
-            <a href="{% url 'delete_discipline_category' category.id %}">
+            <a href="{% url 'students:delete_discipline_category' category.id %}">
                 🗑 Delete
             </a>
 

@@ -5,7 +5,7 @@
 <h2>School Vehicles</h2>
 
 <p>
-    <a href="{% url 'add_vehicle' %}">
+    <a href="{% url 'students:add_vehicle' %}">
         <button type="button">➕ Add Vehicle</button>
     </a>
 </p>
@@ -55,20 +55,20 @@
 
         <td>
 
-            <a href="{% url 'print_vehicle' vehicle.id %}">
+            <a href="{% url 'students:print_vehicle' vehicle.id %}">
                 🖨 Print
             </a>
 
             |
 
-            <a href="{% url 'edit_vehicle' vehicle.id %}">
+            <a href="{% url 'students:edit_vehicle' vehicle.id %}">
                 ✏ Edit
             </a>
 
             |
 
             <a
-                href="{% url 'delete_vehicle' vehicle.id %}"
+                href="{% url 'students:delete_vehicle' vehicle.id %}"
                 onclick="return confirm('Delete this vehicle?');"
             >
                 🗑 Delete

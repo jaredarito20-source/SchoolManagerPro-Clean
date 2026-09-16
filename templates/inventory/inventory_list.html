@@ -6,7 +6,7 @@
 
 <p>
 
-    <a href="{% url 'add_inventory_item' %}">
+    <a href="{% url 'students:add_inventory_item' %}">
         ➕ Add Inventory Item
     </a>
 
@@ -62,24 +62,24 @@
 
             
 
-            <a href="{% url 'delete_inventory_item' item.id %}">
+            <a href="{% url 'students:delete_inventory_item' item.id %}">
                 🗑 Delete
             </a>
 
             |
 
-            <a href="{% url 'receive_stock' item.id %}">
+            <a href="{% url 'students:receive_stock' item.id %}">
                 📥 Receive
             </a>
             
             |
 
-            <a href="{% url 'issue_stock' item.id %}">
+            <a href="{% url 'students:issue_stock' item.id %}">
                 📤 Issue
             </a>
         
             |
-            <a href="{% url 'edit_inventory_item' item.id %}">
+            <a href="{% url 'students:edit_inventory_item' item.id %}">
                 ✏ Edit
             </a>
            

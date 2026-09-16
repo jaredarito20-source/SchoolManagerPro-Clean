@@ -1,0 +1,965 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .cbc-page {
+        max-width: 1400px;
+        margin: 25px auto;
+        padding: 0 15px;
+    }
+
+    .cbc-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .cbc-header h2 {
+        margin: 0 0 15px;
+    }
+
+    .details {
+        display: grid;
+        grid-template-columns: repeat(
+            auto-fit,
+            minmax(180px, 1fr)
+        );
+        gap: 10px;
+    }
+
+    .detail-box {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 6px;
+    }
+
+    .detail-box strong {
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .filters {
+        display: grid;
+        grid-template-columns:
+            repeat(auto-fit, minmax(220px, 1fr));
+        gap: 15px;
+    }
+
+    .filter-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .filter-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background: #fff;
+        box-sizing: border-box;
+    }
+
+    .substrand-header {
+        border-left: 5px solid #198754;
+        padding-left: 15px;
+        margin-bottom: 20px;
+    }
+
+    .substrand-header h3 {
+        margin: 0 0 5px;
+    }
+
+    .substrand-header p {
+        margin: 4px 0;
+        color: #666;
+    }
+
+    .assessment-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .assessment-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 850px;
+    }
+
+    .assessment-table th,
+    .assessment-table td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        vertical-align: middle;
+    }
+
+    .assessment-table th {
+        background: #f1f3f5;
+        text-align: left;
+    }
+
+    .number-column {
+        width: 50px;
+        text-align: center !important;
+    }
+
+    .admission-column {
+        width: 130px;
+    }
+
+    .student-column {
+        min-width: 220px;
+    }
+
+    .mark-column {
+        width: 130px;
+        text-align: center !important;
+    }
+
+    .level-column {
+        width: 150px;
+        text-align: center !important;
+    }
+
+    .points-column {
+        width: 100px;
+        text-align: center !important;
+    }
+
+    .comment-column {
+        min-width: 220px;
+    }
+
+    .student-name {
+        font-weight: 600;
+    }
+
+    .mark-input {
+        width: 90px;
+        padding: 9px;
+        border: 1px solid #bbb;
+        border-radius: 5px;
+        text-align: center;
+        font-size: 15px;
+    }
+
+    .mark-input:focus {
+        outline: none;
+        border-color: #198754;
+        box-shadow:
+            0 0 0 2px rgba(25, 135, 84, .12);
+    }
+
+    .comment-input {
+        width: 100%;
+        min-height: 38px;
+        padding: 8px;
+        border: 1px solid #bbb;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    .current-level {
+        font-weight: 600;
+    }
+
+    .current-points {
+        font-weight: 600;
+    }
+
+    .save-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .save-info {
+        color: #666;
+    }
+
+    .save-button {
+        border: none;
+        padding: 12px 25px;
+        border-radius: 6px;
+        background: #198754;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .save-button:hover {
+        opacity: .9;
+    }
+
+    .navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+
+    .nav-button {
+        display: inline-block;
+        padding: 9px 15px;
+        border-radius: 6px;
+        background: #6c757d;
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .nav-button:hover {
+        opacity: .9;
+    }
+
+    .nav-disabled {
+        visibility: hidden;
+    }
+
+    .messages {
+        margin-bottom: 15px;
+    }
+
+    .message {
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+    }
+
+    .message.success {
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+
+    .message.error {
+        background: #f8d7da;
+        color: #842029;
+    }
+
+    .legend {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 15px;
+    }
+
+    .legend-item {
+        background: #f8f9fa;
+        padding: 7px 10px;
+        border-radius: 5px;
+        font-size: 13px;
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 30px;
+        color: #666;
+    }
+</style>
+
+
+<div class="cbc-page">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="cbc-card cbc-header">
+
+        <h2>
+            CBC Assessment Book
+        </h2>
+
+        <div class="details">
+
+            <div class="detail-box">
+                <strong>Class</strong>
+                {{ school_class.name }}
+            </div>
+
+            <div class="detail-box">
+                <strong>Grade</strong>
+                {{ curriculum.curriculum_grade.display_name }}
+            </div>
+
+            <div class="detail-box">
+                <strong>Pathway</strong>
+
+                {% if curriculum.pathway %}
+                    {{ curriculum.pathway.get_name_display }}
+                {% else %}
+                    —
+                {% endif %}
+            </div>
+
+            <div class="detail-box">
+                <strong>Academic Year</strong>
+                {{ academic_year }}
+            </div>
+
+            <div class="detail-box">
+                <strong>Term</strong>
+                {{ term }}
+            </div>
+
+            <div class="detail-box">
+                <strong>Learning Area</strong>
+                {{ learning_area.name }}
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MESSAGES
+    ====================================================== -->
+
+    {% if messages %}
+
+        <div class="messages">
+
+            {% for message in messages %}
+
+                <div class="message {{ message.tags }}">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         FILTERS
+    ====================================================== -->
+
+    <div class="cbc-card">
+
+        <div class="filters">
+
+            <!-- CLASS -->
+
+            <div class="filter-group">
+
+                <form method="get">
+
+                    <label for="class_id">
+                        Class
+                    </label>
+
+                    <select
+                        name="class_id"
+                        id="class_id"
+                        onchange="this.form.submit()"
+                    >
+
+                        {% for class in authorized_classes %}
+
+                            <option
+                                value="{{ class.id }}"
+                                {% if selected_class.id == class.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ class.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <input
+                        type="hidden"
+                        name="assessment_component"
+                        value="{{ assessment_component }}"
+                    >
+
+                    {% if selected_strand %}
+
+                        <input
+                            type="hidden"
+                            name="strand_id"
+                            value="{{ selected_strand.id }}"
+                        >
+
+                    {% endif %}
+
+                    {% if selected_sub_strand %}
+
+                        <input
+                            type="hidden"
+                            name="sub_strand_id"
+                            value="{{ selected_sub_strand.id }}"
+                        >
+
+                    {% endif %}
+
+                </form>
+
+            </div>
+
+
+            <!-- ASSESSMENT -->
+
+            <div class="filter-group">
+
+                <form method="get">
+
+                    <label for="assessment_component">
+                        Assessment
+                    </label>
+
+                    <select
+                        name="assessment_component"
+                        id="assessment_component"
+                        onchange="this.form.submit()"
+                    >
+
+                        {% for value, label in components %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if assessment_component == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <input
+                        type="hidden"
+                        name="class_id"
+                        value="{{ selected_class.id }}"
+                    >
+
+                    {% if selected_strand %}
+
+                        <input
+                            type="hidden"
+                            name="strand_id"
+                            value="{{ selected_strand.id }}"
+                        >
+
+                    {% endif %}
+
+                    {% if selected_sub_strand %}
+
+                        <input
+                            type="hidden"
+                            name="sub_strand_id"
+                            value="{{ selected_sub_strand.id }}"
+                        >
+
+                    {% endif %}
+
+                </form>
+
+            </div>
+
+
+            <!-- STRAND -->
+
+            <div class="filter-group">
+
+                <form method="get">
+
+                    <label for="strand_id">
+                        Strand
+                    </label>
+
+                    <select
+                        name="strand_id"
+                        id="strand_id"
+                        onchange="this.form.submit()"
+                    >
+
+                        {% for strand in strands %}
+
+                            <option
+                                value="{{ strand.id }}"
+                                {% if selected_strand.id == strand.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ strand.order }}.
+                                {{ strand.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <input
+                        type="hidden"
+                        name="class_id"
+                        value="{{ selected_class.id }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="assessment_component"
+                        value="{{ assessment_component }}"
+                    >
+
+                </form>
+
+            </div>
+
+
+            <!-- SUB-STRAND -->
+
+            <div class="filter-group">
+
+                <form method="get">
+
+                    <label for="sub_strand_id">
+                        Sub-Strand
+                    </label>
+
+                    <select
+                        name="sub_strand_id"
+                        id="sub_strand_id"
+                        onchange="this.form.submit()"
+                    >
+
+                        {% for sub_strand in sub_strands %}
+
+                            <option
+                                value="{{ sub_strand.id }}"
+                                {% if selected_sub_strand.id == sub_strand.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ sub_strand.order }}.
+                                {{ sub_strand.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <input
+                        type="hidden"
+                        name="class_id"
+                        value="{{ selected_class.id }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="strand_id"
+                        value="{{ selected_strand.id }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="assessment_component"
+                        value="{{ assessment_component }}"
+                    >
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SELECTED SUB-STRAND
+    ====================================================== -->
+
+    {% if selected_sub_strand %}
+
+        <div class="cbc-card">
+
+            <div class="substrand-header">
+
+                <h3>
+                    {{ selected_sub_strand.name }}
+                </h3>
+
+                <p>
+                    <strong>Learning Area:</strong>
+                    {{ learning_area.name }}
+                </p>
+
+                <p>
+                    <strong>Strand:</strong>
+                    {{ selected_strand.name }}
+                </p>
+
+                <p>
+                    <strong>Assessment:</strong>
+                    {{ assessment_component }}
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                 CLASS LIST
+            ================================================== -->
+
+            {% if students %}
+
+                <form method="post">
+
+                    {% csrf_token %}
+
+                    <input
+                        type="hidden"
+                        name="class_id"
+                        value="{{ selected_class.id }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="strand_id"
+                        value="{{ selected_strand.id }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="sub_strand_id"
+                        value="{{ selected_sub_strand.id }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="assessment_component"
+                        value="{{ assessment_component }}"
+                    >
+
+
+                    <div class="assessment-table-wrapper">
+
+                        <table class="assessment-table">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th class="number-column">
+                                        #
+                                    </th>
+
+                                    <th class="admission-column">
+                                        Admission No.
+                                    </th>
+
+                                    <th class="student-column">
+                                        Student
+                                    </th>
+
+                                    <th class="mark-column">
+                                        Mark
+                                    </th>
+
+                                    <th class="level-column">
+                                        Performance Level
+                                    </th>
+
+                                    <th class="points-column">
+                                        Points
+                                    </th>
+
+                                    <th class="comment-column">
+                                        Teacher Comment
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody>
+
+                                {% for row in student_rows %}
+
+                                    <tr>
+
+                                        <td class="number-column">
+                                            {{ row.number }}
+                                        </td>
+
+
+                                        <td>
+                                            {{ row.student.admission_number }}
+                                        </td>
+
+
+                                        <td>
+
+                                            <span class="student-name">
+
+                                                {{ row.student.first_name }}
+                                                {{ row.student.last_name }}
+
+                                            </span>
+
+                                        </td>
+
+
+                                        <td class="mark-column">
+
+                                            <input
+                                                type="number"
+                                                class="mark-input"
+                                                name="mark_{{ row.student.id }}"
+                                                min="0"
+                                                max="100"
+                                                step="0.01"
+                                                inputmode="decimal"
+                                                placeholder="Mark"
+                                                value="{% if row.record and row.record.mark != None %}{{ row.record.mark }}{% endif %}"
+                                                autocomplete="off"
+                                            >
+
+                                        </td>
+
+
+                                        <td class="level-column">
+
+                                            {% if row.record and row.record.performance_level %}
+
+                                                <span class="current-level">
+
+                                                    {{ row.record.performance_level.code }}
+
+                                                </span>
+
+                                            {% elif row.record and row.record.mark == 0 %}
+
+                                                —
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <td class="points-column">
+
+                                            {% if row.record and row.record.points != None %}
+
+                                                <span class="current-points">
+
+                                                    {{ row.record.points }}
+
+                                                </span>
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <input
+                                                type="text"
+                                                class="comment-input"
+                                                name="comment_{{ row.student.id }}"
+                                                value="{% if row.record %}{{ row.record.teacher_comment }}{% endif %}"
+                                                placeholder="Optional comment"
+                                            >
+
+                                        </td>
+
+                                    </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         LEGEND
+                    ================================================== -->
+
+                    {% if performance_levels %}
+
+                        <div class="legend">
+
+                            {% for level in performance_levels %}
+
+                                <div class="legend-item">
+
+                                    <strong>
+                                        {{ level.code }}
+                                    </strong>
+
+                                    :
+                                    {{ level.minimum_mark }}
+                                    –
+                                    {{ level.maximum_mark }}
+
+                                    =
+                                    {{ level.points }}
+                                    pts
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         SAVE
+                    ================================================== -->
+
+                    <div class="cbc-card save-section">
+
+                        <div class="save-info">
+
+                            <strong>
+                                {{ students|length }}
+                            </strong>
+
+                            students
+
+                            &nbsp;·&nbsp;
+
+                            Marks are entered manually.
+
+                            Performance level and points
+                            are calculated automatically.
+
+                        </div>
+
+
+                        <button
+                            type="submit"
+                            class="save-button"
+                        >
+                            Save Assessment
+                        </button>
+
+                    </div>
+
+                </form>
+
+
+                <!-- =================================================
+                     SUB-STRAND NAVIGATION
+                ================================================== -->
+
+                <div class="navigation">
+
+                    {% if previous_sub_strand %}
+
+                        <a
+                            class="nav-button"
+                            href="?class_id={{ selected_class.id }}&strand_id={{ selected_strand.id }}&sub_strand_id={{ previous_sub_strand.id }}&assessment_component={{ assessment_component }}"
+                        >
+                            ← Previous Sub-Strand
+                        </a>
+
+                    {% else %}
+
+                        <span class="nav-button nav-disabled">
+                            ← Previous Sub-Strand
+                        </span>
+
+                    {% endif %}
+
+
+                    <strong>
+
+                        Sub-Strand
+                        {{ selected_sub_strand.order }}
+                        of
+                        {{ sub_strands|length }}
+
+                    </strong>
+
+
+                    {% if next_sub_strand %}
+
+                        <a
+                            class="nav-button"
+                            href="?class_id={{ selected_class.id }}&strand_id={{ selected_strand.id }}&sub_strand_id={{ next_sub_strand.id }}&assessment_component={{ assessment_component }}"
+                        >
+                            Next Sub-Strand →
+                        </a>
+
+                    {% else %}
+
+                        <span class="nav-button nav-disabled">
+                            Next Sub-Strand →
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+
+            {% else %}
+
+                <div class="empty-message">
+
+                    <h3>
+                        No Learners Found
+                    </h3>
+
+                    <p>
+                        There are no learners registered
+                        in this class.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+
+        </div>
+
+
+    {% else %}
+
+        <div class="cbc-card empty-message">
+
+            <h3>
+                No Sub-Strand Selected
+            </h3>
+
+            <p>
+                Select a sub-strand to begin entering
+                the class assessment.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

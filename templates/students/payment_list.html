@@ -5,7 +5,7 @@
 <h2>Fee Payments</h2>
 
 <p>
-    <a href="{% url 'add_fee_payment' %}">
+    <a href="{% url 'students:add_fee_payment' %}">
         💰 Receive Payment
     </a>
 </p>
@@ -34,13 +34,13 @@
 
         <td>
 
-            <a href="{% url 'print_receipt' payment.id %}" target="_blank">
+            <a href="{% url 'students:print_receipt' payment.id %}" target="_blank">
                 🖨 Print Receipt
             </a>
 
             |
 
-            <a href="{% url 'fee_statement' payment.student.id %}">
+            <a href="{% url 'students:fee_statement' payment.student.id %}">
                 📄 Fee Statement
             </a>
 

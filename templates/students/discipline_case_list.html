@@ -6,7 +6,7 @@
 
 <p>
 
-<a href="{% url 'add_discipline_case' %}">
+<a href="{% url 'students:add_discipline_case' %}">
     <button>➕ Add Discipline Case</button>
 </a>
 
@@ -54,19 +54,19 @@
 
 <td>
 
-<a href="{% url 'edit_discipline_case' case.id %}">
+<a href="{% url 'students:edit_discipline_case' case.id %}">
 ✏ Edit
 </a>
 
 |
 
-<a href="{% url 'delete_discipline_case' case.id %}">
+<a href="{% url 'students:delete_discipline_case' case.id %}">
 🗑 Delete
 </a>
 
 |
 
-<a href="{% url 'print_discipline_case' case.id %}">
+<a href="{% url 'students:print_discipline_case' case.id %}">
 🖨 Print
 </a>
 

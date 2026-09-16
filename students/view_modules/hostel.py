@@ -52,19 +52,88 @@ def hostel_block_list(request):
     )
 
 
+
 @login_required
 @admin_or_bursar
 def add_hostel_block(request):
 
-    school = request.user.school_user.school
+    school_user = getattr(
+        request.user,
+        "school_user",
+        None,
+    )
+
+    if not school_user:
+
+        messages.error(
+            request,
+            "Your account is not linked to a school."
+        )
+
+        return redirect("home")
+
+    school = school_user.school
 
     if request.method == "POST":
 
+        name = request.POST.get(
+            "name",
+            ""
+        ).strip()
+
+        description = request.POST.get(
+            "description",
+            ""
+        ).strip()
+
+        capacity = request.POST.get(
+            "capacity"
+        ) or 0
+
+        # -----------------------------------------
+        # VALIDATE NAME
+        # -----------------------------------------
+
+        if not name:
+
+            messages.error(
+                request,
+                "Please enter the hostel block name."
+            )
+
+            return render(
+                request,
+                "students/add_hostel_block.html",
+            )
+
+        # -----------------------------------------
+        # PREVENT DUPLICATE BLOCK
+        # -----------------------------------------
+
+        if HostelBlock.objects.filter(
+            school=school,
+            name__iexact=name,
+        ).exists():
+
+            messages.error(
+                request,
+                f"A hostel block named '{name}' already exists."
+            )
+
+            return render(
+                request,
+                "students/add_hostel_block.html",
+            )
+
+        # -----------------------------------------
+        # CREATE BLOCK
+        # -----------------------------------------
+
         HostelBlock.objects.create(
             school=school,
-            name=request.POST["name"],
-            description=request.POST.get("description", ""),
-            is_active="active" in request.POST,
+            name=name,
+            description=description,
+            capacity=capacity,
         )
 
         messages.success(
@@ -72,7 +141,9 @@ def add_hostel_block(request):
             "Hostel block added successfully."
         )
 
-        return redirect("hostel_block_list")
+        return redirect(
+            "students:hostel_block_list"
+        )
 
     return render(
         request,
@@ -80,11 +151,28 @@ def add_hostel_block(request):
     )
 
 
+
+
 @login_required
 @admin_or_bursar
 def edit_hostel_block(request, id):
 
-    school = request.user.school_user.school
+    school_user = getattr(
+        request.user,
+        "school_user",
+        None,
+    )
+
+    if not school_user:
+
+        messages.error(
+            request,
+            "Your account is not linked to a school."
+        )
+
+        return redirect("home")
+
+    school = school_user.school
 
     block = get_object_or_404(
         HostelBlock,
@@ -94,12 +182,70 @@ def edit_hostel_block(request, id):
 
     if request.method == "POST":
 
-        block.name = request.POST["name"]
-        block.description = request.POST.get(
+        name = request.POST.get(
+            "name",
+            "",
+        ).strip()
+
+        description = request.POST.get(
             "description",
             "",
-        )
-        block.active = "active" in request.POST
+        ).strip()
+
+        capacity = request.POST.get(
+            "capacity"
+        ) or 0
+
+        # -----------------------------------------
+        # VALIDATE NAME
+        # -----------------------------------------
+
+        if not name:
+
+            messages.error(
+                request,
+                "Please enter the hostel block name."
+            )
+
+            return render(
+                request,
+                "students/edit_hostel_block.html",
+                {"block": block},
+            )
+
+        # -----------------------------------------
+        # PREVENT DUPLICATE BLOCK NAME
+        # -----------------------------------------
+
+        duplicate = HostelBlock.objects.filter(
+            school=school,
+            name__iexact=name,
+        ).exclude(
+            id=block.id,
+        ).exists()
+
+        if duplicate:
+
+            messages.error(
+                request,
+                f"A hostel block named '{name}' already exists."
+            )
+
+            return render(
+                request,
+                "students/edit_hostel_block.html",
+                {"block": block},
+            )
+
+        # -----------------------------------------
+        # UPDATE BLOCK
+        # -----------------------------------------
+
+        block.name = name
+
+        block.description = description
+
+        block.capacity = capacity
 
         block.save()
 
@@ -108,13 +254,18 @@ def edit_hostel_block(request, id):
             "Hostel block updated successfully."
         )
 
-        return redirect("hostel_block_list")
+        return redirect(
+            "students:hostel_block_list"
+        )
 
     return render(
         request,
         "students/edit_hostel_block.html",
-        {"block": block},
+        {
+            "block": block,
+        },
     )
+
 
 
 @login_required
@@ -138,7 +289,7 @@ def delete_hostel_block(request, id):
             "Hostel block deleted successfully."
         )
 
-        return redirect("hostel_block_list")
+        return redirect("students:hostel_block_list")
 
     return render(
         request,
@@ -302,7 +453,7 @@ def add_student_hostel(request):
         )
 
         return redirect(
-            "student_hostel_list"
+            "students:student_hostel_list"
         )
 
     return render(
@@ -398,7 +549,7 @@ def edit_student_hostel(request, id):
         )
 
         return redirect(
-            "student_hostel_list"
+            "students:student_hostel_list"
         )
 
     return render(
@@ -439,7 +590,7 @@ def delete_student_hostel(request, id):
         )
 
         return redirect(
-            "student_hostel_list"
+            "students:student_hostel_list"
         )
 
     return render(
@@ -598,7 +749,7 @@ def add_hostel_warden(request):
 
     hostel_blocks = HostelBlock.objects.filter(
         school=school,
-        is_active=True,
+        
     )
 
     if request.method == "POST":
@@ -633,7 +784,7 @@ def add_hostel_warden(request):
             "Hostel warden added successfully.",
         )
 
-        return redirect("hostel_warden_list")
+        return redirect("students:hostel_warden_list")
 
     return render(
         request,
@@ -656,7 +807,7 @@ def edit_hostel_warden(request, id):
 
     hostel_blocks = HostelBlock.objects.filter(
         school=school,
-        is_active=True,
+        
     )
 
     if request.method == "POST":
@@ -683,7 +834,7 @@ def edit_hostel_warden(request, id):
             "Hostel warden updated successfully.",
         )
 
-        return redirect("hostel_warden_list")
+        return redirect("students:hostel_warden_list")
 
     return render(
         request,
@@ -714,7 +865,7 @@ def delete_hostel_warden(request, id):
             "Hostel warden deleted successfully.",
         )
 
-        return redirect("hostel_warden_list")
+        return redirect("students:hostel_warden_list")
 
     return render(
         request,
@@ -947,7 +1098,7 @@ def add_hostel_transfer(request):
         )
 
         return redirect(
-            "hostel_transfer_list"
+            "students:hostel_transfer_list"
         )
 
     return render(
@@ -1086,7 +1237,7 @@ def add_hostel_room(request):
 
     blocks = HostelBlock.objects.filter(
         school=school,
-        is_active=True,
+        
     )
 
     if request.method == "POST":
@@ -1095,7 +1246,7 @@ def add_hostel_room(request):
             HostelBlock,
             id=request.POST["block"],
             school=school,
-            is_active=True,
+            
         )
 
         room = HostelRoom.objects.create(
@@ -1120,7 +1271,7 @@ def add_hostel_room(request):
             f"{room.capacity} beds."
         )
 
-        return redirect("hostel_room_list")
+        return redirect("students:hostel_room_list")
 
     return render(
         request,
@@ -1144,7 +1295,7 @@ def edit_hostel_room(request, id):
 
     blocks = HostelBlock.objects.filter(
         school=school,
-        is_active=True,
+        
     )
 
     if request.method == "POST":
@@ -1219,7 +1370,7 @@ def edit_hostel_room(request, id):
         )
 
         return redirect(
-            "hostel_room_list"
+            "students:hostel_room_list"
         )
 
     return render(
@@ -1253,7 +1404,7 @@ def delete_hostel_room(request, id):
             "Hostel room deleted successfully."
         )
 
-        return redirect("hostel_room_list")
+        return redirect("students:hostel_room_list")
 
     return render(
         request,
@@ -1505,7 +1656,7 @@ def hostel_occupancy_report(request):
 
     blocks = HostelBlock.objects.filter(
         school=school,
-        is_active=True,
+
     )
 
     selected_block = None
@@ -1896,7 +2047,7 @@ def add_hostel_bed(request):
         )
 
         return redirect(
-            "hostel_bed_list"
+            "students:hostel_bed_list"
         )
 
     return render(
@@ -2003,7 +2154,7 @@ def edit_hostel_bed(request, id):
         )
 
         return redirect(
-            "hostel_bed_list"
+            "students:hostel_bed_list"
         )
 
     return render(
@@ -2038,7 +2189,7 @@ def delete_hostel_bed(request, id):
             )
 
             return redirect(
-                "hostel_bed_list"
+                "students:hostel_bed_list"
             )
 
         bed.delete()
@@ -2049,7 +2200,7 @@ def delete_hostel_bed(request, id):
         )
 
         return redirect(
-            "hostel_bed_list"
+            "students:hostel_bed_list"
         )
 
     return render(
@@ -2093,7 +2244,7 @@ def generate_hostel_beds(request, id):
         f"{created} bed(s) generated successfully."
     )
 
-    return redirect("hostel_room_list")
+    return redirect("students:hostel_room_list")
 @login_required
 @admin_or_bursar
 def print_hostel_bed(request, id):

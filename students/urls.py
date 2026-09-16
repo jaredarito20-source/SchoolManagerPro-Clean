@@ -1,9 +1,15 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
+app_name = "students"
 from .view_modules.sms import sms_dashboard
 from .view_modules.sms_admin import sms_add_credits
 from .view_modules.sms_admin import sms_packages
 from .view_modules.mpesa import mpesa_stk_push
+from .view_modules.cbc_assessment import (
+    cbc_my_classes,
+    cbc_learning_areas,
+    cbc_assessment_book,
+)
 from . import views
 from students.view_modules.administration import register_school
 from .view_modules.administration import assign_student_parent
@@ -65,6 +71,20 @@ path('subjects/delete/<int:id>/', views.delete_subject, name='delete_subject'),
 
 path('classes/', views.class_list, name='class_list'),
 
+path(
+    'administration/cbc-teacher-assignments/',
+    views.cbc_teacher_assignment_list,
+    name='cbc_teacher_assignment_list',
+),
+
+path(
+    'administration/cbc-teacher-assignments/add/',
+    views.cbc_teacher_assignment_add,
+    name='cbc_teacher_assignment_add',
+),
+
+
+path('classes/<int:id>/curriculum/',views.assign_class_curriculum,name='assign_class_curriculum',),
 path('classes/add/', views.add_class, name='add_class'),
 
 path('classes/edit/<int:id>/', views.edit_class, name='edit_class'),
@@ -88,6 +108,28 @@ path('marks/edit/<int:id>/', views.edit_mark, name='edit_mark'),
 path('marks/delete/<int:id>/', views.delete_mark, name='delete_mark'),
 
 path('reports/student/<int:id>/', views.student_report, name='student_report'),
+
+# ============================================================
+# CBC ASSESSMENTS
+# ============================================================
+
+path(
+    "cbc/my-classes/",
+    cbc_my_classes,
+    name="cbc_my_classes",
+),
+
+path(
+    "cbc/learning-areas/<int:school_class_curriculum_id>/<str:term>/",
+    cbc_learning_areas,
+    name="cbc_learning_areas",
+),
+
+path(
+    "cbc/assessment-book/<int:assignment_id>/",
+    cbc_assessment_book,
+    name="cbc_assessment_book",
+),
 
 path('students/<int:id>/print/', views.print_report, name='print_report'),
 

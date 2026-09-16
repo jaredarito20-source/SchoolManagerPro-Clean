@@ -29,8 +29,8 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('fee_payment', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='ledger_entries', to='students.feepayment')),
                 ('recorded_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='fee_ledger_entries_recorded', to=settings.AUTH_USER_MODEL)),
-                ('school', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='fee_ledger_entries', to='students.schoolprofile')),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='fee_ledger_entries', to='students.student')),
+                ('school', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ledger_entries', to='students.schoolprofile')),
+                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ledger_entries', to='students.student')),
             ],
             options={
                 'ordering': ['transaction_date', 'id'],

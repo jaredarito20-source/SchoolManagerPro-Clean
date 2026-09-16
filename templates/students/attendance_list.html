@@ -6,19 +6,19 @@
 <h2>📋 Attendance Register</h2>
 
 <p>
-    <a href="{% url 'take_attendance' %}">
+    <a href="{% url 'students:take_attendance' %}">
         ➕ Take Attendance
     </a>
-
+d
     |
 
-    <a href="{% url 'print_attendance' %}?action=view&school_class={{ selected_class }}&date={{ selected_date }}">
+    <a href="{% url 'students:print_attendance' %}?action=view&school_class={{ selected_class }}&date={{ selected_date }}">
         🖨 Print Attendance
     </a>
 
     |
 
-    <a href="{% url 'print_attendance' %}?action=download&school_class={{ selected_class }}&date={{ selected_date }}">
+    <a href="{% url 'students:print_attendance' %}?action=download&school_class={{ selected_class }}&date={{ selected_date }}">
         📥 Download PDF
     </a>
 </p>
@@ -162,13 +162,13 @@
 
                 <td>
 
-                    <a href="{% url 'edit_attendance' attendance.id %}">
+                    <a href="{% url 'students:edit_attendance' attendance.id %}">
                         ✏ Edit
                     </a>
 
                     |
 
-                    <a href="{% url 'delete_attendance' attendance.id %}">
+                    <a href="{% url 'students:delete_attendance' attendance.id %}">
                         🗑 Delete
                     </a>
 

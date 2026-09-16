@@ -136,7 +136,7 @@ def generate_timetable(request):
                 f"{generated} lessons created."
             )
 
-        return redirect("generate_timetable")
+        return redirect("students:generate_timetable")
 
     return render(
         request,

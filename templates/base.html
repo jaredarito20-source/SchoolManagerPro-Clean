@@ -29,21 +29,21 @@
     {% else %}
         <h2>🏫 School</h2>
     {% endif %}
-    <a href="{% url 'home' %}">
+    <a href="{% url 'students:home' %}">
         🏠 Dashboard
     </a>
 
     {% if user.is_superuser %}
 
-        <a href="{% url 'school_list' %}">
+        <a href="{% url 'students:school_list' %}">
             🏫 Schools
         </a>
 
-        <a href="{% url 'add_school_profile' %}">
+        <a href="{% url 'students:add_school_profile' %}">
             🏫 Add School
         </a>
 
-        <a href="{% url 'user_list' %}">
+        <a href="{% url 'students:user_list' %}">
             👥 School Users
         </a>
     {% endif %}
@@ -58,15 +58,15 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'student_list' %}">👨‍🎓 Students</a>
-    <a href="{% url 'assign_student_parent' %}">Assign Student to Parent</a>
-    <a href="{% url 'sms_dashboard' %}">SMS</a>
-    <a href="{% url 'attendance_list' %}">📅 Attendance</a>
-    <a href="{% url 'teacher_list' %}">👩‍🏫 Teachers</a>
-    <a href="{% url 'subject_list' %}">📚 Subjects</a>
-    <a href="{% url 'class_list' %}">🏫 Classes</a>
-    <a href="{% url 'mark_list' %}">📊 Marks</a>
-    <a href="{% url 'promotion_list' %}">🎓 Student Promotion</a>
+    <a href="{% url 'students:student_list' %}">👨‍🎓 Students</a>
+    <a href="{% url 'students:assign_student_parent' %}">Assign Student to Parent</a>
+    <a href="{% url 'students:sms_dashboard' %}">SMS</a>
+    <a href="{% url 'students:attendance_list' %}">📅 Attendance</a>
+    <a href="{% url 'students:teacher_list' %}">👩‍🏫 Teachers</a>
+    <a href="{% url 'students:subject_list' %}">📚 Subjects</a>
+    <a href="{% url 'students:class_list' %}">🏫 Classes</a>
+    <a href="{% url 'students:mark_list' %}">📊 Marks</a>
+    <a href="{% url 'students:promotion_list' %}">🎓 Student Promotion</a>
 
 </div>
 
@@ -78,7 +78,7 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'generate_timetable' %}">
+    <a href="{% url 'students:generate_timetable' %}">
         ⚡ Generate Timetable
     </a>
 
@@ -93,26 +93,48 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'exam_list' %}">
+    <a href="{% url 'students:exam_list' %}">
         📝 Exams
     </a>
 
-    <a href="{% url 'add_exam' %}">
+    <a href="{% url 'students:add_exam' %}">
         ➕ Add Exam
     </a>
 
+
     
 
-    <a href="{% url 'exam_timetable_list' %}">
+    <a href="{% url 'students:exam_timetable_list' %}">
         🗓 Exam Timetable
     </a>
 
-    <a href="{% url 'class_results' %}">
+    <a href="{% url 'students:class_results' %}">
         📊 Class Results
     </a>
 
 </div>
 
+<!-- CBC Assessment -->
+
+<button class="dropdown-btn">
+    📘 CBC Assessment ▼
+</button>
+
+<div class="dropdown-container">
+
+    <a href="{% url 'students:cbc_my_classes' %}">
+        👩‍🏫 My CBC Classes
+    </a>
+    </a>
+
+    {% if request.user.is_superuser or request.user.groups.all %}
+        <a href="{% url 'students:cbc_teacher_assignment_list' %}">
+            👨‍🏫 CBC Teacher Assignments
+        </a>
+         {% endif %}
+
+
+</div>
 <!-- Homework -->
 
 <button class="dropdown-btn">
@@ -121,11 +143,11 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'homework_list' %}">
+    <a href="{% url 'students:homework_list' %}">
         📚 Homework List
     </a>
 
-    <a href="{% url 'add_homework' %}">
+    <a href="{% url 'students:add_homework' %}">
         ➕ Add Homework
     </a>
 
@@ -138,19 +160,19 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'fee_structure_list' %}">
+    <a href="{% url 'students:fee_structure_list' %}">
         💰 Fee Structure
     </a>
 
-    <a href="{% url 'fee_payment_list' %}">
+    <a href="{% url 'students:fee_payment_list' %}">
         💵 Fee Payments
     </a>
 
-    <a href="{% url 'fee_balance_list' %}">
+    <a href="{% url 'students:fee_balance_list' %}">
         📋 Fee Balances
     </a>
 
-    <a href="{% url 'finance_dashboard' %}">
+    <a href="{% url 'students:finance_dashboard' %}">
         📊 Finance Dashboard
     </a>
 
@@ -165,11 +187,11 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'salary_structure_list' %}">
+    <a href="{% url 'students:salary_structure_list' %}">
         💰 Salary Structure
     </a>
 
-    <a href="{% url 'payroll_list' %}">
+    <a href="{% url 'students:payroll_list' %}">
         🧾 Payroll Records
     </a>
 
@@ -182,19 +204,19 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'vehicle_list' %}">
+    <a href="{% url 'students:vehicle_list' %}">
         🚌 Vehicles
     </a>
 
-    <a href="{% url 'transport_route_list' %}">
+    <a href="{% url 'students:transport_route_list' %}">
         🛣 Routes
     </a>
 
-    <a href="{% url 'driver_list' %}">
+    <a href="{% url 'students:driver_list' %}">
         👨‍✈️ Drivers
     </a>
 
-    <a href="{% url 'student_transport_list' %}">
+    <a href="{% url 'students:student_transport_list' %}">
         👨‍🎓 Student Transport
     </a>
 
@@ -207,39 +229,39 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'hostel_dashboard' %}">
+    <a href="{% url 'students:hostel_dashboard' %}">
         📊 Hostel Dashboard
     </a>
 
-    <a href="{% url 'hostel_block_list' %}">
+    <a href="{% url 'students:hostel_block_list' %}">
         🏢 Hostel Blocks
     </a>
 
-    <a href="{% url 'hostel_room_list' %}">
+    <a href="{% url 'students:hostel_room_list' %}">
         🚪 Hostel Rooms
     </a>
 
-    <a href="{% url 'student_hostel_list' %}">
+    <a href="{% url 'students:student_hostel_list' %}">
         🛏 Student Allocation
     </a>
 
-    <a href="{% url 'hostel_warden_list' %}">
+    <a href="{% url 'students:hostel_warden_list' %}">
         👮 Hostel Wardens
     </a>
 
-    <a href="{% url 'hostel_transfer_list' %}">
+    <a href="{% url 'students:hostel_transfer_list' %}">
         🔄 Room Transfers
     </a>
 
-    <a href="{% url 'hostel_occupancy_report' %}">
+    <a href="{% url 'students:hostel_occupancy_report' %}">
         📊 Occupancy Report
     </a>
 
-    <a href="{% url 'hostel_bed_list' %}">
+    <a href="{% url 'students:hostel_bed_list' %}">
         🛏 Hostel Beds
     </a>
 
-    <a href="{% url 'print_hostel_dashboard' %}">
+    <a href="{% url 'students:print_hostel_dashboard' %}">
         🖨 Print Hostel Dashboard
     </a>
 
@@ -252,27 +274,27 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'discipline_dashboard' %}">
+    <a href="{% url 'students:discipline_dashboard' %}">
         📊 Discipline Dashboard
     </a>
 
-    <a href="{% url 'discipline_case_list' %}">
+    <a href="{% url 'students:discipline_case_list' %}">
         ⚖ Discipline Cases
     </a>
 
-    <a href="{% url 'add_discipline_case' %}">
+    <a href="{% url 'students:add_discipline_case' %}">
         ➕ Record New Case
     </a>
 
-    <a href="{% url 'discipline_category_list' %}">
+    <a href="{% url 'students:discipline_category_list' %}">
         📂 Discipline Categories
     </a>
 
-    <a href="{% url 'add_discipline_category' %}">
+    <a href="{% url 'students:add_discipline_category' %}">
         ➕ Add Category
     </a>
 
-    <a href="{% url 'print_discipline_dashboard' %}">
+    <a href="{% url 'students:print_discipline_dashboard' %}">
         🖨 Print Dashboard
     </a>
 
@@ -285,15 +307,15 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'inventory_category_list' %}">
+    <a href="{% url 'students:inventory_category_list' %}">
         📂 Categories
     </a>
 
-    <a href="{% url 'stock_transaction_list' %}">
+    <a href="{% url 'students:stock_transaction_list' %}">
         📋 Stock Transactions
     </a>
 
-    <a href="{% url 'inventory_list' %}">
+    <a href="{% url 'students:inventory_list' %}">
         📦 Inventory Items
     </a>
 
@@ -307,23 +329,23 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'library_list' %}">
+    <a href="{% url 'students:library_list' %}">
         📚 Books
     </a>
 
-    <a href="{% url 'borrow_book' %}">
+    <a href="{% url 'students:borrow_book' %}">
         📖 Borrow Book
     </a>
 
-    <a href="{% url 'borrow_list' %}">
+    <a href="{% url 'students:borrow_list' %}">
         📋 Borrowed Books
     </a>
 
-    <a href="{% url 'library_dashboard' %}">
+    <a href="{% url 'students:library_dashboard' %}">
         📊 Library Dashboard
     </a>
 
-    <a href="{% url 'library_reports' %}">
+    <a href="{% url 'students:library_reports' %}">
         📝 Library Reports
     </a>
 
@@ -337,8 +359,11 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'user_list' %}">
+    <a href="{% url 'students:user_list' %}">
         👥 Users
+    </a>
+    <a href="{% url 'students:admin_mark_submission_list' %}"> 
+        ✅ Submitted Marks 
     </a>
 
 </div>
@@ -354,31 +379,34 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'mark_list' %}">
+    <a href="{% url 'students:mark_list' %}">
         📊 Enter Marks
     </a>
+    <a href="{% url 'students:cbc_my_classes' %}">
+        👩‍🏫 My CBC Classes
+    </a>
 
-    <a href="{% url 'teacher_draft_submissions' %}">
+    <a href="{% url 'students:teacher_draft_submissions' %}">
         📝 My Drafts
     </a>
 
-    <a href="{% url 'exam_list' %}">
+    <a href="{% url 'students:exam_list' %}">
         📝 Exams
     </a>
 
-    <a href="{% url 'exam_timetable_list' %}">
+    <a href="{% url 'students:exam_timetable_list' %}">
         🗓 Exam Timetable
     </a>
 
-    <a href="{% url 'class_results' %}">
+    <a href="{% url 'students:class_results' %}">
         📈 Class Results
     </a>
 
-    <a href="{% url 'attendance_list' %}">
+    <a href="{% url 'students:attendance_list' %}">
         📅 Attendance
     </a>
 
-    <a href="{% url 'timetable_list' %}">
+    <a href="{% url 'students:timetable_list' %}">
         🕒 Timetable
     </a>
 
@@ -391,11 +419,11 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'homework_list' %}">
+    <a href="{% url 'students:homework_list' %}">
         📚 My Homework
     </a>
 
-    <a href="{% url 'add_homework' %}">
+    <a href="{% url 'students:add_homework' %}">
         ➕ Create Homework
     </a>
 
@@ -413,27 +441,27 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'finance_dashboard' %}">
+    <a href="{% url 'students:finance_dashboard' %}">
         📊 Finance Dashboard
     </a>
 
-    <a href="{% url 'fee_structure_list' %}">
+    <a href="{% url 'students:fee_structure_list' %}">
         💰 Fee Structure
     </a>
 
-    <a href="{% url 'fee_payment_list' %}">
+    <a href="{% url 'students:fee_payment_list' %}">
         💵 Fee Payments
     </a>
 
-    <a href="{% url 'fee_balance_list' %}">
+    <a href="{% url 'students:fee_balance_list' %}">
         📋 Fee Balances
     </a>
 
-    <a href="{% url 'salary_structure_list' %}">
+    <a href="{% url 'students:salary_structure_list' %}">
         💼 Salary Structure
     </a>
 
-    <a href="{% url 'payroll_list' %}">
+    <a href="{% url 'students:payroll_list' %}">
         🧾 Payroll Records
     </a>
 
@@ -450,33 +478,33 @@
 
 <div class="dropdown-container">
 
-    <a href="{% url 'parent_dashboard' %}">
+    <a href="{% url 'students:parent_dashboard' %}">
         🏠 Dashboard
     </a>
-    <a href="{% url 'parent_attendance' %}">
+    <a href="{% url 'students:parent_attendance' %}">
         📅 Attendance
     </a>
 
-    <a href="{% url 'parent_students' %}">
+    <a href="{% url 'students:parent_students' %}">
         👨‍🎓 My Children
     </a>
 
     
    
-    <a href="{% url 'parent_attendance' %}">
+    <a href="{% url 'students:parent_attendance' %}">
         📅 Attendance
     </a>
     {% if selected_child %}
-    <a href="{% url 'parent_fee_statement' selected_child.id %}">
+    <a href="{% url 'students:parent_fee_statement' selected_child.id %}">
         💰 Fee Statement
     </a>
 {% endif %}
 
-    <a href="{% url 'parent_fee_balance' %}">
+    <a href="{% url 'students:parent_fee_balance' %}">
         💵 Fee Balance
     </a>
 
-     <a href="{% url 'parent_homework' %}">
+     <a href="{% url 'students:parent_homework' %}">
         📚 Homework
     </a>
 

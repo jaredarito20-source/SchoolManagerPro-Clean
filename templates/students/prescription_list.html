@@ -103,7 +103,7 @@
 
     <td>
 
-        <a href="{% url 'prescription_list' %}">
+        <a href="{% url 'students:prescription_list' %}">
             <button type="button">
                 🔄 Reset
             </button>
@@ -121,25 +121,25 @@
 
 <p>
 
-<a href="{% url 'add_prescription' %}">
+<a href="{% url 'students:add_prescription' %}">
     ➕ New Prescription
 </a>
 
 &nbsp;&nbsp;
 
-<a href="{% url 'print_prescription_register' %}">
+<a href="{% url 'students:print_prescription_register' %}">
     🖨 Print Register
 </a>
 
 &nbsp;&nbsp;
 
-<a href="{% url 'medical_dashboard' %}">
+<a href="{% url 'students:medical_dashboard' %}">
     🏥 Medical Dashboard
 </a>
 
 &nbsp;&nbsp;
 
-<a href="{% url 'medication_list' %}">
+<a href="{% url 'students:medication_list' %}">
     💊 Medications
 </a>
 
@@ -212,26 +212,26 @@
 
     <td>
 
-        <a href="{% url 'view_prescription' prescription.id %}">
+        <a href="{% url 'students:view_prescription' prescription.id %}">
             👁 View
         </a>
 
         |
 
-        <a href="{% url 'edit_prescription' prescription.id %}">
+        <a href="{% url 'students:edit_prescription' prescription.id %}">
             ✏ Edit
         </a>
 
         |
 
-        <a href="{% url 'print_prescription' prescription.id %}">
+        <a href="{% url 'students:print_prescription' prescription.id %}">
             🖨 Print
         </a>
 
         |
 
         <a
-            href="{% url 'delete_prescription' prescription.id %}"
+            href="{% url 'students:delete_prescription' prescription.id %}"
             onclick="return confirm('Are you sure you want to delete this prescription?');"
         >
             🗑 Delete

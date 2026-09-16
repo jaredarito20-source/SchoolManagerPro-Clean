@@ -6,7 +6,7 @@
 
 <p>
 
-<a href="{% url 'add_medical_visit' %}">
+<a href="{% url 'students:add_medical_visit' %}">
     <button>➕ New Medical Visit</button>
 </a>
 
@@ -47,19 +47,19 @@
 
 <td>
 
-<a href="{% url 'edit_medical_visit' visit.id %}">
+<a href="{% url 'students:edit_medical_visit' visit.id %}">
 ✏ Edit
 </a>
 
 |
 
-<a href="{% url 'delete_medical_visit' visit.id %}">
+<a href="{% url 'students:delete_medical_visit' visit.id %}">
 🗑 Delete
 </a>
 
 |
 
-<a href="{% url 'print_medical_visit' visit.id %}">
+<a href="{% url 'students:print_medical_visit' visit.id %}">
 🖨 Print
 </a>
 

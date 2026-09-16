@@ -100,6 +100,32 @@
                 >
             </td>
         </tr>
+        <tr>
+            <td><strong>Curriculum System:</strong></td>
+            <td>
+                <select
+                    name="curriculum_system"
+                    class="form-control"
+                    required
+                >
+                    <option value="CBC" selected>
+                        CBC
+                    </option>
+
+                    <option value="8-4-4">
+                        8-4-4
+                    </option>
+
+                    <option value="BOTH">
+                        Both CBC &amp; 8-4-4
+                    </option>
+                </select>
+
+                <small class="text-muted">
+                    Select the curriculum system used by this school.
+                </small>
+            </td>
+        </tr>
 
         <tr>
             <td>Principal Name:</td>
@@ -194,7 +220,7 @@
         💾 Save School
     </button>
 
-    <a href="{% url 'home' %}" class="btn btn-secondary">
+    <a href="{% url 'students:home' %}" class="btn btn-secondary">
         Cancel
     </a>
 

@@ -6,234 +6,303 @@
 
 <form method="POST" enctype="multipart/form-data">
 
-    {% csrf_token %}
 
-    <table>
+{% csrf_token %}
 
-        <tr>
-            <td><label for="name">School Name</label></td>
-            <td>
-                <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value="{{ profile.name }}"
-                    required
+<table>
+
+    <tr>
+        <td><label for="name">School Name</label></td>
+        <td>
+            <input
+                type="text"
+                id="name"
+                name="name"
+                value="{{ profile.name }}"
+                required
+            >
+        </td>
+    </tr>
+
+    <tr>
+        <td><label for="motto">Motto</label></td>
+        <td>
+            <input
+                type="text"
+                id="motto"
+                name="motto"
+                value="{{ profile.motto }}"
+            >
+        </td>
+    </tr>
+
+    <tr>
+        <td><label for="address">Address</label></td>
+        <td>
+            <input
+                type="text"
+                id="address"
+                name="address"
+                value="{{ profile.address }}"
+                required
+            >
+        </td>
+    </tr>
+
+    <tr>
+        <td><label for="phone">Phone</label></td>
+        <td>
+            <input
+                type="text"
+                id="phone"
+                name="phone"
+                value="{{ profile.phone }}"
+                required
+            >
+        </td>
+    </tr>
+
+    <tr>
+        <td><label for="email">Email</label></td>
+        <td>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                value="{{ profile.email }}"
+            >
+        </td>
+    </tr>
+
+    <tr>
+        <td><label for="website">Website</label></td>
+        <td>
+            <input
+                type="text"
+                id="website"
+                name="website"
+                value="{{ profile.website }}"
+            >
+        </td>
+    </tr>
+
+    <tr>
+        <td><label for="academic_year">Academic Year</label></td>
+        <td>
+            <input
+                type="text"
+                id="academic_year"
+                name="academic_year"
+                value="{{ profile.academic_year }}"
+                required
+            >
+        </td>
+    </tr>
+
+    <!-- CURRICULUM SYSTEM -->
+    <tr>
+        <td>
+            <label for="curriculum_system">
+                Curriculum System
+            </label>
+        </td>
+
+        <td>
+            <select
+                id="curriculum_system"
+                name="curriculum_system"
+                required
+            >
+                <option
+                    value="CBC"
+                    {% if profile.curriculum_system == "CBC" %}
+                        selected
+                    {% endif %}
                 >
-            </td>
-        </tr>
+                    CBC
+                </option>
 
-        <tr>
-            <td><label for="motto">Motto</label></td>
-            <td>
-                <input
-                    type="text"
-                    id="motto"
-                    name="motto"
-                    value="{{ profile.motto }}"
+                <option
+                    value="8-4-4"
+                    {% if profile.curriculum_system == "8-4-4" %}
+                        selected
+                    {% endif %}
                 >
-            </td>
-        </tr>
+                    8-4-4
+                </option>
 
-        <tr>
-            <td><label for="address">Address</label></td>
-            <td>
-                <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value="{{ profile.address }}"
-                    required
+                <option
+                    value="BOTH"
+                    {% if profile.curriculum_system == "BOTH" %}
+                        selected
+                    {% endif %}
                 >
-            </td>
-        </tr>
+                    Both CBC &amp; 8-4-4
+                </option>
+            </select>
 
-        <tr>
-            <td><label for="phone">Phone</label></td>
-            <td>
-                <input
-                    type="text"
-                    id="phone"
-                    name="phone"
-                    value="{{ profile.phone }}"
-                    required
+            <small>
+                Select the curriculum system used by this school.
+            </small>
+        </td>
+    </tr>
+
+    <tr>
+        <td><label for="current_term">Current Term</label></td>
+
+        <td>
+            <select
+                id="current_term"
+                name="current_term"
+                required
+            >
+                <option value="">Select Term</option>
+
+                <option
+                    value="1"
+                    {% if profile.current_term == "1" %}
+                        selected
+                    {% endif %}
                 >
-            </td>
-        </tr>
+                    Term 1
+                </option>
 
-        <tr>
-            <td><label for="email">Email</label></td>
-            <td>
-                <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value="{{ profile.email }}"
+                <option
+                    value="2"
+                    {% if profile.current_term == "2" %}
+                        selected
+                    {% endif %}
                 >
-            </td>
-        </tr>
+                    Term 2
+                </option>
 
-        <tr>
-            <td><label for="website">Website</label></td>
-            <td>
-                <input
-                    type="text"
-                    id="website"
-                    name="website"
-                    value="{{ profile.website }}"
+                <option
+                    value="3"
+                    {% if profile.current_term == "3" %}
+                        selected
+                    {% endif %}
                 >
-            </td>
-        </tr>
+                    Term 3
+                </option>
+            </select>
+        </td>
+    </tr>
 
-        <tr>
-            <td><label for="academic_year">Academic Year</label></td>
-            <td>
-                <input
-                    type="text"
-                    id="academic_year"
-                    name="academic_year"
-                    value="{{ profile.academic_year }}"
-                    required
-                >
-            </td>
-        </tr>
+    <tr>
+        <td><label for="principal_name">Principal Name</label></td>
+        <td>
+            <input
+                type="text"
+                id="principal_name"
+                name="principal_name"
+                value="{{ profile.principal_name }}"
+            >
+        </td>
+    </tr>
 
-        <tr>
-            <td><label for="current_term">Current Term</label></td>
-            <td>
-                <select
-                    id="current_term"
-                    name="current_term"
-                    required
-                >
-                    <option value="">Select Term</option>
+    <tr>
+        <td><label for="logo">School Logo</label></td>
+        <td>
 
-                    <option
-                        value="1"
-                        {% if profile.current_term == "1" %}selected{% endif %}
+            {% if profile.logo %}
+                <p>
+                    Current logo:
+                    <br>
+
+                    <img
+                        src="{{ profile.logo.url }}"
+                        alt="School Logo"
+                        width="120"
                     >
-                        Term 1
-                    </option>
+                </p>
+            {% endif %}
 
-                    <option
-                        value="2"
-                        {% if profile.current_term == "2" %}selected{% endif %}
+            <input
+                type="file"
+                id="logo"
+                name="logo"
+                accept="image/*"
+            >
+
+        </td>
+    </tr>
+
+    <tr>
+        <td>
+            <label for="principal_signature">
+                Principal Signature
+            </label>
+        </td>
+
+        <td>
+
+            {% if profile.principal_signature %}
+                <p>
+                    Current signature:
+                    <br>
+
+                    <img
+                        src="{{ profile.principal_signature.url }}"
+                        alt="Principal Signature"
+                        width="200"
                     >
-                        Term 2
-                    </option>
+                </p>
+            {% endif %}
 
-                    <option
-                        value="3"
-                        {% if profile.current_term == "3" %}selected{% endif %}
+            <input
+                type="file"
+                id="principal_signature"
+                name="principal_signature"
+                accept="image/*"
+            >
+
+        </td>
+    </tr>
+
+    <tr>
+        <td>
+            <label for="school_stamp">
+                School Stamp
+            </label>
+        </td>
+
+        <td>
+
+            {% if profile.school_stamp %}
+                <p>
+                    Current stamp:
+                    <br>
+
+                    <img
+                        src="{{ profile.school_stamp.url }}"
+                        alt="School Stamp"
+                        width="150"
                     >
-                        Term 3
-                    </option>
+                </p>
+            {% endif %}
 
-                </select>
-            </td>
-        </tr>
+            <input
+                type="file"
+                id="school_stamp"
+                name="school_stamp"
+                accept="image/*"
+            >
 
-        <tr>
-            <td><label for="principal_name">Principal Name</label></td>
-            <td>
-                <input
-                    type="text"
-                    id="principal_name"
-                    name="principal_name"
-                    value="{{ profile.principal_name }}"
-                >
-            </td>
-        </tr>
+        </td>
+    </tr>
 
-        <tr>
-            <td><label for="logo">School Logo</label></td>
-            <td>
+</table>
 
-                {% if profile.logo %}
-                    <p>
-                        Current logo:
-                        <br>
-                        <img
-                            src="{{ profile.logo.url }}"
-                            alt="School Logo"
-                            width="120"
-                        >
-                    </p>
-                {% endif %}
+<br>
 
-                <input
-                    type="file"
-                    id="logo"
-                    name="logo"
-                    accept="image/*"
-                >
+<button type="submit">
+    💾 Save Changes
+</button>
 
-            </td>
-        </tr>
+<a href="{% url 'students:school_list' %}">
+    Cancel
+</a>
 
-        <tr>
-            <td><label for="principal_signature">Principal Signature</label></td>
-            <td>
-
-                {% if profile.principal_signature %}
-                    <p>
-                        Current signature:
-                        <br>
-                        <img
-                            src="{{ profile.principal_signature.url }}"
-                            alt="Principal Signature"
-                            width="200"
-                        >
-                    </p>
-                {% endif %}
-
-                <input
-                    type="file"
-                    id="principal_signature"
-                    name="principal_signature"
-                    accept="image/*"
-                >
-
-            </td>
-        </tr>
-
-        <tr>
-            <td><label for="school_stamp">School Stamp</label></td>
-            <td>
-
-                {% if profile.school_stamp %}
-                    <p>
-                        Current stamp:
-                        <br>
-                        <img
-                            src="{{ profile.school_stamp.url }}"
-                            alt="School Stamp"
-                            width="150"
-                        >
-                    </p>
-                {% endif %}
-
-                <input
-                    type="file"
-                    id="school_stamp"
-                    name="school_stamp"
-                    accept="image/*"
-                >
-
-            </td>
-        </tr>
-
-    </table>
-
-    <br>
-
-    <button type="submit">
-        💾 Save Changes
-    </button>
-
-    <a href="{% url 'school_list' %}">
-        Cancel
-    </a>
 
 </form>
 

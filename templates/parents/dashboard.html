@@ -74,19 +74,19 @@
 
     <br>
 
-    <a href="{% url 'parent_results' selected_child.id %}">
+    <a href="{% url 'students:parent_results' selected_child.id %}">
         View Results
     </a>
 
-    <a href="{% url 'parent_student_profile' selected_child.id %}">
+    <a href="{% url 'students:parent_student_profile' selected_child.id %}">
         Student Profile
     </a>
 
-    <a href="{% url 'parent_fee_statement' selected_child.id %}">
+    <a href="{% url 'students:parent_fee_statement' selected_child.id %}">
         Fee Statement
     </a>
 
 {% endif %}
 
 {% endblock %}
-```
+

@@ -121,7 +121,7 @@ No marks found.
 <br>
 
 <a
-href="{% url 'approve_mark_submission' submission.id %}"
+href="{% url 'students:approve_mark_submission' submission.id %}"
 class="btn btn-success">
 
 ✅ Approve
@@ -129,7 +129,7 @@ class="btn btn-success">
 </a>
 
 <a
-href="{% url 'reject_mark_submission' submission.id %}"
+href="{% url 'students:reject_mark_submission' submission.id %}"
 class="btn btn-danger">
 
 ❌ Reject
@@ -137,7 +137,7 @@ class="btn btn-danger">
 </a>
 
 <a
-href="{% url 'admin_mark_submission_list' %}"
+href="{% url 'students:admin_mark_submission_list' %}"
 class="btn btn-secondary">
 
 ← Back

@@ -5,7 +5,7 @@
 <h2>Transport Routes</h2>
 
 <p>
-    <a href="{% url 'add_transport_route' %}">
+    <a href="{% url 'students:add_transport_route' %}">
         <button type="button">➕ Add Route</button>
     </a>
 </p>
@@ -76,19 +76,19 @@
 
             <td>
 
-                <a href="{% url 'edit_transport_route' route.id %}">
+                <a href="{% url 'students:edit_transport_route' route.id %}">
                     ✏ Edit
                 </a>
 
                 |
 
-                <a href="{% url 'delete_transport_route' route.id %}">
+                <a href="{% url 'students:delete_transport_route' route.id %}">
                     🗑 Delete
                 </a>
 
                 |
 
-                <a href="{% url 'print_transport_route' route.id %}">
+                <a href="{% url 'students:print_transport_route' route.id %}">
                     🖨 Print
                 </a>
 

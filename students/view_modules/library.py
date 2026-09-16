@@ -107,7 +107,7 @@ def add_book(request):
             "Book added successfully."
         )
 
-        return redirect("library_list")
+        return redirect("students:library_list")
 
     return render(
         request,
@@ -159,7 +159,7 @@ def edit_book(request, id):
             "Book updated successfully."
         )
 
-        return redirect("library_list")
+        return redirect("students:library_list")
 
     return render(
         request,
@@ -197,7 +197,7 @@ def delete_book(request, id):
             "Book deleted successfully."
         )
 
-        return redirect("library_list")
+        return redirect("students:library_list")
 
     return render(
         request,
@@ -255,7 +255,7 @@ def borrow_book(request):
             )
 
             return redirect(
-                "borrow_book"
+                "students:borrow_book"
             )
 
         BorrowBook.objects.create(
@@ -278,7 +278,7 @@ def borrow_book(request):
         )
 
         return redirect(
-            "borrow_list"
+            "students:borrow_list"
         )
 
     return render(
@@ -351,7 +351,7 @@ def return_book(request, id):
         )
 
         return redirect(
-            "borrow_list"
+            "students:borrow_list"
         )
 
     borrow.status = "Returned"
@@ -378,7 +378,7 @@ def return_book(request, id):
     )
 
     return redirect(
-        "borrow_list"
+        "students:borrow_list"
     )
 from datetime import date
 from django.db.models import Sum

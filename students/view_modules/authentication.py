@@ -11,7 +11,7 @@ from django.shortcuts import render, redirect
 def login_view(request):
 
     if request.user.is_authenticated:
-        return redirect("home")
+        return redirect("students:home")
 
     if request.method == "POST":
 
@@ -36,7 +36,7 @@ def login_view(request):
                 f"Welcome {user.username}.",
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         messages.error(
             request,
@@ -100,7 +100,7 @@ def change_password(request):
             "Password changed successfully.",
         )
 
-        return redirect("home")
+        return redirect("students:home")
 
     return render(
         request,

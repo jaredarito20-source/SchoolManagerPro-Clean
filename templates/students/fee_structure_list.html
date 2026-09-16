@@ -6,7 +6,7 @@
 
 
 <p>
-    <a href="{% url 'add_fee_structure' %}">
+    <a href="{% url 'students:add_fee_structure' %}">
         ➕ Add Fee Structure
     </a>
 </p>
@@ -65,13 +65,13 @@
     </td>
 
     <td>
-        <a href="{% url 'edit_fee_structure' fee.id %}">
+        <a href="{% url 'students:edit_fee_structure' fee.id %}">
             Edit
         </a>
 
         &nbsp;|&nbsp;
 
-        <a href="{% url 'delete_fee_structure' fee.id %}">
+        <a href="{% url 'students:delete_fee_structure' fee.id %}">
             Delete
         </a>
     </td>

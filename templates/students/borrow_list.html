@@ -5,7 +5,7 @@
 <h2>📚 Borrowed Books</h2>
 
 <p>
-    <a href="{% url 'borrow_book' %}" class="btn">
+    <a href="{% url 'students:borrow_book' %}" class="btn">
         ➕ Borrow Book
     </a>
 </p>
@@ -70,7 +70,7 @@
 
                 {% if borrow.status == "Borrowed" %}
 
-                    <a href="{% url 'return_book' borrow.id %}" class="btn">
+                    <a href="{% url 'students:return_book' borrow.id %}" class="btn">
                         📥 Return Book
                     </a>
 

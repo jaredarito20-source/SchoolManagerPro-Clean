@@ -14,7 +14,7 @@
 
 {% if request.user.is_superuser %}
 <p>
-    <a href="{% url 'add_exam' %}">
+    <a href="{% url 'students:add_exam' %}">
         <button>Add Exam</button>
     </a>
 </p>
@@ -58,13 +58,13 @@
 
                 {% if request.user.is_superuser %}
 
-                    <a href="{% url 'edit_exam' exam.id %}">
+                    <a href="{% url 'students:edit_exam' exam.id %}">
                         ✏ Edit
                     </a>
 
                     |
 
-                    <a href="{% url 'delete_exam' exam.id %}">
+                    <a href="{% url 'students:delete_exam' exam.id %}">
                         🗑 Delete
                     </a>
 
@@ -72,13 +72,13 @@
 
                     {% if exam.status == "OPEN" %}
 
-                        <a href="{% url 'toggle_exam_status' exam.id %}">
+                        <a href="{% url 'students:toggle_exam_status' exam.id %}">
                             🔒 Close Exam
                         </a>
 
                     {% else %}
 
-                        <a href="{% url 'toggle_exam_status' exam.id %}">
+                        <a href="{% url 'students:toggle_exam_status' exam.id %}">
                             🔓 Reopen Exam
                         </a>
 

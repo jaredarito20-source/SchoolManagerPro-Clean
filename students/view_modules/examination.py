@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from datetime import date
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -129,7 +129,7 @@ def add_exam(request):
                 )
 
                 return redirect(
-                    "add_exam"
+                    "students:add_exam"
                 )
 
             school = SchoolProfile.objects.filter(
@@ -144,7 +144,7 @@ def add_exam(request):
                 )
 
                 return redirect(
-                    "add_exam"
+                    "students:add_exam"
                 )
 
         else:
@@ -172,7 +172,7 @@ def add_exam(request):
         )
 
         return redirect(
-            "exam_list"
+            "students:exam_list"
         )
 
     # --------------------------------
@@ -238,7 +238,7 @@ def edit_exam(request, id):
             "Exam updated successfully."
         )
 
-        return redirect("exam_list")
+        return redirect("students:exam_list")
 
     # --------------------------------
     # FORM
@@ -290,7 +290,7 @@ def delete_exam(request, id):
             "Exam deleted successfully."
         )
 
-        return redirect("exam_list")
+        return redirect("students:exam_list")
 
     # --------------------------------
     # CONFIRMATION PAGE
@@ -317,39 +317,32 @@ def mark_list(request):
     marks = Mark.objects.select_related(
         "student",
         "student__school",
+        "student__school_class",
         "subject",
         "subject__school",
         "subject__teacher",
         "exam",
         "exam__school",
+        "submission",
     )
 
     # =====================================================
-    # SUPERUSER
+    # SCHOOL / ROLE SECURITY
     # =====================================================
 
     if request.user.is_superuser:
 
-        marks = marks.all()
-
-    # =====================================================
-    # SCHOOL ADMINISTRATOR
-    # =====================================================
+        school = None
 
     elif hasattr(request.user, "school_user"):
 
-        school_user = request.user.school_user
-        school = school_user.school
+        school = request.user.school_user.school
 
         marks = marks.filter(
             student__school=school,
             subject__school=school,
             exam__school=school,
         )
-
-    # =====================================================
-    # TEACHER
-    # =====================================================
 
     elif hasattr(request.user, "teacher_profile"):
 
@@ -363,14 +356,89 @@ def mark_list(request):
             exam__school=school,
         )
 
+    else:
+
+        school = None
+        marks = Mark.objects.none()
+
     # =====================================================
-    # NO VALID PROFILE
+    # ONLY APPROVED MARKS
     # =====================================================
+
+    marks = marks.filter(
+        submission__status="APPROVED"
+    )
+
+    # =====================================================
+    # FILTER VALUES
+    # =====================================================
+
+    selected_year = request.GET.get("year", "")
+    selected_term = request.GET.get("term", "")
+    selected_exam = request.GET.get("exam", "")
+    selected_class = request.GET.get("school_class", "")
+
+    # =====================================================
+    # APPLY FILTERS
+    # =====================================================
+
+    if selected_year:
+        marks = marks.filter(
+            exam__year=selected_year
+        )
+
+    if selected_term:
+        marks = marks.filter(
+            exam__term=selected_term
+        )
+
+    if selected_exam:
+        marks = marks.filter(
+            exam_id=selected_exam
+        )
+
+    if selected_class:
+        marks = marks.filter(
+            student__school_class_id=selected_class
+        )
+
+    # =====================================================
+    # FILTER DROPDOWN DATA
+    # =====================================================
+
+    if request.user.is_superuser:
+
+        exams = Exam.objects.all().order_by("-year", "term", "name")
+        classes = SchoolClass.objects.all().order_by("name")
+
+    elif school:
+
+        exams = Exam.objects.filter(
+            school=school
+        ).order_by("-year", "term", "name")
+
+        classes = SchoolClass.objects.filter(
+            school=school
+        ).order_by("name")
 
     else:
 
-        marks = Mark.objects.none()
+        exams = Exam.objects.none()
+        classes = SchoolClass.objects.none()
 
+    current_year = date.today().year
+
+    years = [
+        current_year - 1,
+        current_year,
+        current_year + 1,
+    ]
+
+    terms = [
+        "1",
+        "2",
+        "3",
+    ]
     # =====================================================
     # DISPLAY
     # =====================================================
@@ -380,6 +448,14 @@ def mark_list(request):
         "students/mark_list.html",
         {
             "marks": marks,
+            "years": years,
+            "terms": terms,
+            "exams": exams,
+            "classes": classes,
+            "selected_year": selected_year,
+            "selected_term": selected_term,
+            "selected_exam": selected_exam,
+            "selected_class": selected_class,
         },
     )
 @login_required
@@ -1040,7 +1116,7 @@ def edit_mark(request, id):
                     "Your account is not linked to a school."
                 )
 
-                return redirect("mark_list")
+                return redirect("students:mark_list")
 
             school = teacher.school
 
@@ -1079,7 +1155,7 @@ def edit_mark(request, id):
                 "Approved marks cannot be edited."
             )
 
-            return redirect("mark_list")
+            return redirect("students:mark_list")
 
         if mark.submission.status == "SUBMITTED":
 
@@ -1089,7 +1165,7 @@ def edit_mark(request, id):
                 "Please wait for the administrator to review them."
             )
 
-            return redirect("mark_list")
+            return redirect("students:mark_list")
 
     # --------------------------------
     # TEACHER PERMISSION
@@ -1110,7 +1186,7 @@ def edit_mark(request, id):
                 "Your account is not linked to a teacher profile."
             )
 
-            return redirect("mark_list")
+            return redirect("students:mark_list")
 
         # Teacher can only edit marks
         # for their own subject
@@ -1122,7 +1198,7 @@ def edit_mark(request, id):
                 "You can only edit marks for your own subjects."
             )
 
-            return redirect("mark_list")
+            return redirect("students:mark_list")
 
     # --------------------------------
     # SCHOOL
@@ -1368,7 +1444,7 @@ def edit_mark(request, id):
         )
 
         return redirect(
-            "mark_list"
+            "students:mark_list"
         )
 
     # --------------------------------
@@ -1431,7 +1507,7 @@ def delete_mark(request, id):
                     "Your account is not linked to a school or teacher profile."
                 )
 
-                return redirect("mark_list")
+                return redirect("students:mark_list")
 
             school = teacher.school
 
@@ -1475,7 +1551,7 @@ def delete_mark(request, id):
                     "You can only delete marks for your own subjects."
                 )
 
-                return redirect("mark_list")
+                return redirect("students:mark_list")
 
     # --------------------------------
     # PREVENT DELETING APPROVED MARKS
@@ -1490,7 +1566,7 @@ def delete_mark(request, id):
                 "Approved marks cannot be deleted."
             )
 
-            return redirect("mark_list")
+            return redirect("students:mark_list")
 
     # --------------------------------
     # DELETE
@@ -1505,7 +1581,7 @@ def delete_mark(request, id):
             "Mark deleted successfully."
         )
 
-        return redirect("mark_list")
+        return redirect("students:mark_list")
 
     # --------------------------------
     # CONFIRMATION PAGE
@@ -1555,7 +1631,7 @@ def submit_mark(request, id):
                 request,
                 "You cannot submit another teacher's marks."
             )
-            return redirect("mark_list")
+            return redirect("students:mark_list")
 
     mark.status = "SUBMITTED"
     mark.save()
@@ -1565,7 +1641,7 @@ def submit_mark(request, id):
         "Marks submitted successfully."
     )
 
-    return redirect("mark_list")
+    return redirect("students:mark_list")
 
 @login_required
 @admin_or_teacher
@@ -1824,7 +1900,7 @@ def approve_mark_submission(request, id):
             request,
             "Invalid request."
         )
-        return redirect("admin_mark_submission_list")
+        return redirect("students:admin_mark_submission_list")
 
     # --------------------------------
     # GET SUBMISSION
@@ -1872,7 +1948,7 @@ def approve_mark_submission(request, id):
         "Marks approved successfully."
     )
 
-    return redirect("admin_mark_submission_list")
+    return redirect("students:admin_mark_submission_list")
 @login_required
 @admin_or_bursar
 def reject_mark_submission(request, id):
@@ -1882,7 +1958,7 @@ def reject_mark_submission(request, id):
             request,
             "Invalid request."
         )
-        return redirect("admin_mark_submission_list")
+        return redirect("students:admin_mark_submission_list")
 
     # --------------------------------
     # GET SUBMISSION
@@ -1925,7 +2001,7 @@ def reject_mark_submission(request, id):
     )
 
     return redirect(
-        "admin_mark_submission_list"
+        "students:admin_mark_submission_list"
     )
 @login_required
 @admin_or_bursar
@@ -3505,9 +3581,8 @@ def class_results(request):
                     student=student,
                     subject=subject,
                     exam=selected_exam,
-                    school=school,
+                    submission__status="APPROVED",
                 ).first()
-
                 if mark:
                     student_marks[subject.id] = mark.marks
                     total += mark.marks
@@ -3571,11 +3646,13 @@ def class_results(request):
         for subject in subjects:
 
             subject_marks = Mark.objects.filter(
-                school=school,
+                
                 subject=subject,
                 exam=selected_exam,
                 student__school=school,
                 student__school_class=selected_class,
+                submission__status="APPROVED",
+
             )
 
             if subject_marks.exists():
@@ -3719,4 +3796,4 @@ def toggle_exam_status(request, id):
 
     exam.save()
 
-    return redirect("exam_list")
+    return redirect("students:exam_list")
