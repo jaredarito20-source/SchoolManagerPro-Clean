@@ -109,7 +109,7 @@
                                 selected
                             {% endif %}
                         >
-                            {{ exam.name }} - {{ exam.term }} {{ exam.year }}
+                            {{ exam.name }} - {{ exam.term }} {{ exam.year }} (Out of {{ exam.marks_out_of }})
                         </option>
 
                     {% endfor %}
@@ -138,7 +138,12 @@
                 <tr>
                     <th>Admission No</th>
                     <th>Student Name</th>
-                    <th>Marks</th>
+                    <th>
+                        Marks
+                        {% if selected_exam %}
+                            (Out of {{ selected_exam.marks_out_of }})
+                        {% endif %}
+                    </th>
                 </tr>
             </thead>
 
@@ -163,7 +168,9 @@
                                 name="marks_{{ student.id }}"
                                 class="form-control"
                                 min="0"
-                                max="100"
+                                {% if selected_exam %}
+                                    max="{{ selected_exam.marks_out_of }}"
+                                {% endif %}
                                 step="0.01"
                             >
                         </td>

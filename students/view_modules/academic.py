@@ -382,42 +382,53 @@ def add_student(request):
         # DETERMINE ACADEMIC PERIOD
         # ========================================================
 
-        current_academic_year = (
-            school.academic_year or ""
-        ).strip()
-
-        current_term = (
-            school.current_term or ""
-        ).strip()
-
-        if not current_academic_year or not current_term:
-
-            messages.error(
-                request,
-                "The school's current academic year and term "
-                "must be configured before enrolling a student."
-            )
-
-            return redirect("students:add_student")
-
         academic_year = (
-            request.POST.get("academic_year")
-            or current_academic_year
-        ).strip()
+            request.POST.get("academic_year", "")
+            .strip()
+        )
 
         enrollment_term = (
-            request.POST.get("enrollment_term")
-            or current_term
-        ).strip()
+            request.POST.get("enrollment_term", "")
+            .strip()
+        )
+
+        # --------------------------------------------------------
+        # Academic year MUST come from SchoolAcademicYear
+        # --------------------------------------------------------
 
         if not academic_year:
 
             messages.error(
                 request,
-                "Academic year is required."
+                "Please select an academic year."
             )
 
             return redirect("students:add_student")
+
+
+        school_academic_year = (
+            SchoolAcademicYear.objects
+            .filter(
+                school=school,
+                year=academic_year,
+            )
+            .first()
+        )
+
+        if not school_academic_year:
+
+            messages.error(
+                request,
+                f"Academic year {academic_year} is not configured "
+                f"for {school.name}."
+            )
+
+            return redirect("students:add_student")
+
+
+        # --------------------------------------------------------
+        # Validate term
+        # --------------------------------------------------------
 
         if enrollment_term not in ["1", "2", "3"]:
 
@@ -427,7 +438,6 @@ def add_student(request):
             )
 
             return redirect("students:add_student")
-
         # ========================================================
         # VALIDATE CLASS BELONGS TO SCHOOL
         # ========================================================
@@ -695,85 +705,83 @@ def add_student(request):
 
     if request.user.is_superuser:
 
-        academic_year = ""
-        current_term = ""
+        # --------------------------------------------------------
+        # On initial page load there is no selected school yet.
+        # --------------------------------------------------------
 
-        configured_years = (
-            SchoolProfile.objects
-            .exclude(academic_year="")
-            .values_list(
-                "academic_year",
-                flat=True
+        selected_school_id = (
+            request.GET.get("school")
+            or request.POST.get("school")
+            or ""
+        ).strip()
+
+        if selected_school_id:
+
+            school = (
+                SchoolProfile.objects
+                .filter(id=selected_school_id)
+                .first()
             )
-            .distinct()
-        )
 
-        academic_years = set()
+            if school:
 
-        for year in configured_years:
-
-            try:
-
-                year_int = int(str(year).strip())
-
-                academic_years.add(
-                    str(year_int - 1)
+                academic_years = (
+                    SchoolAcademicYear.objects
+                    .filter(school=school)
+                    .values_list("year", flat=True)
+                    .distinct()
+                    .order_by("-year")
                 )
 
-                academic_years.add(
-                    str(year_int)
+                academic_year = (
+                    str(academic_years[0])
+                    if academic_years
+                    else ""
                 )
 
-                academic_years.add(
-                    str(year_int + 1)
-                )
+                current_term = (
+                    school.current_term or ""
+                ).strip()
 
-            except (TypeError, ValueError):
+            else:
 
-                cleaned_year = str(year).strip()
+                academic_years = []
 
-                if cleaned_year:
-                    academic_years.add(cleaned_year)
+                academic_year = ""
 
-        academic_years = sorted(
-            academic_years,
-            key=lambda value: (
-                (0, int(value))
-                if value.isdigit()
-                else (1, value)
-            )
-        )
+                current_term = ""
+
+        else:
+
+            academic_years = []
+
+            academic_year = ""
+
+            current_term = ""
 
     else:
 
+        # --------------------------------------------------------
+        # Normal school user
+        # --------------------------------------------------------
+
+        academic_years = (
+            SchoolAcademicYear.objects
+            .filter(school=school)
+            .values_list("year", flat=True)
+            .distinct()
+            .order_by("-year")
+        )
+
         academic_year = (
-            school.academic_year or ""
-        ).strip()
+            str(academic_years[0])
+            if academic_years
+            else ""
+        )
 
         current_term = (
             school.current_term or ""
         ).strip()
-
-        academic_years = []
-
-        if academic_year:
-
-            try:
-
-                current_year = int(academic_year)
-
-                academic_years = [
-                    str(current_year - 1),
-                    str(current_year),
-                    str(current_year + 1),
-                ]
-
-            except ValueError:
-
-                academic_years = [
-                    academic_year
-                ]
-
     # ============================================================
     # BUILD CBC CLASS INFORMATION FOR THE TEMPLATE
     # ============================================================
@@ -973,48 +981,15 @@ def student_list(request):
 
     if school:
 
-
-
-        configured_year = (
-
-            school.academic_year or ""
-
-        ).strip()
-
-
-
-        academic_years = []
-
-
-
-        if configured_year:
-
-            try:
-
-                current_year = int(configured_year)
-
-
-
-                academic_years = [
-
-                    str(current_year - 1),
-
-                    str(current_year),
-
-                    str(current_year + 1),
-
-                ]
-
-
-
-            except ValueError:
-
-                academic_years = [configured_year]
-
-
+        academic_years = (
+            SchoolAcademicYear.objects
+            .filter(school=school)
+            .values_list("year", flat=True)
+            .distinct()
+            .order_by("-year")
+        )
 
         classes = (
-
             SchoolClass.objects
 
             .filter(school=school)
@@ -1027,28 +1002,12 @@ def student_list(request):
 
     else:
 
-
-
         academic_years = (
-
-            SchoolProfile.objects
-
-            .exclude(academic_year="")
-
-            .values_list(
-
-                "academic_year",
-
-                flat=True
-
+                SchoolAcademicYear.objects
+                .values_list("year", flat=True)
+                .distinct()
+                .order_by("-year")
             )
-
-            .distinct()
-
-            .order_by("-academic_year")
-
-        )
-
 
 
         classes = (
@@ -1203,233 +1162,253 @@ def student_list(request):
 
 
 
-
-
-
-
-
-
 @login_required
-
+@admin_or_bursar
 def edit_student(request, id):
 
-
+    # --------------------------------
+    # GET STUDENT SECURELY
+    # --------------------------------
 
     if request.user.is_superuser:
 
-
-
         student = get_object_or_404(
-
             Student,
-
-            id=id
-
+            id=id,
         )
-
-
-
-        schools = SchoolProfile.objects.all()
-
-
-
-        classes = SchoolClass.objects.select_related(
-
-            "school"
-
-        ).all().order_by("name")
-
-
-
-        parents = User.objects.filter(
-
-            groups__name="Parents"
-
-        ).order_by("username")
-
-
 
     else:
 
-
-
-        school = request.user.school_user.school
-
-
-
-        student = get_object_or_404(
-
-            Student,
-
-            id=id,
-
-            school=school
-
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
         )
 
+        if not school_user:
 
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("students:home")
+
+        school = school_user.school
+
+        student = get_object_or_404(
+            Student,
+            id=id,
+            school=school,
+        )
+
+    # --------------------------------
+    # SCHOOL
+    # --------------------------------
+
+    school = student.school
+
+    # --------------------------------
+    # FORM OPTIONS
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        schools = SchoolProfile.objects.all().order_by("name")
+
+        classes = SchoolClass.objects.select_related(
+            "school"
+        ).all().order_by(
+            "school__name",
+            "name",
+        )
+
+        parents = User.objects.filter(
+            groups__name="Parents",
+        ).order_by(
+            "username",
+        )
+
+    else:
 
         schools = [school]
 
-
-
         classes = SchoolClass.objects.filter(
+            school=school,
+        ).order_by(
+            "name",
+        )
 
-            school=school
-
-        ).order_by("name")
-
-
-
+        # Only parent accounts belonging to this school
         parents = User.objects.filter(
+            groups__name="Parents",
+            school_user__school=school,
+        ).order_by(
+            "username",
+        )
 
-            groups__name="Parents"
-
-        ).order_by("username")
-
-
+    # --------------------------------
+    # POST
+    # --------------------------------
 
     if request.method == "POST":
 
-
-
         student.admission_number = request.POST.get(
-
-            "admission_number"
-
-        )
+            "admission_number",
+            "",
+        ).strip()
 
         student.first_name = request.POST.get(
-
-            "first_name"
-
-        )
+            "first_name",
+            "",
+        ).strip()
 
         student.last_name = request.POST.get(
-
-            "last_name"
-
-        )
+            "last_name",
+            "",
+        ).strip()
 
         student.gender = request.POST.get(
-
-            "gender"
-
-        )
+            "gender",
+            "",
+        ).strip()
 
         student.date_of_birth = request.POST.get(
+            "date_of_birth",
+            "",
+        ).strip()
 
-            "date_of_birth"
+        # --------------------------------
+        # CLASS
+        # --------------------------------
 
+        class_id = request.POST.get(
+            "school_class"
         )
-
-
-
-        class_id = request.POST.get("school_class")
-
-
 
         if class_id:
 
-            student.school_class = get_object_or_404(
-
-                SchoolClass,
-
+            school_class = SchoolClass.objects.filter(
                 id=class_id,
+                school=school,
+            ).first()
 
-                school=student.school,
+            if not school_class:
 
-            )
+                messages.error(
+                    request,
+                    "Invalid class selected for this school."
+                )
+
+                return redirect(
+                    "students:edit_student",
+                    id=student.id,
+                )
+
+            student.school_class = school_class
 
         else:
 
             student.school_class = None
 
-
+        # --------------------------------
+        # PARENT DETAILS
+        # --------------------------------
 
         student.parent_name = request.POST.get(
-
-            "parent_name"
-
-        )
+            "parent_name",
+            "",
+        ).strip()
 
         student.phone = request.POST.get(
+            "phone",
+            "",
+        ).strip()
 
-            "phone"
-
-        )
-
-
+        # --------------------------------
+        # PARENT USER
+        # --------------------------------
 
         parent_user_id = request.POST.get(
-
             "parent_user"
-
         )
-
-
 
         if parent_user_id:
 
-            student.parent_user = get_object_or_404(
+            if request.user.is_superuser:
 
-                User,
+                parent_user = User.objects.filter(
+                    id=parent_user_id,
+                    groups__name="Parents",
+                ).first()
 
-                id=parent_user_id,
+            else:
 
-                groups__name="Parents",
+                parent_user = User.objects.filter(
+                    id=parent_user_id,
+                    groups__name="Parents",
+                    school_user__school=school,
+                ).first()
 
-            )
+            if not parent_user:
+
+                messages.error(
+                    request,
+                    "Invalid parent account selected."
+                )
+
+                return redirect(
+                    "students:edit_student",
+                    id=student.id,
+                )
+
+            student.parent_user = parent_user
 
         else:
 
             student.parent_user = None
 
-
+        # --------------------------------
+        # PHOTO
+        # --------------------------------
 
         if request.FILES.get("photo"):
 
             student.photo = request.FILES["photo"]
 
-
+        # --------------------------------
+        # SAVE
+        # --------------------------------
 
         student.save()
 
-
-
         messages.success(
-
             request,
-
             "Student updated successfully."
-
         )
 
+        return redirect(
+            "students:student_list"
+        )
 
-
-        return redirect("students:student_list")
-
-
+    # --------------------------------
+    # FORM
+    # --------------------------------
 
     return render(
-
         request,
-
         "students/edit_student.html",
-
         {
-
             "student": student,
-
             "schools": schools,
-
             "classes": classes,
-
             "parents": parents,
-
         },
-
     )
+
+
+
+
 
 @login_required
 
@@ -1475,7 +1454,7 @@ def promotion_list(request):
 
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -1611,7 +1590,7 @@ def promote_students(request):
 
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -2095,455 +2074,6 @@ from django.contrib import messages
 
 
 
-@login_required
-
-@admin_required
-
-def add_teacher(request):
-
-
-
-    # --------------------------------
-
-    # AVAILABLE SCHOOLS
-
-    # --------------------------------
-
-
-
-    if request.user.is_superuser:
-
-
-
-        schools = SchoolProfile.objects.all()
-
-
-
-    else:
-
-
-
-        school = request.user.school_user.school
-
-
-
-        schools = [school]
-
-
-
-    # --------------------------------
-
-    # POST
-
-    # --------------------------------
-
-
-
-    if request.method == "POST":
-
-
-
-        employee_number = request.POST.get(
-
-            "employee_number",
-
-            ""
-
-        ).strip()
-
-
-
-        first_name = request.POST.get(
-
-            "first_name",
-
-            ""
-
-        ).strip()
-
-
-
-        last_name = request.POST.get(
-
-            "last_name",
-
-            ""
-
-        ).strip()
-
-
-
-        gender = request.POST.get(
-
-            "gender"
-
-        )
-
-
-
-        phone = request.POST.get(
-
-            "phone",
-
-            ""
-
-        ).strip()
-
-
-
-        email = request.POST.get(
-
-            "email",
-
-            ""
-
-        ).strip()
-
-
-
-        username = request.POST.get(
-
-            "username",
-
-            ""
-
-        ).strip()
-
-
-
-        password = request.POST.get(
-
-            "password",
-
-            ""
-
-        )
-
-
-
-        confirm_password = request.POST.get(
-
-            "confirm_password",
-
-            ""
-
-        )
-
-
-
-        # --------------------------------
-
-        # DETERMINE SCHOOL
-
-        # --------------------------------
-
-
-
-        if request.user.is_superuser:
-
-
-
-            school_id = request.POST.get(
-
-                "school"
-
-            )
-
-
-
-            if not school_id:
-
-
-
-                messages.error(
-
-                    request,
-
-                    "Please select a school."
-
-                )
-
-
-
-                return redirect(
-
-                    "add_teacher"
-
-                )
-
-
-
-            school = SchoolProfile.objects.filter(
-
-                id=school_id
-
-            ).first()
-
-
-
-            if not school:
-
-
-
-                messages.error(
-
-                    request,
-
-                    "Invalid school selected."
-
-                )
-
-
-
-                return redirect(
-
-                    "add_teacher"
-
-                )
-
-
-
-        else:
-
-
-
-            school = request.user.school_user.school
-
-
-
-        # --------------------------------
-
-        # PASSWORD CHECK
-
-        # --------------------------------
-
-
-
-        if password != confirm_password:
-
-
-
-            messages.error(
-
-                request,
-
-                "Passwords do not match."
-
-            )
-
-
-
-            return redirect(
-
-                "add_teacher"
-
-            )
-
-
-
-        # --------------------------------
-
-        # USERNAME CHECK
-
-        # --------------------------------
-
-
-
-        if User.objects.filter(
-
-            username=username
-
-        ).exists():
-
-
-
-            messages.error(
-
-                request,
-
-                "Username already exists."
-
-            )
-
-
-
-            return redirect(
-
-                "add_teacher"
-
-            )
-
-
-
-        # --------------------------------
-
-        # EMPLOYEE NUMBER CHECK
-
-        # --------------------------------
-
-
-
-        if Teacher.objects.filter(
-
-            employee_number=employee_number
-
-        ).exists():
-
-
-
-            messages.error(
-
-                request,
-
-                "Employee number already exists."
-
-            )
-
-
-
-            return redirect(
-
-                "add_teacher"
-
-            )
-
-
-
-        # --------------------------------
-
-        # CREATE USER
-
-        # --------------------------------
-
-
-
-        user = User.objects.create_user(
-
-
-
-            username=username,
-
-            password=password,
-
-
-
-            first_name=first_name,
-
-            last_name=last_name,
-
-            email=email,
-
-
-
-        )
-
-
-
-        # --------------------------------
-
-        # TEACHER GROUP
-
-        # --------------------------------
-
-
-
-        teacher_group = Group.objects.get(
-
-            name="Teachers"
-
-        )
-
-
-
-        user.groups.add(
-
-            teacher_group
-
-        )
-
-
-
-        # --------------------------------
-
-        # CREATE TEACHER
-
-        # --------------------------------
-
-
-
-        Teacher.objects.create(
-
-
-
-            user=user,
-
-
-
-            school=school,
-
-
-
-            employee_number=employee_number,
-
-            first_name=first_name,
-
-            last_name=last_name,
-
-
-
-            gender=gender,
-
-            phone=phone,
-
-            email=email,
-
-
-
-        )
-
-
-
-        messages.success(
-
-            request,
-
-            f"{first_name} {last_name} "
-
-            "was created successfully."
-
-        )
-
-
-
-        return redirect(
-
-            "teacher_list"
-
-        )
-
-
-
-    # --------------------------------
-
-    # FORM
-
-    # --------------------------------
-
-
-
-    return render(
-
-        request,
-
-        "students/add_teacher.html",
-
-        {
-
-            "schools": schools,
-
-        },
-
-    )
 
 @login_required
 
@@ -2557,254 +2087,156 @@ def add_teacher(request):
 
 )
 
+@login_required
+@admin_or_bursar
 def edit_teacher(request, id):
 
-
-
     # --------------------------------
-
-    # GET TEACHER
-
+    # GET TEACHER SECURELY
     # --------------------------------
-
-
 
     if request.user.is_superuser:
 
-
-
         teacher = get_object_or_404(
-
-            Teacher.objects.select_related("school", "user"),
-
+            Teacher.objects.select_related(
+                "school",
+                "user",
+            ),
             id=id,
-
         )
-
-
 
     else:
 
-
-
-        school = request.user.school_user.school
-
-
-
-        teacher = get_object_or_404(
-
-            Teacher.objects.select_related("school", "user"),
-
-            id=id,
-
-            school=school,
-
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
         )
 
+        if not school_user:
 
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("students:home")
+
+        school = school_user.school
+
+        teacher = get_object_or_404(
+            Teacher.objects.select_related(
+                "school",
+                "user",
+            ),
+            id=id,
+            school=school,
+        )
+
+    school = teacher.school
 
     # --------------------------------
-
     # POST
-
     # --------------------------------
-
-
 
     if request.method == "POST":
 
-
-
         employee_number = request.POST.get(
-
             "employee_number",
-
-            ""
-
+            "",
         ).strip()
-
-
 
         first_name = request.POST.get(
-
             "first_name",
-
-            ""
-
+            "",
         ).strip()
-
-
 
         last_name = request.POST.get(
-
             "last_name",
-
-            ""
-
+            "",
         ).strip()
-
-
 
         gender = request.POST.get(
-
-            "gender"
-
-        )
-
-
+            "gender",
+            "",
+        ).strip()
 
         phone = request.POST.get(
-
             "phone",
-
-            ""
-
+            "",
         ).strip()
-
-
 
         email = request.POST.get(
-
             "email",
-
-            ""
-
+            "",
         ).strip()
 
-
-
         # --------------------------------
-
-        # EMPLOYEE NUMBER CHECK
-
+        # EMPLOYEE NUMBER
         # --------------------------------
-
-
 
         if Teacher.objects.filter(
-
-            employee_number=employee_number
-
+            school=school,
+            employee_number=employee_number,
         ).exclude(
-
-            id=teacher.id
-
+            id=teacher.id,
         ).exists():
 
-
-
             messages.error(
-
                 request,
-
-                "Employee number already exists."
-
+                "Employee number already exists in this school."
             )
-
-
 
             return redirect(
-
-                "edit_teacher",
-
+                "students:edit_teacher",
                 id=teacher.id,
-
             )
 
-
-
         # --------------------------------
-
         # UPDATE TEACHER
-
         # --------------------------------
-
-
 
         teacher.employee_number = employee_number
-
         teacher.first_name = first_name
-
         teacher.last_name = last_name
-
         teacher.gender = gender
-
         teacher.phone = phone
-
         teacher.email = email
-
-
 
         teacher.save()
 
-
-
         # --------------------------------
-
         # UPDATE LOGIN USER
-
         # --------------------------------
-
-
 
         if teacher.user:
 
-
-
             teacher.user.first_name = first_name
-
             teacher.user.last_name = last_name
-
             teacher.user.email = email
-
-
 
             teacher.user.save()
 
-
-
         messages.success(
-
             request,
-
             "Teacher updated successfully."
-
         )
-
-
 
         return redirect(
-
-            "teacher_list"
-
+            "students:teacher_list"
         )
 
-
-
     # --------------------------------
-
     # FORM
-
     # --------------------------------
-
-
 
     return render(
-
         request,
-
         "students/edit_teacher.html",
-
         {
-
             "teacher": teacher,
-
         },
-
     )
-
-
-
 @login_required
 
 @in_group(
@@ -4848,7 +4280,7 @@ def attendance_list(request):
 
 
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -5072,7 +4504,7 @@ def add_attendance(request):
 
 
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -5550,7 +4982,7 @@ def take_attendance(request):
 
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -6030,7 +5462,7 @@ def edit_attendance(request, id):
 
 
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -6192,7 +5624,7 @@ def delete_attendance(request, id):
 
 
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -6344,7 +5776,7 @@ def print_attendance(request):
 
 
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -6479,414 +5911,1011 @@ def print_attendance(request):
     )
 
 @login_required
-
 @admin_or_teacher
-
 def add_timetable(request):
 
+    # --------------------------------
+    # DETERMINE SCHOOL
+    # --------------------------------
 
+    if request.user.is_superuser:
+
+        school = None
+
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("students:home")
+
+        school = school_user.school
+
+    # --------------------------------
+    # GET FORM OPTIONS
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        classes = (
+            SchoolClass.objects
+            .select_related("school")
+            .all()
+            .order_by(
+                "school__name",
+                "name",
+            )
+        )
+
+        subjects = (
+            Subject.objects
+            .select_related(
+                "school",
+                "school_class",
+            )
+            .all()
+            .order_by(
+                "school__name",
+                "name",
+            )
+        )
+
+        teachers = (
+            Teacher.objects
+            .select_related("school")
+            .all()
+            .order_by(
+                "school__name",
+                "first_name",
+                "last_name",
+            )
+        )
+
+    else:
+
+        classes = (
+            SchoolClass.objects
+            .filter(school=school)
+            .order_by("name")
+        )
+
+        subjects = (
+            Subject.objects
+            .filter(school=school)
+            .order_by("name")
+        )
+
+        teachers = (
+            Teacher.objects
+            .filter(school=school)
+            .order_by(
+                "first_name",
+                "last_name",
+            )
+        )
+
+    # --------------------------------
+    # POST
+    # --------------------------------
 
     if request.method == "POST":
 
+        class_id = request.POST.get("school_class")
+        subject_id = request.POST.get("subject")
+        teacher_id = request.POST.get("teacher")
+        day_id = request.POST.get("day")
+        period_id = request.POST.get("period")
 
+        if not all(
+            [
+                class_id,
+                subject_id,
+                teacher_id,
+                day_id,
+                period_id,
+            ]
+        ):
 
-        school_class = SchoolClass.objects.get(
+            messages.error(
+                request,
+                "Class, subject, teacher, day and period are required."
+            )
 
-            id=request.POST["school_class"]
+            return redirect(
+                "students:add_timetable"
+            )
 
+        # --------------------------------
+        # GET CLASS
+        # --------------------------------
+
+        if request.user.is_superuser:
+
+            school_class = get_object_or_404(
+                SchoolClass.objects.select_related("school"),
+                id=class_id,
+            )
+
+        else:
+
+            school_class = get_object_or_404(
+                SchoolClass.objects.select_related("school"),
+                id=class_id,
+                school=school,
+            )
+
+        timetable_school = school_class.school
+
+        # --------------------------------
+        # GET SUBJECT
+        # --------------------------------
+
+        subject = get_object_or_404(
+            Subject,
+            id=subject_id,
+            school=timetable_school,
         )
 
+        # --------------------------------
+        # GET TEACHER
+        # --------------------------------
 
-
-        subject = Subject.objects.get(
-
-            id=request.POST["subject"]
-
+        teacher = get_object_or_404(
+            Teacher,
+            id=teacher_id,
+            school=timetable_school,
         )
 
+        # --------------------------------
+        # SUBJECT MUST BELONG TO CLASS
+        # --------------------------------
 
+        if (
+            subject.school_class_id
+            and subject.school_class_id != school_class.id
+        ):
 
-        teacher = Teacher.objects.get(
+            messages.error(
+                request,
+                "The selected subject does not belong to "
+                "the selected class."
+            )
 
-            id=request.POST["teacher"]
+            return redirect(
+                "students:add_timetable"
+            )
 
+        # --------------------------------
+        # GET DAY
+        # --------------------------------
+
+        day = get_object_or_404(
+            SchoolDay,
+            id=day_id,
+            active=True,
         )
 
+        # --------------------------------
+        # GET PERIOD
+        # --------------------------------
 
-
-        Timetable.objects.create(
-
-            school_class=school_class,
-
-            subject=subject,
-
-            teacher=teacher,
-
-            day=request.POST["day"],
-
-            start_time=request.POST["start_time"],
-
-            end_time=request.POST["end_time"],
-
+        period = get_object_or_404(
+            Period,
+            id=period_id,
         )
 
+        # --------------------------------
+        # CREATE
+        # --------------------------------
 
+        try:
 
-        return redirect("timetable_list")
+            Timetable.objects.create(
+                school=timetable_school,
+                school_class=school_class,
+                day=day,
+                period=period,
+                subject=subject,
+                teacher=teacher,
+            )
 
+        except IntegrityError:
 
+            messages.error(
+                request,
+                "This timetable slot is already occupied "
+                "by the selected class or teacher."
+            )
+
+            return redirect(
+                "students:add_timetable"
+            )
+
+        messages.success(
+            request,
+            "Timetable entry added successfully."
+        )
+
+        return redirect(
+            "students:timetable_list"
+        )
+
+    # --------------------------------
+    # FORM
+    # --------------------------------
 
     return render(
-
         request,
-
         "students/add_timetable.html",
-
         {
-
-            "classes": SchoolClass.objects.all(),
-
-            "subjects": Subject.objects.all(),
-
-            "teachers": Teacher.objects.all(),
-
+            "classes": classes,
+            "subjects": subjects,
+            "teachers": teachers,
         },
-
     )
-
-
-
-
-
 @login_required
-
 @in_group(
-
     "Administrators",
-
     "Head Teacher",
-
 )
-
 def timetable_list(request):
 
+    # --------------------------------
+    # SUPERUSER
+    # --------------------------------
 
+    if request.user.is_superuser:
 
-    timetables = Timetable.objects.all()
+        timetables = (
+            Timetable.objects
+            .select_related(
+                "school",
+                "school_class",
+                "school_class__school",
+                "day",
+                "period",
+                "subject",
+                "teacher",
+            )
+            .all()
+        )
 
+    # --------------------------------
+    # SCHOOL USER
+    # --------------------------------
 
+    else:
 
-    return render(
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
 
-        request,
+        if not school_user or not school_user.school:
 
-        "students/timetable_list.html",
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
 
-        {
+            return redirect("students:home")
 
-            "timetables": timetables
+        school = school_user.school
 
-        },
+        timetables = (
+            Timetable.objects
+            .select_related(
+                "school",
+                "school_class",
+                "school_class__school",
+                "day",
+                "period",
+                "subject",
+                "teacher",
+            )
+            .filter(
+                school=school,
+            )
+        )
 
+    # --------------------------------
+    # ORDER
+    # --------------------------------
+
+    timetables = timetables.order_by(
+        "school_class__name",
+        "day",
+        "period",
     )
 
+    return render(
+        request,
+        "students/timetable_list.html",
+        {
+            "timetables": timetables,
+        },
+    )
 @login_required
-
 @admin_required
-
 def edit_timetable(request, id):
 
+    # --------------------------------
+    # GET TIMETABLE SECURELY
+    # --------------------------------
 
+    if request.user.is_superuser:
 
-    timetable = get_object_or_404(Timetable, id=id)
+        timetable = get_object_or_404(
+            Timetable.objects.select_related(
+                "school",
+                "school_class",
+                "school_class__school",
+                "day",
+                "period",
+                "subject",
+                "teacher",
+            ),
+            id=id,
+        )
 
+    else:
 
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("students:home")
+
+        school = school_user.school
+
+        timetable = get_object_or_404(
+            Timetable.objects.select_related(
+                "school",
+                "school_class",
+                "school_class__school",
+                "day",
+                "period",
+                "subject",
+                "teacher",
+            ),
+            id=id,
+            school=school,
+        )
+
+    # --------------------------------
+    # AUTHORITATIVE SCHOOL
+    # --------------------------------
+
+    school = timetable.school
+
+    # --------------------------------
+    # LOCK PROTECTION
+    # --------------------------------
+
+    if timetable.locked:
+
+        messages.error(
+            request,
+            "This timetable entry is locked and cannot be edited."
+        )
+
+        return redirect(
+            "students:timetable_list"
+        )
+
+    # --------------------------------
+    # FORM OPTIONS
+    # --------------------------------
+
+    classes = (
+        SchoolClass.objects
+        .filter(school=school)
+        .order_by("name")
+    )
+
+    subjects = (
+        Subject.objects
+        .filter(school=school)
+        .order_by("name")
+    )
+
+    teachers = (
+        Teacher.objects
+        .filter(school=school)
+        .order_by(
+            "first_name",
+            "last_name",
+        )
+    )
+
+    # --------------------------------
+    # POST
+    # --------------------------------
 
     if request.method == "POST":
 
-
-
-        timetable.school_class = SchoolClass.objects.get(
-
-            id=request.POST["school_class"]
-
+        class_id = request.POST.get(
+            "school_class"
         )
 
-
-
-        timetable.subject = Subject.objects.get(
-
-            id=request.POST["subject"]
-
+        subject_id = request.POST.get(
+            "subject"
         )
 
-
-
-        timetable.teacher = Teacher.objects.get(
-
-            id=request.POST["teacher"]
-
+        teacher_id = request.POST.get(
+            "teacher"
         )
 
+        day_id = request.POST.get(
+            "day"
+        )
 
+        period_id = request.POST.get(
+            "period"
+        )
 
-        timetable.day = request.POST["day"]
+        if not all(
+            [
+                class_id,
+                subject_id,
+                teacher_id,
+                day_id,
+                period_id,
+            ]
+        ):
 
-        timetable.start_time = request.POST["start_time"]
+            messages.error(
+                request,
+                "Class, subject, teacher, day and period are required."
+            )
 
-        timetable.end_time = request.POST["end_time"]
+            return redirect(
+                "students:edit_timetable",
+                id=timetable.id,
+            )
 
+        # --------------------------------
+        # CLASS
+        # --------------------------------
 
+        school_class = get_object_or_404(
+            SchoolClass,
+            id=class_id,
+            school=school,
+        )
 
-        timetable.save()
+        # --------------------------------
+        # SUBJECT
+        # --------------------------------
 
+        subject = get_object_or_404(
+            Subject,
+            id=subject_id,
+            school=school,
+        )
 
+        # --------------------------------
+        # TEACHER
+        # --------------------------------
 
-        return redirect("timetable_list")
+        teacher = get_object_or_404(
+            Teacher,
+            id=teacher_id,
+            school=school,
+        )
 
+        # --------------------------------
+        # DAY
+        # --------------------------------
 
+        day = get_object_or_404(
+            SchoolDay,
+            id=day_id,
+            active=True,
+        )
+
+        # --------------------------------
+        # PERIOD
+        # --------------------------------
+
+        period = get_object_or_404(
+            Period,
+            id=period_id,
+        )
+
+        # --------------------------------
+        # SUBJECT MUST BELONG TO CLASS
+        # --------------------------------
+
+        if (
+            subject.school_class_id
+            and subject.school_class_id != school_class.id
+        ):
+
+            messages.error(
+                request,
+                "The selected subject does not belong "
+                "to the selected class."
+            )
+
+            return redirect(
+                "students:edit_timetable",
+                id=timetable.id,
+            )
+
+        # --------------------------------
+        # UPDATE
+        # --------------------------------
+
+        timetable.school = school
+        timetable.school_class = school_class
+        timetable.subject = subject
+        timetable.teacher = teacher
+        timetable.day = day
+        timetable.period = period
+
+        try:
+
+            timetable.save()
+
+        except IntegrityError:
+
+            messages.error(
+                request,
+                "This timetable slot is already occupied "
+                "by the selected class or teacher."
+            )
+
+            return redirect(
+                "students:edit_timetable",
+                id=timetable.id,
+            )
+
+        messages.success(
+            request,
+            "Timetable updated successfully."
+        )
+
+        return redirect(
+            "students:timetable_list"
+        )
+
+    # --------------------------------
+    # FORM
+    # --------------------------------
 
     return render(
-
         request,
-
         "students/edit_timetable.html",
-
         {
-
             "timetable": timetable,
-
-            "classes": SchoolClass.objects.all(),
-
-            "subjects": Subject.objects.all(),
-
-            "teachers": Teacher.objects.all(),
-
+            "classes": classes,
+            "subjects": subjects,
+            "teachers": teachers,
         },
-
     )
-
 @login_required
-
 @admin_required
-
 def delete_timetable(request, id):
 
+    # --------------------------------
+    # GET TIMETABLE SECURELY
+    # --------------------------------
 
+    if request.user.is_superuser:
 
-    timetable = get_object_or_404(Timetable, id=id)
+        timetable = get_object_or_404(
+            Timetable.objects.select_related(
+                "school",
+                "school_class",
+                "day",
+                "period",
+                "subject",
+                "teacher",
+            ),
+            id=id,
+        )
 
+    else:
 
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("students:home")
+
+        school = school_user.school
+
+        timetable = get_object_or_404(
+            Timetable.objects.select_related(
+                "school",
+                "school_class",
+                "day",
+                "period",
+                "subject",
+                "teacher",
+            ),
+            id=id,
+            school=school,
+        )
+
+    # --------------------------------
+    # LOCK PROTECTION
+    # --------------------------------
+
+    if timetable.locked:
+
+        messages.error(
+            request,
+            "This timetable entry is locked and cannot be deleted."
+        )
+
+        return redirect(
+            "students:timetable_list"
+        )
+
+    # --------------------------------
+    # DELETE
+    # --------------------------------
 
     if request.method == "POST":
 
         timetable.delete()
 
-        return redirect("timetable_list")
+        messages.success(
+            request,
+            "Timetable deleted successfully."
+        )
 
+        return redirect(
+            "students:timetable_list"
+        )
 
+    # --------------------------------
+    # CONFIRMATION
+    # --------------------------------
 
     return render(
-
         request,
-
         "students/delete_timetable.html",
-
         {
-
             "timetable": timetable,
-
         },
-
     )
-
-
-
-
 
 @login_required
-
-@in_group("Administrators", "Head Teacher", "Senior Teacher")
-
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+)
 def print_timetable(request):
 
-    timetables = Timetable.objects.select_related(
+    # --------------------------------
+    # GET SCHOOL
+    # --------------------------------
 
-        "school_class",
+    if request.user.is_superuser:
 
-        "subject",
+        school_id = request.GET.get("school")
 
-        "teacher",
+        if school_id:
 
-    ).order_by(
+            school = get_object_or_404(
+                SchoolProfile,
+                id=school_id,
+            )
 
-        "school_class__name",
+            timetables = (
+                Timetable.objects
+                .select_related(
+                    "school",
+                    "school_class",
+                    "day",
+                    "period",
+                    "subject",
+                    "teacher",
+                )
+                .filter(
+                    school=school,
+                )
+            )
 
-        "day",
+        else:
 
-        "start_time",
+            school = None
 
+            timetables = (
+                Timetable.objects
+                .select_related(
+                    "school",
+                    "school_class",
+                    "day",
+                    "period",
+                    "subject",
+                    "teacher",
+                )
+                .all()
+            )
+
+    # --------------------------------
+    # SCHOOL USER
+    # --------------------------------
+
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect("students:home")
+
+        school = school_user.school
+
+        timetables = (
+            Timetable.objects
+            .select_related(
+                "school",
+                "school_class",
+                "day",
+                "period",
+                "subject",
+                "teacher",
+            )
+            .filter(
+                school=school,
+            )
+        )
+
+    # --------------------------------
+    # FILTER CLASS
+    # --------------------------------
+
+    school_class_id = request.GET.get(
+        "school_class"
     )
 
+    if school_class_id:
 
+        if school:
 
-    school = SchoolProfile.objects.first()
+            # Both the timetable and class must
+            # belong to the selected school.
 
+            timetables = timetables.filter(
+                school=school,
+                school_class_id=school_class_id,
+                school_class__school=school,
+            )
 
+        else:
+
+            # Superuser with no selected school.
+
+            timetables = timetables.filter(
+                school_class_id=school_class_id,
+            )
+
+    # --------------------------------
+    # ORDER
+    # --------------------------------
+
+    timetables = timetables.order_by(
+        "school__name",
+        "school_class__name",
+        "day__id",
+        "period__order",
+    )
+
+    # --------------------------------
+    # PDF
+    # --------------------------------
 
     buffer = BytesIO()
 
-
-
     doc = SimpleDocTemplate(
-
         buffer,
-
         pagesize=A4,
-
         leftMargin=0.5 * inch,
-
         rightMargin=0.5 * inch,
-
         topMargin=0.5 * inch,
-
         bottomMargin=0.5 * inch,
-
     )
-
-
 
     styles = getSampleStyleSheet()
 
     story = []
 
-
+    # --------------------------------
+    # SCHOOL TITLE
+    # --------------------------------
 
     if school:
 
-        story.append(Paragraph(f"<b>{school.name}</b>", styles["Title"]))
+        story.append(
+            Paragraph(
+                f"<b>{school.name}</b>",
+                styles["Title"],
+            )
+        )
 
+    else:
 
+        story.append(
+            Paragraph(
+                "<b>School Timetable</b>",
+                styles["Title"],
+            )
+        )
 
-    story.append(Paragraph("<b>School Timetable</b>", styles["Heading2"]))
-
-    story.append(Spacer(1, 0.08 * inch))
-
-
-
-    data = [[
-
-        "Class",
-
-        "Subject",
-
-        "Teacher",
-
-        "Day",
-
-        "Start",
-
-        "End",
-
-    ]]
-
-
-
-    for t in timetables:
-
-        data.append([
-
-            t.school_class.name,
-
-            t.subject.name,
-
-            f"{t.teacher.first_name} {t.teacher.last_name}",
-
-            t.day,
-
-            str(t.start_time),
-
-            str(t.end_time),
-
-        ])
-
-
-
-    table = Table(
-
-        data,
-
-        colWidths=[
-
-            1.1 * inch,
-
-            1.5 * inch,
-
-            1.8 * inch,
-
-            1.0 * inch,
-
-            0.9 * inch,
-
-            0.9 * inch,
-
-        ],
-
+    story.append(
+        Paragraph(
+            "<b>School Timetable</b>",
+            styles["Heading2"],
+        )
     )
 
+    story.append(
+        Spacer(
+            1,
+            0.08 * inch,
+        )
+    )
 
+    # --------------------------------
+    # TABLE HEADER
+    # --------------------------------
 
-    table.setStyle(TableStyle([
+    data = [[
+        "Class",
+        "Subject",
+        "Teacher",
+        "Day",
+        "Period",
+        "Start",
+        "End",
+    ]]
 
-        ("BACKGROUND", (0,0), (-1,0), HexColor("#1F4E79")),
+    # --------------------------------
+    # TABLE DATA
+    # --------------------------------
 
-        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+    for timetable in timetables:
 
-        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        data.append([
+            timetable.school_class.name,
+            timetable.subject.name,
+            (
+                f"{timetable.teacher.first_name} "
+                f"{timetable.teacher.last_name}"
+            ),
+            timetable.day.name,
+            timetable.period.name,
+            timetable.period.start_time.strftime("%H:%M"),
+            timetable.period.end_time.strftime("%H:%M"),
+        ])
 
-        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+    # --------------------------------
+    # PDF TABLE
+    # --------------------------------
 
-        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+    table = Table(
+        data,
+        repeatRows=1,
+        colWidths=[
+            0.9 * inch,
+            1.35 * inch,
+            1.65 * inch,
+            0.85 * inch,
+            0.8 * inch,
+            0.65 * inch,
+            0.65 * inch,
+        ],
+    )
 
-        ("GRID", (0,0), (-1,-1), 1, colors.black),
-
-        ("BOTTOMPADDING", (0,0), (-1,0), 10),
-
-        ("BACKGROUND", (0,1), (-1,-1), colors.beige),
-
-    ]))
-
-
+    table.setStyle(
+        TableStyle([
+            (
+                "BACKGROUND",
+                (0, 0),
+                (-1, 0),
+                HexColor("#1F4E79"),
+            ),
+            (
+                "TEXTCOLOR",
+                (0, 0),
+                (-1, 0),
+                colors.white,
+            ),
+            (
+                "FONTNAME",
+                (0, 0),
+                (-1, 0),
+                "Helvetica-Bold",
+            ),
+            (
+                "ALIGN",
+                (0, 0),
+                (-1, -1),
+                "CENTER",
+            ),
+            (
+                "VALIGN",
+                (0, 0),
+                (-1, -1),
+                "MIDDLE",
+            ),
+            (
+                "GRID",
+                (0, 0),
+                (-1, -1),
+                1,
+                colors.black,
+            ),
+            (
+                "BOTTOMPADDING",
+                (0, 0),
+                (-1, 0),
+                10,
+            ),
+            (
+                "BACKGROUND",
+                (0, 1),
+                (-1, -1),
+                colors.beige,
+            ),
+        ])
+    )
 
     story.append(table)
 
-
-
     doc.build(story)
-
-
 
     buffer.seek(0)
 
-
-
     return FileResponse(
-
         buffer,
-
         as_attachment=True,
-
         filename="School_Timetable.pdf",
-
     )
-
-
-
-
-
-
-
-
 
     # Continue generating your PDF here
 
@@ -6908,273 +6937,142 @@ def print_timetable(request):
 
 )
 
+@login_required
+@in_group(
+    "Administrators",
+    "Head Teacher",
+    "Senior Teacher",
+    "Teachers",
+)
 def exam_timetable_list(request):
 
+    # --------------------------------
+    # GET USER'S SCHOOL
+    # --------------------------------
 
+    if request.user.is_superuser:
 
-    timetables = ExamTimetable.objects.select_related(
+        timetables = ExamTimetable.objects.select_related(
+            "school",
+            "school_class",
+            "exam",
+            "subject",
+            "supervisor",
+        ).all()
 
-        "school_class",
+    else:
 
-        "exam",
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
 
-        "subject",
+        if not school_user:
 
-        "supervisor",
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
 
-    ).order_by(
+            return redirect("students:home")
 
+        school = school_user.school
+
+        timetables = ExamTimetable.objects.select_related(
+            "school",
+            "school_class",
+            "exam",
+            "subject",
+            "supervisor",
+        ).filter(
+            school=school
+        )
+
+    # --------------------------------
+    # ORDER
+    # --------------------------------
+
+    timetables = timetables.order_by(
         "school_class__name",
-
         "exam_date",
-
         "start_time",
-
     )
-
-
 
     return render(
-
         request,
-
         "students/exam_timetable_list.html",
-
         {
-
             "timetables": timetables,
-
         },
-
     )
 
-@login_required
 
-@in_group(
 
-    "Administrators",
-
-    "Head Teacher",
-
-    "Senior Teacher",
-
-    "Teachers",
-
-)
 
 @login_required
-
 @in_group(
-
     "Administrators",
-
     "Head Teacher",
-
     "Senior Teacher",
-
     "Teachers",
-
 )
-
 def print_exam_timetable(request):
 
+    # --------------------------------
+    # GET USER'S SCHOOL
+    # --------------------------------
 
+    if request.user.is_superuser:
 
-    school = SchoolProfile.objects.first()
+        school = None
 
+        timetables = ExamTimetable.objects.select_related(
+            "school",
+            "school_class",
+            "exam",
+            "subject",
+            "supervisor",
+        ).all()
 
+    else:
 
-    timetables = ExamTimetable.objects.select_related(
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
 
-        "school_class",
+        if not school_user:
 
-        "exam",
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
 
-        "subject",
+            return redirect("students:home")
 
-        "supervisor",
+        school = school_user.school
 
-    ).order_by(
+        timetables = ExamTimetable.objects.select_related(
+            "school",
+            "school_class",
+            "exam",
+            "subject",
+            "supervisor",
+        ).filter(
+            school=school
+        )
 
+    # --------------------------------
+    # ORDER
+    # --------------------------------
+
+    timetables = timetables.order_by(
         "school_class__name",
-
         "exam_date",
-
         "start_time",
-
     )
-
-
-
-    buffer = BytesIO()
-
-
-
-    doc = SimpleDocTemplate(
-
-        buffer,
-
-        pagesize=A4,
-
-    )
-
-
-
-    styles = getSampleStyleSheet()
-
-
-
-    story = []
-
-
-
-    if school:
-
-        story.append(
-
-            Paragraph(
-
-                f"<b>{school.name}</b>",
-
-                styles["Title"],
-
-            )
-
-        )
-
-
-
-    story.append(
-
-        Paragraph(
-
-            "<b>School Examination Timetable</b>",
-
-            styles["Heading2"],
-
-        )
-
-    )
-
-
-
-    story.append(Spacer(1,12))
-
-
-
-    data = [[
-
-        "Class",
-
-        "Exam",
-
-        "Subject",
-
-        "Date",
-
-        "Day",
-
-        "Start",
-
-        "End",
-
-        "Room",
-
-        "Supervisor",
-
-    ]]
-
-
-
-    for t in timetables:
-
-
-
-        supervisor = ""
-
-
-
-        if t.supervisor:
-
-            supervisor = (
-
-                f"{t.supervisor.first_name} "
-
-                f"{t.supervisor.last_name}"
-
-            )
-
-
-
-        data.append([
-
-            t.school_class.name,
-
-            t.exam.name,
-
-            t.subject.name,
-
-            str(t.exam_date),
-
-            t.day,
-
-            str(t.start_time),
-
-            str(t.end_time),
-
-            t.room,
-
-            supervisor,
-
-        ])
-
-
-
-    table = Table(data)
-
-
-
-    table.setStyle(TableStyle([
-
-        ("BACKGROUND",(0,0),(-1,0),colors.darkblue),
-
-        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
-
-        ("GRID",(0,0),(-1,-1),1,colors.black),
-
-        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
-
-        ("ALIGN",(0,0),(-1,-1),"CENTER"),
-
-        ("BOTTOMPADDING",(0,0),(-1,0),8),
-
-    ]))
-
-
-
-    story.append(table)
-
-
-
-    doc.build(story)
-
-
-
-    buffer.seek(0)
-
-
-
-    return FileResponse(
-
-        buffer,
-
-        as_attachment=False,
-
-        filename="School_Exam_Timetable.pdf",
-
-    )
-
-
 
 
 
@@ -7238,7 +7136,7 @@ def add_exam_timetable(request):
 
 
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -7776,7 +7674,7 @@ def print_class_exam_timetable(request, id):
 
 
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -8310,7 +8208,7 @@ def edit_exam_timetable(request, id):
 
 
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 
@@ -8854,7 +8752,7 @@ def delete_exam_timetable(request, id):
 
 
 
-            return redirect("home")
+            return redirect("students:home")
 
 
 

@@ -10,6 +10,9 @@ from students.models import (
     CurriculumSubStrand,
     CurriculumAssessmentItem,
 )
+from students.management.commands.cbc_grade10_helpers import (
+    seed_grade10_performance_levels,
+)
 
 
 class Command(BaseCommand):
@@ -27,7 +30,7 @@ class Command(BaseCommand):
         academic_year = str(options["academic_year"])
 
         version, _ = CurriculumVersion.objects.get_or_create(
-            code=f"CBC-{academic_year}",
+            code=f"CBC{academic_year}",
             defaults={
                 "name": f"CBC {academic_year}",
                 "academic_year": academic_year,
@@ -50,6 +53,8 @@ class Command(BaseCommand):
 
         grade.display_name = "Grade 10"
         grade.save()
+
+        seed_grade10_performance_levels(grade)
 
         pathway, _ = CurriculumPathway.objects.get_or_create(
             curriculum_grade=grade,

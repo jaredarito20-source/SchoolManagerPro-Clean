@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from reportlab.lib import colors
-from django.http import FileResponse
+from django.http import FileResponse,HttpResponseForbidden
 from reportlab.lib.colors import HexColor
 from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet
@@ -12,12 +12,17 @@ from io import BytesIO
 from reportlab.lib.enums import TA_CENTER
 from django.db.models import Avg, Sum, Count
 from django.http import HttpResponse
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.db import transaction
-
+from django.db.models import Q
 from django.utils import timezone
 
 from reportlab.pdfgen import canvas
+from students.models import (
+    
+    CBCSubjectAssessment,
+    TeacherAssessmentAssignment,
+)
 
 from students.decorators import (
     admin_or_bursar,
@@ -29,6 +34,9 @@ from students.decorators import (
 from students.utils import (
     draw_school_header,
     draw_school_footer,
+    get_cbc_subject_performance_level,
+    cbc_performance_level_label,
+    
 )
 
 from reportlab.platypus import (
@@ -44,36 +52,67 @@ from students.models import *
 
 
 
+
 @login_required
 def exam_list(request):
 
+    # --------------------------------------------------
+    # SUPERUSER: CAN VIEW ALL SCHOOLS
+    # --------------------------------------------------
+
     if request.user.is_superuser:
 
-        exams = Exam.objects.select_related(
-            "school",
-        ).all()
+        exams = (
+            Exam.objects
+            .select_related("school")
+            .order_by("-year", "term", "name")
+        )
+
+    # --------------------------------------------------
+    # NORMAL USER: MUST BELONG TO A SCHOOL
+    # --------------------------------------------------
 
     else:
 
-        school = request.user.school_user.school
+        school_user = getattr(request.user, "school_user", None)
 
-        exams = Exam.objects.select_related(
-            "school",
-        ).filter(
-            school=school
+        if not school_user or not school_user.school:
+            messages.error(
+                request,
+                "Your account is not assigned to a school."
+            )
+
+            return redirect("students:home")
+
+        school = school_user.school
+
+        exams = (
+            Exam.objects
+            .select_related("school")
+            .filter(school=school)
+            .order_by("-year", "term", "name")
         )
+
+    is_exam_admin = (
+        request.user.is_superuser
+        or request.user.groups.filter(name="Administrators").exists()
+    )
 
     return render(
         request,
         "students/exam_list.html",
         {
             "exams": exams,
+            "is_exam_admin": is_exam_admin,
         },
     )
 
 
+
+
+
 @login_required
-@admin_or_bursar
+@admin_required
 def add_exam(request):
 
     # --------------------------------
@@ -82,11 +121,28 @@ def add_exam(request):
 
     if request.user.is_superuser:
 
-        schools = SchoolProfile.objects.all()
+        schools = SchoolProfile.objects.all().order_by("id")
 
     else:
 
-        school = request.user.school_user.school
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+
+            messages.error(
+                request,
+                "Your account is not assigned to a school."
+            )
+
+            return redirect(
+                "students:home"
+            )
+
+        school = school_user.school
 
         schools = [school]
 
@@ -109,7 +165,101 @@ def add_exam(request):
         year = request.POST.get(
             "year",
             ""
+            
         ).strip()
+
+        marks_out_of = request.POST.get(
+            "marks_out_of",
+            ""
+        ).strip()
+
+        # --------------------------------
+        # VALIDATE NAME
+        # --------------------------------
+
+        if not name:
+
+            messages.error(
+                request,
+                "Please enter the exam name."
+            )
+
+            return redirect(
+                "students:add_exam"
+            )
+
+        # --------------------------------
+        # VALIDATE TERM
+        # --------------------------------
+
+        # Keep this aligned with the existing
+        # Exam.term choices used by the application.
+
+        allowed_terms = {
+            "1",
+            "2",
+            "3",
+        }
+
+        if term not in allowed_terms:
+
+            messages.error(
+                request,
+                "Please select a valid term."
+            )
+
+            return redirect(
+                "students:add_exam"
+            )
+
+        # --------------------------------
+        # VALIDATE YEAR
+        # --------------------------------
+
+        try:
+
+            year = int(year)
+
+        except (TypeError, ValueError):
+
+            messages.error(
+                request,
+                "Please enter a valid academic year."
+            )
+
+            return redirect(
+                "students:add_exam"
+            )
+
+        # --------------------------------
+        # VALIDATE MARKS OUT OF
+        # --------------------------------
+
+        try:
+
+            marks_out_of = Decimal(marks_out_of)
+
+        except (TypeError, ValueError):
+
+            messages.error(
+                request,
+                "Please enter a valid Marks Out Of value."
+            )
+
+            return redirect(
+                "students:add_exam"
+            )
+
+        if marks_out_of <= 0:
+
+            messages.error(
+                request,
+                "Marks Out Of must be greater than zero."
+            )
+
+            return redirect(
+                "students:add_exam"
+            )
 
         # --------------------------------
         # DETERMINE SCHOOL
@@ -132,9 +282,11 @@ def add_exam(request):
                     "students:add_exam"
                 )
 
-            school = SchoolProfile.objects.filter(
-                id=school_id
-            ).first()
+            school = (
+                SchoolProfile.objects
+                .filter(id=school_id)
+                .first()
+            )
 
             if not school:
 
@@ -149,7 +301,28 @@ def add_exam(request):
 
         else:
 
-            school = request.user.school_user.school
+            # --------------------------------
+            # NORMAL USER CANNOT CHOOSE SCHOOL
+            # --------------------------------
+
+            school_user = getattr(
+                request.user,
+                "school_user",
+                None,
+            )
+
+            if not school_user or not school_user.school:
+
+                messages.error(
+                    request,
+                    "Your account is not assigned to a school."
+                )
+
+                return redirect(
+                    "students:home"
+                )
+
+            school = school_user.school
 
         # --------------------------------
         # CREATE EXAM
@@ -158,10 +331,13 @@ def add_exam(request):
         Exam.objects.create(
 
             name=name,
+
             term=term,
+
             year=year,
 
             school=school,
+            marks_out_of=marks_out_of,
 
             status="OPEN",
         )
@@ -187,11 +363,310 @@ def add_exam(request):
         },
     )
 @login_required
-@admin_or_bursar
+@admin_required
+def setup_cbc_exams(request):
+
+    # --------------------------------
+    # DETERMINE AVAILABLE SCHOOLS
+    # --------------------------------
+
+    if request.user.is_superuser:
+
+        schools = SchoolProfile.objects.all().order_by("id")
+
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+
+            messages.error(
+                request,
+                "Your account is not assigned to a school."
+            )
+
+            return redirect(
+                "students:home"
+            )
+
+        school = school_user.school
+        schools = [school]
+
+    # --------------------------------
+    # POST
+    # --------------------------------
+
+    if request.method == "POST":
+
+        term = request.POST.get(
+            "term",
+            ""
+        ).strip()
+
+        year = request.POST.get(
+            "year",
+            ""
+        ).strip()
+        
+
+        cat1_marks_out_of = request.POST.get(
+            "cat1_marks_out_of",
+            ""
+        ).strip()
+
+        mid_marks_out_of = request.POST.get(
+            "mid_marks_out_of",
+            ""
+        ).strip()
+
+        end_marks_out_of = request.POST.get(
+            "end_marks_out_of",
+            ""
+        ).strip()
+
+        # --------------------------------
+        # VALIDATE TERM
+        # --------------------------------
+
+        if term not in {"1", "2", "3"}:
+
+            messages.error(
+                request,
+                "Please select a valid term."
+            )
+
+            return redirect(
+                "students:setup_cbc_exams"
+            )
+
+        # --------------------------------
+        # VALIDATE YEAR
+        # --------------------------------
+
+        try:
+
+            year = int(year)
+
+        except (TypeError, ValueError):
+
+            messages.error(
+                request,
+                "Please enter a valid academic year."
+            )
+
+            return redirect(
+                "students:setup_cbc_exams"
+            )
+        
+        
+
+        # --------------------------------
+        # VALIDATE MARKS OUT OF
+        # --------------------------------
+
+        try:
+
+            cat1_marks_out_of = Decimal(
+                cat1_marks_out_of
+            )
+
+            mid_marks_out_of = Decimal(
+                mid_marks_out_of
+            )
+
+            end_marks_out_of = Decimal(
+                end_marks_out_of
+            )
+
+        except (TypeError, ValueError):
+
+            messages.error(
+                request,
+                "Please enter valid Marks Out Of values for all CBC exams."
+            )
+
+            return redirect(
+                "students:setup_cbc_exams"
+            )
+
+        if (
+            cat1_marks_out_of <= 0
+            or mid_marks_out_of <= 0
+            or end_marks_out_of <= 0
+        ):
+
+            messages.error(
+                request,
+                "Marks Out Of values must all be greater than zero."
+            )
+
+            return redirect(
+                "students:setup_cbc_exams"
+            )
+
+        # --------------------------------
+        # DETERMINE SCHOOL
+        # --------------------------------
+
+        if request.user.is_superuser:
+
+            school_id = request.POST.get(
+                "school"
+            )
+
+            if not school_id:
+
+                messages.error(
+                    request,
+                    "Please select a school."
+                )
+
+                return redirect(
+                    "students:setup_cbc_exams"
+                )
+
+            school = (
+                SchoolProfile.objects
+                .filter(id=school_id)
+                .first()
+            )
+
+            if not school:
+
+                messages.error(
+                    request,
+                    "Invalid school selected."
+                )
+
+                return redirect(
+                    "students:setup_cbc_exams"
+                )
+
+        else:
+
+            school_user = getattr(
+                request.user,
+                "school_user",
+                None,
+            )
+
+            if not school_user or not school_user.school:
+
+                messages.error(
+                    request,
+                    "Your account is not assigned to a school."
+                )
+
+                return redirect(
+                    "students:home"
+                )
+
+            school = school_user.school
+
+        # --------------------------------
+        # STANDARD CBC EXAMS
+        # --------------------------------
+
+        standard_exams = [
+            "CAT 1",
+            "MID TERM",
+            "END TERM",
+        ]
+
+        created = []
+        existing = []
+
+        # --------------------------------
+        # CREATE ONLY MISSING EXAMS
+        # --------------------------------
+
+        with transaction.atomic():
+
+            for exam_name in standard_exams:
+
+                exam = (
+                    Exam.objects
+                    .filter(
+                        school=school,
+                        year=year,
+                        term=term,
+                        name__iexact=exam_name,
+                    )
+                    .first()
+                )
+
+                if exam:
+
+                    existing.append(exam.name)
+                    continue
+
+                marks_out_of_map = {
+                    "CAT 1": cat1_marks_out_of,
+                    "MID TERM": mid_marks_out_of,
+                    "END TERM": end_marks_out_of,
+                }
+
+                Exam.objects.create(
+                    name=exam_name,
+                    term=term,
+                    year=year,
+                    school=school,
+                    marks_out_of=marks_out_of_map[exam_name],
+                    status="OPEN",
+                )
+
+                created.append(exam_name)
+
+        # --------------------------------
+        # RESULT MESSAGE
+        # --------------------------------
+
+        if created:
+
+            messages.success(
+                request,
+                "CBC exams created: "
+                + ", ".join(created)
+                + "."
+            )
+
+        if existing:
+
+            messages.info(
+                request,
+                "Already existing: "
+                + ", ".join(existing)
+                + "."
+            )
+
+        return redirect(
+            "students:exam_list"
+        )
+
+    # --------------------------------
+    # FORM
+    # --------------------------------
+
+    return render(
+        request,
+        "students/setup_cbc_exams.html",
+        {
+            "schools": schools,
+        },
+    )
+
+
+
+@login_required
+@admin_required
 def edit_exam(request, id):
 
     # --------------------------------
-    # GET EXAM
+    # GET EXAM — SCHOOL SAFE
     # --------------------------------
 
     if request.user.is_superuser:
@@ -203,7 +678,22 @@ def edit_exam(request, id):
 
     else:
 
-        school = request.user.school_user.school
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+
+            messages.error(
+                request,
+                "Your account is not assigned to a school."
+            )
+
+            return redirect("students:home")
+
+        school = school_user.school
 
         exam = get_object_or_404(
             Exam.objects.select_related("school"),
@@ -217,28 +707,141 @@ def edit_exam(request, id):
 
     if request.method == "POST":
 
-        exam.name = request.POST.get(
+        name = request.POST.get(
             "name",
             ""
         ).strip()
 
-        exam.term = request.POST.get(
+        term = request.POST.get(
             "term",
             ""
         ).strip()
 
-        exam.year = request.POST.get(
-            "year"
-        )
+        year = request.POST.get(
+            "year",
+            ""
+        ).strip()
 
-        exam.save()
+        marks_out_of = request.POST.get(
+            "marks_out_of",
+            ""
+        ).strip()
+
+        # --------------------------------
+        # VALIDATE NAME
+        # --------------------------------
+
+        if not name:
+
+            messages.error(
+                request,
+                "Please enter the exam name."
+            )
+
+            return redirect(
+                "students:edit_exam",
+                id=exam.id,
+            )
+
+        # --------------------------------
+        # VALIDATE TERM
+        # --------------------------------
+
+        if term not in {"1", "2", "3"}:
+
+            messages.error(
+                request,
+                "Please select a valid term."
+            )
+
+            return redirect(
+                "students:edit_exam",
+                id=exam.id,
+            )
+
+        # --------------------------------
+        # VALIDATE YEAR
+        # --------------------------------
+
+        try:
+
+            year = int(year)
+
+        except (TypeError, ValueError):
+
+            messages.error(
+                request,
+                "Please enter a valid academic year."
+            )
+
+            return redirect(
+                "students:edit_exam",
+                id=exam.id,
+            )
+
+        # --------------------------------
+        # VALIDATE MARKS OUT OF
+        # --------------------------------
+
+        try:
+
+            marks_out_of = Decimal(
+                marks_out_of
+            )
+
+        except (TypeError, ValueError, InvalidOperation):
+
+            messages.error(
+                request,
+                "Please enter a valid Marks Out Of value."
+            )
+
+            return redirect(
+                "students:edit_exam",
+                id=exam.id,
+            )
+
+        if marks_out_of <= 0:
+
+            messages.error(
+                request,
+                "Marks Out Of must be greater than zero."
+            )
+
+            return redirect(
+                "students:edit_exam",
+                id=exam.id,
+            )
+
+        # --------------------------------
+        # UPDATE THIS EXAM ONLY
+        # --------------------------------
+
+        exam.name = name
+        exam.term = term
+        exam.year = year
+        exam.marks_out_of = marks_out_of
+
+        # IMPORTANT:
+        # exam.school is deliberately NOT changed.
+
+        exam.save(
+            update_fields=[
+                "name",
+                "term",
+                "year",
+                "marks_out_of",
+            ]
+        )
 
         messages.success(
             request,
             "Exam updated successfully."
         )
 
-        return redirect("students:exam_list")
+        return redirect(
+            "students:exam_list"
+        )
 
     # --------------------------------
     # FORM
@@ -252,8 +855,9 @@ def edit_exam(request, id):
         },
     )
 
+
 @login_required
-@admin_or_bursar
+@admin_required
 def delete_exam(request, id):
 
     # --------------------------------
@@ -269,7 +873,24 @@ def delete_exam(request, id):
 
     else:
 
-        school = request.user.school_user.school
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+
+            messages.error(
+                request,
+                "Your account is not assigned to a school."
+            )
+
+            return redirect(
+                "students:home"
+            )
+
+        school = school_user.school
 
         exam = get_object_or_404(
             Exam.objects.select_related("school"),
@@ -290,7 +911,9 @@ def delete_exam(request, id):
             "Exam deleted successfully."
         )
 
-        return redirect("students:exam_list")
+        return redirect(
+            "students:exam_list"
+        )
 
     # --------------------------------
     # CONFIRMATION PAGE
@@ -303,9 +926,12 @@ def delete_exam(request, id):
             "exam": exam,
         },
     )
+
+
 # ==========================
 # Marks
 # ==========================
+
 @login_required
 @admin_or_teacher
 def mark_list(request):
@@ -332,34 +958,75 @@ def mark_list(request):
 
     if request.user.is_superuser:
 
+        # Superuser can work across all schools.
         school = None
-
-    elif hasattr(request.user, "school_user"):
-
-        school = request.user.school_user.school
-
-        marks = marks.filter(
-            student__school=school,
-            subject__school=school,
-            exam__school=school,
-        )
-
-    elif hasattr(request.user, "teacher_profile"):
-
-        teacher = request.user.teacher_profile
-        school = teacher.school
-
-        marks = marks.filter(
-            subject__teacher=teacher,
-            student__school=school,
-            subject__school=school,
-            exam__school=school,
-        )
 
     else:
 
-        school = None
-        marks = Mark.objects.none()
+        # -----------------------------------------------
+        # GET USER'S SCHOOL
+        # -----------------------------------------------
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        teacher = getattr(
+            request.user,
+            "teacher_profile",
+            None,
+        )
+
+        if school_user and school_user.school:
+
+            school = school_user.school
+
+        elif teacher and teacher.school:
+
+            school = teacher.school
+
+        else:
+
+            school = None
+            marks = Mark.objects.none()
+
+        # -----------------------------------------------
+        # SCHOOL ISOLATION
+        # -----------------------------------------------
+
+        if school:
+
+            marks = marks.filter(
+                student__school=school,
+                subject__school=school,
+                exam__school=school,
+            )
+
+            # -------------------------------------------
+            # TEACHER RESTRICTION
+            # -------------------------------------------
+            #
+            # Administrators can see all approved marks
+            # within their school.
+            #
+            # Teachers can only see marks belonging to
+            # subjects assigned to them.
+            #
+            # Do NOT use hasattr(school_user) to decide
+            # whether someone is an administrator.
+            # ------------------------------------------------
+
+            is_administrator = request.user.groups.filter(
+                name="Administrators"
+            ).exists()
+
+            if teacher and not is_administrator:
+
+                marks = marks.filter(
+                    subject__teacher=teacher
+                )
 
     # =====================================================
     # ONLY APPROVED MARKS
@@ -373,31 +1040,62 @@ def mark_list(request):
     # FILTER VALUES
     # =====================================================
 
-    selected_year = request.GET.get("year", "")
-    selected_term = request.GET.get("term", "")
-    selected_exam = request.GET.get("exam", "")
-    selected_class = request.GET.get("school_class", "")
+    selected_year = request.GET.get(
+        "year",
+        "",
+    ).strip()
+
+    selected_term = request.GET.get(
+        "term",
+        "",
+    ).strip()
+
+    selected_exam = request.GET.get(
+        "exam",
+        "",
+    ).strip()
+
+    selected_class = request.GET.get(
+        "school_class",
+        "",
+    ).strip()
 
     # =====================================================
-    # APPLY FILTERS
+    # APPLY YEAR FILTER
     # =====================================================
 
     if selected_year:
+
         marks = marks.filter(
             exam__year=selected_year
         )
 
+    # =====================================================
+    # APPLY TERM FILTER
+    # =====================================================
+
     if selected_term:
+
         marks = marks.filter(
             exam__term=selected_term
         )
 
+    # =====================================================
+    # APPLY EXAM FILTER
+    # =====================================================
+
     if selected_exam:
+
         marks = marks.filter(
             exam_id=selected_exam
         )
 
+    # =====================================================
+    # APPLY CLASS FILTER
+    # =====================================================
+
     if selected_class:
+
         marks = marks.filter(
             student__school_class_id=selected_class
         )
@@ -408,37 +1106,93 @@ def mark_list(request):
 
     if request.user.is_superuser:
 
-        exams = Exam.objects.all().order_by("-year", "term", "name")
-        classes = SchoolClass.objects.all().order_by("name")
+        exams = (
+            Exam.objects
+            .select_related("school")
+            .order_by(
+                "-year",
+                "term",
+                "name",
+            )
+        )
+
+        classes = (
+            SchoolClass.objects
+            .select_related("school")
+            .order_by("name")
+        )
 
     elif school:
 
-        exams = Exam.objects.filter(
-            school=school
-        ).order_by("-year", "term", "name")
+        exams = (
+            Exam.objects
+            .filter(school=school)
+            .order_by(
+                "-year",
+                "term",
+                "name",
+            )
+        )
 
-        classes = SchoolClass.objects.filter(
-            school=school
-        ).order_by("name")
+        classes = (
+            SchoolClass.objects
+            .filter(school=school)
+            .order_by("name")
+        )
 
     else:
 
         exams = Exam.objects.none()
         classes = SchoolClass.objects.none()
 
-    current_year = date.today().year
+    # =====================================================
+    # AVAILABLE YEARS
+    # =====================================================
 
-    years = [
-        current_year - 1,
-        current_year,
-        current_year + 1,
-    ]
+    if request.user.is_superuser:
+
+        if school:
+
+            years = (
+                SchoolAcademicYear.objects
+                .filter(school=school)
+                .values_list("year", flat=True)
+                .distinct()
+                .order_by("-year")
+            )
+
+        else:
+
+            years = (
+                SchoolAcademicYear.objects
+                .values_list("year", flat=True)
+                .distinct()
+                .order_by("-year")
+            )
+
+    elif school:
+
+        years = (
+            SchoolAcademicYear.objects
+            .filter(school=school)
+            .values_list("year", flat=True)
+            .distinct()
+            .order_by("-year")
+        )
+
+    else:
+
+        years = SchoolAcademicYear.objects.none()
+    # =====================================================
+    # AVAILABLE TERMS
+    # =====================================================
 
     terms = [
         "1",
         "2",
         "3",
     ]
+
     # =====================================================
     # DISPLAY
     # =====================================================
@@ -458,51 +1212,69 @@ def mark_list(request):
             "selected_class": selected_class,
         },
     )
+
+
+
 @login_required
 @admin_or_teacher
 def add_mark(request):
 
     # =========================================================
-    # DETERMINE USER'S SCHOOL
+    # DETERMINE USER'S SCHOOL AND ROLE
     # =========================================================
 
     if request.user.is_superuser:
 
         school = None
-
-    elif hasattr(request.user, "school_user"):
-
-        # Administrators and other school users
-        # get their school from school_user.
-        school = request.user.school_user.school
+        teacher = None
 
     else:
 
-        # Teachers get their school from Teacher profile.
-        teacher = Teacher.objects.filter(
-            user=request.user
-        ).select_related("school").first()
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
 
-        if not teacher:
+        teacher = getattr(
+            request.user,
+            "teacher_profile",
+            None,
+        )
+
+        # -----------------------------------------------------
+        # Determine school
+        # -----------------------------------------------------
+
+        if school_user and school_user.school:
+
+            school = school_user.school
+
+        elif teacher and teacher.school:
+
+            school = teacher.school
+
+        else:
 
             messages.error(
                 request,
                 "Your account is not linked to a school or teacher."
             )
 
-            return redirect("home")
-
-        school = teacher.school
-
+            return redirect(
+                "students:home"
+            )
 
     # =========================================================
     # DETERMINE WHETHER USER IS ADMINISTRATOR
     # =========================================================
 
-    is_administrator = request.user.groups.filter(
-        name="Administrators"
-    ).exists()
-
+    is_administrator = (
+        request.user.is_superuser
+        or request.user.groups.filter(
+            name="Administrators"
+        ).exists()
+    )
 
     # =========================================================
     # AVAILABLE CLASSES
@@ -510,40 +1282,41 @@ def add_mark(request):
 
     if request.user.is_superuser:
 
-        classes = SchoolClass.objects.all().order_by(
-            "school__name",
-            "name",
+        classes = (
+            SchoolClass.objects
+            .select_related("school")
+            .all()
+            .order_by(
+                "school__name",
+                "name",
+            )
         )
 
     elif is_administrator:
 
-        # Administrator sees all classes in their school.
-        classes = SchoolClass.objects.filter(
-            school=school
-        ).order_by(
-            "name"
+        classes = (
+            SchoolClass.objects
+            .filter(school=school)
+            .order_by("name")
         )
 
     else:
 
-        # Teacher sees only classes where they teach.
-        teacher = Teacher.objects.filter(
-            user=request.user
-        ).first()
-
         if teacher:
 
-            classes = SchoolClass.objects.filter(
-                school=school,
-                subjects__teacher=teacher,
-            ).distinct().order_by(
-                "name"
+            classes = (
+                SchoolClass.objects
+                .filter(
+                    school=school,
+                    subjects__teacher=teacher,
+                )
+                .distinct()
+                .order_by("name")
             )
 
         else:
 
             classes = SchoolClass.objects.none()
-
 
     # =========================================================
     # OPEN EXAMS
@@ -551,40 +1324,43 @@ def add_mark(request):
 
     if request.user.is_superuser:
 
-        exams = Exam.objects.filter(
-            status="OPEN"
-        ).select_related(
-            "school"
-        ).order_by(
-            "year",
-            "term",
-            "name",
+        exams = (
+            Exam.objects
+            .filter(status="OPEN")
+            .select_related("school")
+            .order_by(
+                "year",
+                "term",
+                "name",
+            )
         )
 
     else:
 
-        exams = Exam.objects.filter(
-            school=school,
-            status="OPEN",
-        ).order_by(
-            "year",
-            "term",
-            "name",
+        exams = (
+            Exam.objects
+            .filter(
+                school=school,
+                status="OPEN",
+            )
+            .select_related("school")
+            .order_by(
+                "year",
+                "term",
+                "name",
+            )
         )
-
 
     # =========================================================
     # INITIAL VALUES
     # =========================================================
 
     students = Student.objects.none()
-
     subjects = Subject.objects.none()
 
     selected_class = None
     selected_subject = None
     selected_exam = None
-
 
     # =========================================================
     # POST
@@ -604,7 +1380,6 @@ def add_mark(request):
             "exam"
         )
 
-
         # =====================================================
         # VALIDATE CLASS
         # =====================================================
@@ -614,18 +1389,17 @@ def add_mark(request):
             if request.user.is_superuser:
 
                 selected_class = get_object_or_404(
-                    SchoolClass,
+                    SchoolClass.objects.select_related("school"),
                     id=class_id,
                 )
 
             else:
 
                 selected_class = get_object_or_404(
-                    SchoolClass,
+                    SchoolClass.objects.select_related("school"),
                     id=class_id,
                     school=school,
                 )
-
 
         # =====================================================
         # LOAD SUBJECTS FOR SELECTED CLASS
@@ -635,42 +1409,54 @@ def add_mark(request):
 
             if request.user.is_superuser:
 
-                subjects = Subject.objects.filter(
-                    school=selected_class.school,
-                    school_class=selected_class,
-                ).order_by(
-                    "name"
+                subjects = (
+                    Subject.objects
+                    .filter(
+                        school=selected_class.school,
+                        school_class=selected_class,
+                    )
+                    .select_related(
+                        "school",
+                        "school_class",
+                        "teacher",
+                    )
+                    .order_by("name")
                 )
 
             elif is_administrator:
 
-                subjects = Subject.objects.filter(
-                    school=school,
-                    school_class=selected_class,
-                ).order_by(
-                    "name"
+                subjects = (
+                    Subject.objects
+                    .filter(
+                        school=school,
+                        school_class=selected_class,
+                    )
+                    .select_related(
+                        "school",
+                        "school_class",
+                        "teacher",
+                    )
+                    .order_by("name")
                 )
 
             else:
 
-                teacher = Teacher.objects.filter(
-                    user=request.user
-                ).first()
-
                 if teacher:
 
-                    subjects = Subject.objects.filter(
-                        school=school,
-                        school_class=selected_class,
-                        teacher=teacher,
-                    ).order_by(
-                        "name"
+                    subjects = (
+                        Subject.objects
+                        .filter(
+                            school=school,
+                            school_class=selected_class,
+                            teacher=teacher,
+                        )
+                        .select_related(
+                            "school",
+                            "school_class",
+                            "teacher",
+                        )
+                        .order_by("name")
                     )
-
-                else:
-
-                    subjects = Subject.objects.none()
-
 
         # =====================================================
         # VALIDATE SUBJECT
@@ -698,10 +1484,6 @@ def add_mark(request):
 
             else:
 
-                teacher = Teacher.objects.filter(
-                    user=request.user
-                ).first()
-
                 if not teacher:
 
                     messages.error(
@@ -710,7 +1492,7 @@ def add_mark(request):
                     )
 
                     return redirect(
-                        "add_mark"
+                        "students:add_mark"
                     )
 
                 selected_subject = get_object_or_404(
@@ -720,7 +1502,6 @@ def add_mark(request):
                     school_class=selected_class,
                     teacher=teacher,
                 )
-
 
         # =====================================================
         # VALIDATE EXAM
@@ -745,6 +1526,48 @@ def add_mark(request):
                     status="OPEN",
                 )
 
+        # =====================================================
+        # SCHOOL CONSISTENCY
+        # =====================================================
+
+        if (
+            selected_class
+            and selected_subject
+            and selected_exam
+        ):
+
+            if selected_class.school_id != selected_exam.school_id:
+
+                messages.error(
+                    request,
+                    "The selected class and exam do not belong to the same school."
+                )
+
+                return redirect(
+                    "students:add_mark"
+                )
+
+            if selected_subject.school_id != selected_exam.school_id:
+
+                messages.error(
+                    request,
+                    "The selected subject and exam do not belong to the same school."
+                )
+
+                return redirect(
+                    "students:add_mark"
+                )
+
+            if selected_subject.school_class_id != selected_class.id:
+
+                messages.error(
+                    request,
+                    "The selected subject does not belong to the selected class."
+                )
+
+                return redirect(
+                    "students:add_mark"
+                )
 
         # =====================================================
         # LOAD STUDENTS
@@ -752,24 +1575,14 @@ def add_mark(request):
 
         if selected_class:
 
-            if request.user.is_superuser:
-
-                students = Student.objects.filter(
-                    school_class=selected_class,
+            students = (
+                Student.objects
+                .filter(
                     school=selected_class.school,
-                ).order_by(
-                    "admission_number"
-                )
-
-            else:
-
-                students = Student.objects.filter(
-                    school=school,
                     school_class=selected_class,
-                ).order_by(
-                    "admission_number"
                 )
-
+                .order_by("admission_number")
+            )
 
         # =====================================================
         # SAVE MARKS
@@ -782,64 +1595,31 @@ def add_mark(request):
             and selected_exam
         ):
 
-
-            # =================================================
-            # SCHOOL CONSISTENCY CHECK
-            # =================================================
-
-            if selected_subject.school != selected_exam.school:
-
-                messages.error(
-                    request,
-                    "The selected subject and exam do not belong to the same school."
-                )
-
-                return redirect(
-                    "add_mark"
-                )
-
-
-            if selected_class.school != selected_exam.school:
-
-                messages.error(
-                    request,
-                    "The selected class and exam do not belong to the same school."
-                )
-
-                return redirect(
-                    "add_mark"
-                )
-
-
             # =================================================
             # DETERMINE TEACHER FOR SUBMISSION
             # =================================================
 
             if request.user.is_superuser:
 
-                # Superuser uses the teacher assigned to
-                # the subject.
-                teacher = selected_subject.teacher
+                teacher_for_submission = (
+                    selected_subject.teacher
+                )
 
             elif is_administrator:
 
-                # Administrator also uses the teacher assigned
-                # to the subject.
-                teacher = selected_subject.teacher
+                teacher_for_submission = (
+                    selected_subject.teacher
+                )
 
             else:
 
-                # Normal teacher uses their own Teacher profile.
-                teacher = Teacher.objects.filter(
-                    user=request.user
-                ).first()
-
+                teacher_for_submission = teacher
 
             # =================================================
             # TEACHER REQUIRED
             # =================================================
 
-            if not teacher:
+            if not teacher_for_submission:
 
                 messages.error(
                     request,
@@ -847,15 +1627,17 @@ def add_mark(request):
                 )
 
                 return redirect(
-                    "add_mark"
+                    "students:add_mark"
                 )
 
-
             # =================================================
-            # TEACHER / EXAM SCHOOL CHECK
+            # TEACHER / SCHOOL CONSISTENCY
             # =================================================
 
-            if teacher.school != selected_exam.school:
+            if (
+                teacher_for_submission.school_id
+                != selected_exam.school_id
+            ):
 
                 messages.error(
                     request,
@@ -863,113 +1645,52 @@ def add_mark(request):
                 )
 
                 return redirect(
-                    "add_mark"
+                    "students:add_mark"
                 )
 
-
             # =================================================
-            # FIND OR CREATE MARK SUBMISSION
+            # MATERIALIZE STUDENTS
             # =================================================
 
-            submission, created = MarkSubmission.objects.get_or_create(
-
-                school_class=selected_class,
-
-                subject=selected_subject,
-
-                exam=selected_exam,
-
-                defaults={
-                    "teacher": teacher,
-                    "status": "DRAFT",
-                },
+            student_list = list(
+                students
             )
 
-
             # =================================================
-            # DO NOT EDIT APPROVED MARKS
-            # =================================================
-
-            if submission.status == "APPROVED":
-
-                messages.error(
-                    request,
-                    "These marks have already been approved."
-                )
-
-                return redirect(
-                    "add_mark"
-                )
-
-
-            # =================================================
-            # DO NOT EDIT SUBMITTED MARKS
+            # VALIDATE ALL MARKS BEFORE WRITING ANYTHING
             # =================================================
 
-            if submission.status == "SUBMITTED":
+            validated_marks = []
 
-                messages.error(
-                    request,
-                    "These marks have already been submitted and are waiting for approval."
-                )
+            validation_errors = []
 
-                return redirect(
-                    "add_mark"
-                )
+            for student in student_list:
 
-
-            # =================================================
-            # REJECTED → RETURN TO DRAFT
-            # =================================================
-
-            if submission.status == "REJECTED":
-
-                submission.status = "DRAFT"
-
-                submission.teacher = teacher
-
-                submission.save(
-                    update_fields=[
-                        "status",
-                        "teacher",
-                    ]
-                )
-
-
-            # =================================================
-            # SAVE EACH STUDENT'S MARK
-            # =================================================
-
-            saved_count = 0
-
-            for student in students:
-
-                value = request.POST.get(
+                raw_value = request.POST.get(
                     f"marks_{student.id}"
                 )
-
 
                 # ---------------------------------------------
                 # EMPTY MARK
                 # ---------------------------------------------
 
-                if value in (None, ""):
+                if raw_value in (None, ""):
 
                     continue
 
-
                 # ---------------------------------------------
-                # CONVERT MARK
+                # CONVERT TO DECIMAL
                 # ---------------------------------------------
 
                 try:
 
-                    mark_value = float(value)
+                    mark_value = Decimal(
+                        str(raw_value).strip()
+                    )
 
-                except (TypeError, ValueError):
+                except Exception:
 
-                    messages.error(
-                        request,
+                    validation_errors.append(
                         f"Invalid mark for "
                         f"{student.first_name} "
                         f"{student.last_name}."
@@ -977,78 +1698,210 @@ def add_mark(request):
 
                     continue
 
-
                 # ---------------------------------------------
-                # VALIDATE RANGE
+                # RANGE
                 # ---------------------------------------------
 
-                if mark_value < 0 or mark_value > 100:
+                exam_max = selected_exam.marks_out_of
 
-                    messages.error(
-                        request,
+                if (
+                    mark_value < Decimal("0")
+                    or mark_value > exam_max
+                ):
+
+                    validation_errors.append(
                         f"Mark for "
                         f"{student.first_name} "
                         f"{student.last_name} "
-                        f"must be between 0 and 100."
+                        f"must be between 0 and {exam_max}."
                     )
 
                     continue
 
-
-                # ---------------------------------------------
-                # CALCULATE GRADE
-                # ---------------------------------------------
-
-                grade = calculate_grade(
-                    mark_value
+                validated_marks.append(
+                    (
+                        student,
+                        mark_value,
+                    )
                 )
-
-
-                # ---------------------------------------------
-                # CREATE OR UPDATE MARK
-                # ---------------------------------------------
-
-                Mark.objects.update_or_create(
-
-                    student=student,
-
-                    subject=selected_subject,
-
-                    exam=selected_exam,
-
-                    defaults={
-                        "marks": mark_value,
-                        "grade": grade,
-                        "submission": submission,
-                    },
-                )
-
-                saved_count += 1
-
 
             # =================================================
-            # RESULT MESSAGE
+            # STOP IF ANY MARK IS INVALID
             # =================================================
 
-            if saved_count > 0:
+            if validation_errors:
 
-                messages.success(
-                    request,
-                    f"{saved_count} mark(s) saved successfully."
+                for error in validation_errors:
+
+                    messages.error(
+                        request,
+                        error,
+                    )
+
+                return redirect(
+                    "students:add_mark"
                 )
 
-            else:
+            # =================================================
+            # REQUIRE AT LEAST ONE MARK
+            # =================================================
+
+            if not validated_marks:
 
                 messages.warning(
                     request,
                     "No marks were entered."
                 )
 
+                return redirect(
+                    "students:add_mark"
+                )
 
-            return redirect(
-                "add_mark"
+            # =================================================
+            # ATOMIC SAVE
+            # =================================================
+
+            with transaction.atomic():
+
+                # ---------------------------------------------
+                # LOCK EXISTING SUBMISSION
+                # ---------------------------------------------
+
+                submission = (
+                    MarkSubmission.objects
+                    .select_for_update()
+                    .filter(
+                        school_class=selected_class,
+                        subject=selected_subject,
+                        exam=selected_exam,
+                    )
+                    .first()
+                )
+
+                # ---------------------------------------------
+                # CREATE SUBMISSION IF NECESSARY
+                # ---------------------------------------------
+
+                if not submission:
+
+                    submission = MarkSubmission.objects.create(
+                        school_class=selected_class,
+                        subject=selected_subject,
+                        exam=selected_exam,
+                        teacher=teacher_for_submission,
+                        status="DRAFT",
+                    )
+
+                # ---------------------------------------------
+                # PROTECT APPROVED MARKS
+                # ---------------------------------------------
+
+                elif submission.status == "APPROVED":
+
+                    messages.error(
+                        request,
+                        "These marks have already been approved."
+                    )
+
+                    return redirect(
+                        "students:add_mark"
+                    )
+
+                # ---------------------------------------------
+                # PROTECT SUBMITTED MARKS
+                # ---------------------------------------------
+
+                elif submission.status == "SUBMITTED":
+
+                    messages.error(
+                        request,
+                        "These marks have already been submitted and are waiting for approval."
+                    )
+
+                    return redirect(
+                        "students:add_mark"
+                    )
+
+                # ---------------------------------------------
+                # REJECTED → DRAFT
+                # ---------------------------------------------
+
+                elif submission.status == "REJECTED":
+
+                    submission.status = "DRAFT"
+                    submission.teacher = teacher_for_submission
+
+                    submission.save(
+                        update_fields=[
+                            "status",
+                            "teacher",
+                        ]
+                    )
+
+                # ---------------------------------------------
+                # ENSURE DRAFT HAS CORRECT TEACHER
+                # ---------------------------------------------
+
+                elif submission.teacher_id != teacher_for_submission.id:
+
+                    submission.teacher = teacher_for_submission
+
+                    submission.save(
+                        update_fields=[
+                            "teacher",
+                        ]
+                    )
+
+                # ---------------------------------------------
+                # SAVE MARKS
+                # ---------------------------------------------
+
+                saved_count = 0
+
+                for student, mark_value in validated_marks:
+
+                # =================================================
+                # CBC EXAM MARK
+                # =================================================
+                #
+                # Store the teacher's raw mark exactly as entered.
+                #
+                # The selected exam's marks_out_of has already
+                # been used during validation.
+                #
+                # CBC performance level will be derived later
+                # when the exam results are displayed/compiled.
+                #
+                    
+                    Mark.objects.update_or_create(
+
+                        student=student,
+
+                        subject=selected_subject,
+
+                        exam=selected_exam,
+
+                        defaults={
+                            "marks": mark_value,
+                            
+                            "submission": submission,
+                        },
+                    )
+
+                    saved_count += 1
+
+            # =================================================
+            # SUCCESS
+            # =================================================
+
+            messages.success(
+                request,
+                f"{saved_count} mark(s) saved successfully."
             )
 
+            return redirect(
+                "students:add_mark"
+            )
 
     # =========================================================
     # RETURN FORM
@@ -1068,6 +1921,920 @@ def add_mark(request):
             "selected_exam": selected_exam,
         },
     )
+
+
+
+
+
+
+
+
+
+
+@login_required
+@admin_required
+def cbc_mark_list(request):
+    """
+    CBC Admin Mark List.
+
+    PP1–Grade 9:
+        - Qualitative CBC subject assessments
+        - CAT 1 / Mid Term / End Term
+        - Average
+        - Performance Level
+        - One Admin Edit action per learning-area row
+
+    Grade 10–12:
+        - Numeric upper-secondary assessments
+        - Existing upper-secondary workflow preserved
+    """
+
+    # ============================================================
+    # DETERMINE USER SCHOOL
+    # ============================================================
+
+    if request.user.is_superuser:
+        user_school = None
+        schools = SchoolProfile.objects.all().order_by("name")
+    else:
+        school_user = getattr(request.user, "school_user", None)
+
+        if not school_user or not school_user.school:
+            messages.error(
+                request,
+                "Your account is not assigned to a school.",
+            )
+            return redirect("students:home")
+
+        user_school = school_user.school
+        schools = SchoolProfile.objects.filter(
+            id=user_school.id
+        )
+
+    # ============================================================
+    # SCHOOL SELECTION
+    # ============================================================
+
+    if request.user.is_superuser:
+        selected_school_id = request.GET.get("school")
+
+        if selected_school_id:
+            try:
+                selected_school_id = int(selected_school_id)
+            except (TypeError, ValueError):
+                selected_school_id = None
+
+        selected_school = (
+            SchoolProfile.objects.filter(
+                id=selected_school_id
+            ).first()
+            if selected_school_id
+            else None
+        )
+    else:
+        selected_school = user_school
+        selected_school_id = user_school.id
+
+        # ============================================================
+    # ACADEMIC YEARS
+    #
+    # CBC Mark List uses years in which students are actually
+    # enrolled at the selected school.
+    #
+    # ============================================================
+
+    academic_year_queryset = (
+        StudentAcademicEnrollment.objects.all()
+    )
+
+    if selected_school:
+        academic_year_queryset = (
+            academic_year_queryset.filter(
+                school_class__school=selected_school
+            )
+        )
+
+    academic_years = (
+        academic_year_queryset
+        .values_list(
+            "academic_year",
+            flat=True,
+        )
+        .distinct()
+        .order_by("-academic_year")
+    )
+    selected_year = request.GET.get("year")
+
+    if selected_year:
+        try:
+            selected_year = int(selected_year)
+        except (TypeError, ValueError):
+            selected_year = None
+
+    if selected_year is None:
+        if (
+            selected_school
+            and getattr(selected_school, "academic_year", None)
+        ):
+            selected_year = int(selected_school.academic_year)
+        else:
+            selected_year = (
+                academic_years.first()
+                if academic_years
+                else timezone.now().year
+            )
+
+    # ============================================================
+    # TERM
+    # ============================================================
+
+    selected_term = request.GET.get("term") or "1"
+
+    if selected_term not in {"1", "2", "3"}:
+        selected_term = "1"
+
+    # ============================================================
+    # CLASSES
+    # ============================================================
+
+    classes_queryset = SchoolClass.objects.all()
+
+    if selected_school:
+        classes_queryset = classes_queryset.filter(
+            school=selected_school
+        )
+
+    classes = (
+        classes_queryset
+        .filter(
+            student_enrollments__academic_year=str(selected_year)
+        )
+        .distinct()
+        .order_by("name")
+    )
+
+    selected_class_id = request.GET.get("class_id")
+
+    if selected_class_id:
+        try:
+            selected_class_id = int(selected_class_id)
+        except (TypeError, ValueError):
+            selected_class_id = None
+
+    # ============================================================
+    # EXAMS
+    # ============================================================
+
+    exams_queryset = Exam.objects.filter(
+        year=int(selected_year),
+        term=selected_term,
+    )
+
+    if selected_school:
+        exams_queryset = exams_queryset.filter(
+            school=selected_school
+        )
+
+    exams = exams_queryset.filter(
+        name__in=[
+            "CAT 1",
+            "MID TERM",
+            "END TERM",
+        ]
+    ).order_by("name")
+
+    selected_exam_id = request.GET.get("exam")
+
+    if selected_exam_id:
+        try:
+            selected_exam_id = int(selected_exam_id)
+        except (TypeError, ValueError):
+            selected_exam_id = None
+
+    # ============================================================
+    # STUDENTS
+    # IMPORTANT:
+    # USE ACADEMIC ENROLLMENT FOR THE SELECTED YEAR + TERM
+    # ============================================================
+
+    students_queryset = Student.objects.all()
+
+    if selected_school:
+        students_queryset = students_queryset.filter(
+            school=selected_school
+        )
+
+    students_queryset = students_queryset.filter(
+        academic_enrollments__academic_year=str(selected_year),
+        academic_enrollments__term=selected_term,
+    )
+
+    if selected_class_id:
+        students_queryset = students_queryset.filter(
+            academic_enrollments__school_class_id=selected_class_id
+        )
+
+    students = (
+        students_queryset
+        .distinct()
+        .order_by("first_name", "last_name")
+    )
+
+    # ============================================================
+    # SELECTED STUDENT
+    # ============================================================
+
+    selected_student_id = request.GET.get("student")
+
+    if selected_student_id:
+        try:
+            selected_student_id = int(selected_student_id)
+        except (TypeError, ValueError):
+            selected_student_id = None
+
+    student = None
+
+    if selected_student_id:
+        student = students.filter(
+            id=selected_student_id
+        ).first()
+
+        if not student:
+            messages.error(
+                request,
+                "The selected student is not enrolled for the selected "
+                "academic year and term.",
+            )
+            selected_student_id = None
+
+    # ============================================================
+    # INITIAL CONTEXT
+    # ============================================================
+
+    context = {
+        "schools": schools,
+        "selected_school_id": selected_school_id,
+        "academic_years": academic_years,
+        "selected_year": selected_year,
+        "terms": ["1", "2", "3"],
+        "selected_term": selected_term,
+        "classes": classes,
+        "selected_class_id": selected_class_id,
+        "exams": exams,
+        "selected_exam_id": selected_exam_id,
+        "students": students,
+        "selected_student_id": selected_student_id,
+        "student": student,
+        "rows": [],
+        "is_upper_secondary": False,
+        "print_assignment": None,
+    }
+
+    # ============================================================
+    # NO STUDENT SELECTED
+    # ============================================================
+
+    if not student:
+        return render(
+            request,
+            "students/cbc_mark_list.html",
+            context,
+        )
+
+    # ============================================================
+    # DETERMINE STUDENT ENROLLMENT
+    # ============================================================
+
+    enrollment = (
+        StudentAcademicEnrollment.objects
+        .filter(
+            student=student,
+            academic_year=str(selected_year),
+            term=selected_term,
+        )
+        .select_related("school_class")
+        .first()
+    )
+
+    # Fallback to year-level enrollment if necessary
+    if not enrollment:
+        enrollment = (
+            StudentAcademicEnrollment.objects
+            .filter(
+                student=student,
+                academic_year=str(selected_year),
+            )
+            .select_related("school_class")
+            .order_by("term")
+            .first()
+        )
+
+    if not enrollment:
+        messages.warning(
+            request,
+            "No academic enrollment was found for the selected student.",
+        )
+        return render(
+            request,
+            "students/cbc_mark_list.html",
+            context,
+        )
+
+    school_class = enrollment.school_class
+
+    # ============================================================
+    # SCHOOL CLASS CURRICULUM
+    # ============================================================
+
+    school_class_curriculum = (
+        SchoolClassCurriculum.objects
+        .filter(
+            school_class=school_class,
+            academic_year=str(selected_year),
+        )
+        .select_related(
+            "school_class",
+            "curriculum_grade",
+            "pathway",
+        )
+        .first()
+    )
+
+    if not school_class_curriculum:
+        messages.warning(
+            request,
+            "No CBC curriculum configuration was found for this class "
+            "and academic year.",
+        )
+        return render(
+            request,
+            "students/cbc_mark_list.html",
+            context,
+        )
+
+    curriculum_grade = school_class_curriculum.curriculum_grade
+
+    # ============================================================
+    # DETERMINE GRADE
+    # ============================================================
+
+    grade_code = (
+        getattr(curriculum_grade, "grade", None)
+        or getattr(curriculum_grade, "display_name", "")
+        or ""
+    )
+
+    grade_code = str(grade_code).upper().replace(" ", "")
+
+    upper_secondary_grades = {
+        "GRADE10",
+        "GRADE11",
+        "GRADE12",
+        "10",
+        "11",
+        "12",
+    }
+
+    is_upper_secondary = (
+        grade_code in upper_secondary_grades
+        or grade_code.endswith("GRADE10")
+        or grade_code.endswith("GRADE11")
+        or grade_code.endswith("GRADE12")
+    )
+
+    context["is_upper_secondary"] = is_upper_secondary
+    context["school_class"] = school_class
+    context["school_class_curriculum"] = school_class_curriculum
+    context["curriculum_grade"] = curriculum_grade
+
+    
+    
+        # ============================================================
+    # LEARNING AREAS
+    # ============================================================
+    #
+    # PP1–Grade 9:
+    #     Learning areas are not pathway-specific.
+    #
+    # Grade 10–12:
+    #     Learning areas MUST match the exact
+    #     curriculum grade + pathway assigned
+    #     to this class.
+    #
+    # ============================================================
+
+    learning_areas_queryset = (
+        CurriculumLearningArea.objects
+        .filter(
+            curriculum_grade_id=(
+                school_class_curriculum.curriculum_grade_id
+            ),
+            assessment_enabled=True,
+        )
+        .order_by("name")
+    )
+
+    if is_upper_secondary:
+
+        pathway = school_class_curriculum.pathway
+
+        if pathway:
+            learning_areas_queryset = (
+                learning_areas_queryset.filter(
+                    pathway_id=pathway.id
+                )
+            )
+        else:
+            learning_areas_queryset = (
+                learning_areas_queryset.filter(
+                    pathway__isnull=True
+                )
+            )
+
+    else:
+
+        learning_areas_queryset = (
+            learning_areas_queryset.filter(
+                pathway__isnull=True
+            )
+        )
+
+    learning_areas = list(
+        learning_areas_queryset
+    )
+    # ============================================================
+    # GRADE 10–12
+    #
+    # DO NOT CHANGE THE EXISTING NUMERICAL WORKFLOW.
+    # ============================================================
+
+    if is_upper_secondary:
+
+        upper_assessments = (
+            CBCUpperSecondaryAssessment.objects
+            .filter(
+                student=student,
+                academic_year=str(selected_year),
+                term=selected_term,
+            )
+            .select_related(
+                "learning_area",
+                "submission",
+                "submission__teacher",
+            )
+        )
+
+        assessment_map = {}
+
+        for assessment in upper_assessments:
+            assessment_map[
+                (
+                    assessment.learning_area_id,
+                    assessment.assessment_component,
+                )
+            ] = assessment
+
+        rows = []
+
+        for learning_area in learning_areas:
+
+            cat1 = assessment_map.get(
+                (
+                    learning_area.id,
+                    "CAT1",
+                )
+            )
+
+            mid = assessment_map.get(
+                (
+                    learning_area.id,
+                    "MID",
+                )
+            )
+
+            end = assessment_map.get(
+                (
+                    learning_area.id,
+                    "END",
+                )
+            )
+
+            scores = []
+
+            for assessment in (cat1, mid, end):
+                if (
+                    assessment
+                    and assessment.percentage_score is not None
+                ):
+                    scores.append(
+                        Decimal(str(assessment.percentage_score))
+                    )
+            average = None
+
+            if scores:
+                average = (
+                    sum(scores) / len(scores)
+                ).quantize(
+                    Decimal("0.01")
+                )
+
+            performance_level = None
+            points = None
+
+            if (
+                cat1
+                and mid
+                and end
+                and average is not None
+            ):
+                performance_level = (
+                    CBCPerformanceLevel.objects.filter(
+                        curriculum_grade=curriculum_grade,
+                        minimum_mark__lte=average,
+                        maximum_mark__gte=average,
+                    )
+                    .order_by("order")
+                    .first()
+                )
+                if performance_level:
+                    points = getattr(
+                        performance_level,
+                        "points",
+                        None,
+                    )
+
+            # ----------------------------------------------------
+            # ADMIN EDIT ENTRY
+            #
+            # Keep the existing upper-secondary workflow.
+            # ----------------------------------------------------
+
+            editable_assessment = None
+
+            for assessment in (
+                cat1,
+                mid,
+                end,
+            ):
+                if (
+                    assessment
+                    and assessment.submission
+                    and assessment.submission.status
+                    in {"SUBMITTED", "APPROVED"}
+                ):
+                    editable_assessment = assessment
+                    break
+
+            row_editable = (
+                editable_assessment is not None
+            )
+
+            rows.append({
+            "learning_area": learning_area,
+
+            # -----------------------------
+            # CAT 1
+            # -----------------------------
+            "cat1_raw": cat1.raw_score if cat1 else None,
+            "cat1_out_of": cat1.marks_out_of if cat1 else None,
+            "cat1_percentage": (
+                cat1.percentage_score if cat1 else None
+            ),
+            "cat1_points": cat1.points if cat1 else None,
+
+            # -----------------------------
+            # MID TERM
+            # -----------------------------
+            "mid_raw": mid.raw_score if mid else None,
+            "mid_out_of": mid.marks_out_of if mid else None,
+            "mid_percentage": (
+                mid.percentage_score if mid else None
+            ),
+            "mid_points": mid.points if mid else None,
+
+            # -----------------------------
+            # END TERM
+            # -----------------------------
+            "end_raw": end.raw_score if end else None,
+            "end_out_of": end.marks_out_of if end else None,
+            "end_percentage": (
+                end.percentage_score if end else None
+            ),
+            "end_points": end.points if end else None,
+
+            # -----------------------------
+            # OVERALL
+            # -----------------------------
+            "average": average,
+            "performance_level": performance_level,
+            "points": points,
+
+            # -----------------------------
+            # EDIT ACTION
+            # -----------------------------
+            "cat1_assessment": cat1,
+            "mid_assessment": mid,
+            "end_assessment": end,
+
+            "edit_assessment": editable_assessment,
+            "row_editable": row_editable,
+        })
+            context["rows"] = rows
+
+        # --------------------------------------------------------
+        # UPPER SECONDARY PRINT ASSIGNMENT
+        # --------------------------------------------------------
+
+        context["print_assignment"] = (
+            upper_assessments.first()
+        )
+
+        return render(
+            request,
+            "students/cbc_mark_list.html",
+            context,
+        )
+
+    # ============================================================
+    # PP1–GRADE 9
+    #
+    # CBCSubjectAssessment
+    # ============================================================
+
+    lower_assessments = (
+        CBCSubjectAssessment.objects
+        .filter(
+            student=student,
+            academic_year=str(selected_year),
+            term=selected_term,
+        )
+        .filter(
+            submission__school_class_curriculum=school_class_curriculum
+        )
+        .select_related(
+            "learning_area",
+            "submission",
+            "submission__teacher",
+            "submission__school_class_curriculum",
+            "submission__school_class_curriculum__school_class",
+        )
+    )
+
+    # ============================================================
+    # MAP ASSESSMENTS
+    # ============================================================
+
+    assessment_map = {}
+
+    for assessment in lower_assessments:
+        assessment_map[
+            (
+                assessment.learning_area_id,
+                assessment.assessment_component,
+            )
+        ] = assessment
+
+    # ============================================================
+    # BUILD PP1–GRADE 9 ROWS
+    # ============================================================
+
+    rows = []
+
+    for learning_area in learning_areas:
+
+        cat1 = assessment_map.get(
+            (
+                learning_area.id,
+                "CAT1",
+            )
+        )
+
+        mid = assessment_map.get(
+            (
+                learning_area.id,
+                "MID",
+            )
+        )
+
+        end = assessment_map.get(
+            (
+                learning_area.id,
+                "END",
+            )
+        )
+
+        # --------------------------------------------------------
+        # EXTRACT SCORES
+        # --------------------------------------------------------
+
+        cat1_percentage = (
+            cat1.score
+            if cat1 and cat1.score is not None
+            else None
+        )
+
+        mid_percentage = (
+            mid.score
+            if mid and mid.score is not None
+            else None
+        )
+
+        end_percentage = (
+            end.score
+            if end and end.score is not None
+            else None
+        )
+
+        # --------------------------------------------------------
+        # AVERAGE
+        #
+        # Only calculate when there are entered marks.
+        # --------------------------------------------------------
+
+        scores = []
+
+        for score in (
+            cat1_percentage,
+            mid_percentage,
+            end_percentage,
+        ):
+            if score is not None:
+                scores.append(
+                    Decimal(str(score))
+                )
+
+        average = None
+
+        if scores:
+            average = (
+                sum(scores) / len(scores)
+            ).quantize(
+                Decimal("0.01")
+            )
+
+        # --------------------------------------------------------
+        # PERFORMANCE LEVEL
+        #
+        # Final performance level is determined from the
+        # complete CAT1 + MID + END set.
+        #
+        # Display as EE / ME / AE / BE, never as 4/3/2/1.
+        # --------------------------------------------------------
+
+        performance_level = None
+
+        if (
+            cat1
+            and mid
+            and end
+            and cat1.score is not None
+            and mid.score is not None
+            and end.score is not None
+            and average is not None
+        ):
+            performance_level = (
+                get_cbc_subject_performance_level(
+                    average
+                )
+            )
+
+            performance_labels = {
+                4: "EE — Exceeding Expectations",
+                3: "ME — Meeting Expectations",
+                2: "AE — Approaching Expectations",
+                1: "BE — Below Expectations",
+            }
+
+            if performance_level is not None:
+
+                performance_code = getattr(
+                    performance_level,
+                    "code",
+                    performance_level,
+                )
+
+                performance_level = (
+                    performance_labels.get(
+                        performance_code,
+                        str(performance_level),
+                    )
+                )
+
+        # --------------------------------------------------------
+        # ADMIN EDIT STATUS
+        #
+        # One Edit button for the whole learning-area row.
+        #
+        # SUBMITTED  -> editable
+        # APPROVED   -> editable
+        # DRAFT      -> not editable
+        # REJECTED   -> not editable
+        # --------------------------------------------------------
+
+        edit_assessment = None
+
+        for assessment in (
+            cat1,
+            mid,
+            end,
+        ):
+            if (
+                assessment is not None
+                and assessment.submission is not None
+                and assessment.submission.status
+                in {"SUBMITTED", "APPROVED"}
+            ):
+                edit_assessment = assessment
+                break
+
+        row_editable = (
+            edit_assessment is not None
+        )
+
+        # --------------------------------------------------------
+        # ASSIGNMENT
+        #
+        # Keep assignment information available where it exists,
+        # but the Assessment Book remains a learner-level action,
+        # not a learning-area-row action.
+        # --------------------------------------------------------
+
+        source_assessment = (
+            edit_assessment
+            or cat1
+            or mid
+            or end
+        )
+
+        assignment = None
+
+        if (
+            source_assessment
+            and source_assessment.submission
+            and source_assessment.submission.teacher
+        ):
+            assignment = (
+                TeacherAssessmentAssignment.objects
+                .filter(
+                    teacher=source_assessment.submission.teacher,
+                    school_class_curriculum=school_class_curriculum,
+                    learning_area=learning_area,
+                    academic_year=str(selected_year),
+                )
+                .first()
+            )
+
+        rows.append(
+            {
+                "learning_area": learning_area,
+
+                # Actual assessment objects
+                "cat1_assessment": cat1,
+                "mid_assessment": mid,
+                "end_assessment": end,
+
+                # Display values
+                "cat1_percentage": cat1_percentage,
+                "mid_percentage": mid_percentage,
+                "end_percentage": end_percentage,
+
+                # Calculated values
+                "average": average,
+                "performance_level": performance_level,
+
+                # Existing assignment information
+                "assignment": assignment,
+
+                # Admin edit information
+                "edit_assessment": edit_assessment,
+                "row_editable": row_editable,
+            }
+        )
+
+    context["rows"] = rows
+
+    # ============================================================
+    # LEARNER-LEVEL PRINT / ASSESSMENT BOOK
+    #
+    # One button belongs in the selected-student header,
+    # not once per learning-area row.
+    # ============================================================
+
+    context["print_assignment"] = (
+        lower_assessments.first()
+    )
+
+    # ============================================================
+    # RENDER
+    # ============================================================
+
+    return render(
+        request,
+        "students/cbc_mark_list.html",
+        context,
+    )
+
+
 @login_required
 @admin_or_teacher
 def edit_mark(request, id):
@@ -1685,7 +3452,7 @@ def mark_submission_list(request):
                 request,
                 "Your account is not linked to a school."
             )
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -2007,19 +3774,74 @@ def reject_mark_submission(request, id):
 @admin_or_bursar
 def view_mark_submission(request, id):
 
-    submission = get_object_or_404(
-        MarkSubmission,
-        id=id,
-    )
+    if request.user.is_superuser:
 
-    marks = Mark.objects.filter(
-        submission=submission
-    ).select_related(
-        "student",
-        "subject",
-        "exam",
-    ).order_by(
-        "student__admission_number"
+        submission = get_object_or_404(
+            MarkSubmission.objects.select_related(
+                "teacher",
+                "school_class",
+                "school_class__school",
+                "subject",
+                "subject__school",
+                "exam",
+                "exam__school",
+            ),
+            id=id,
+        )
+
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+
+            messages.error(
+                request,
+                "Your account is not linked to a school."
+            )
+
+            return redirect(
+                "students:home"
+            )
+
+        school = school_user.school
+
+        submission = get_object_or_404(
+            MarkSubmission.objects.select_related(
+                "teacher",
+                "school_class",
+                "school_class__school",
+                "subject",
+                "subject__school",
+                "exam",
+                "exam__school",
+            ),
+            id=id,
+            school_class__school=school,
+            subject__school=school,
+            exam__school=school,
+        )
+
+    marks = (
+        Mark.objects
+        .filter(
+            submission=submission,
+            student__school=submission.school_class.school,
+            subject__school=submission.school_class.school,
+            exam__school=submission.school_class.school,
+        )
+        .select_related(
+            "student",
+            "subject",
+            "exam",
+        )
+        .order_by(
+            "student__admission_number"
+        )
     )
 
     return render(
@@ -2467,7 +4289,7 @@ def print_report(request, id):
                     "Your account is not linked to a school."
                 )
 
-                return redirect("home")
+                return redirect("students:home")
 
         # --------------------------------------
         # GET STUDENT FROM SAME SCHOOL
@@ -3785,15 +5607,64 @@ def print_class_results(request):
     )
 
 @login_required
-@admin_or_bursar
+@admin_required
 def toggle_exam_status(request, id):
-    exam = get_object_or_404(Exam, id=id)
+
+    # --------------------------------------------------
+    # GET EXAM
+    # --------------------------------------------------
+
+    exam = get_object_or_404(
+        Exam.objects.select_related("school"),
+        id=id,
+    )
+
+    # --------------------------------------------------
+    # SUPERUSER
+    # --------------------------------------------------
+
+    if request.user.is_superuser:
+        allowed = True
+
+    # --------------------------------------------------
+    # NORMAL USER
+    # --------------------------------------------------
+
+    else:
+
+        school_user = getattr(
+            request.user,
+            "school_user",
+            None,
+        )
+
+        if not school_user or not school_user.school:
+            return HttpResponseForbidden(
+                "Your account is not assigned to a school."
+            )
+
+        allowed = exam.school_id == school_user.school_id
+
+    # --------------------------------------------------
+    # SCHOOL SECURITY
+    # --------------------------------------------------
+
+    if not allowed:
+        return HttpResponseForbidden(
+            "You are not authorized to modify this examination."
+        )
+
+    # --------------------------------------------------
+    # TOGGLE STATUS
+    # --------------------------------------------------
 
     if exam.status == "OPEN":
         exam.status = "CLOSED"
     else:
         exam.status = "OPEN"
 
-    exam.save()
+    exam.save(
+        update_fields=["status"]
+    )
 
     return redirect("students:exam_list")

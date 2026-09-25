@@ -2,6 +2,11 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.contrib import messages
 from django.utils import timezone
+from decimal import Decimal
+from django.http import HttpResponse
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph
+
 from students.utils import get_user_school
 from django.shortcuts import render, redirect, get_object_or_404
 from students.models import(Student, 
@@ -14,7 +19,15 @@ from students.models import(Student,
                             SchoolClass, 
                             Teacher,
                             HomeworkSubmission,
-                           
+                            CBCSubjectAssessment,
+                            CBCUpperSecondaryAssessment,
+                            CBCPerformanceLevel,
+                            CBCSubStrandAssessment,
+                            CBCStrandSummativeAssessment,
+                            CurriculumLearningArea,
+                            CurriculumStrand,
+                            SchoolClassCurriculum,
+                                                
 )
 
 
@@ -23,6 +36,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from ..models import Homework, Subject, SchoolClass, Teacher
 
+CBCPerformanceLevel,
 
 
 
@@ -103,13 +117,13 @@ def parent_student_profile(request, student_id):
     )
 
     marks = Mark.objects.filter(
-        school=school,
         student=student,
+        student__school=school,
     )
 
     fee_payments = FeePayment.objects.filter(
-        school=school,
         student=student,
+        student__school=school,
     )
 
     context = {
@@ -150,6 +164,10 @@ def parent_attendance(request):
 @login_required
 def parent_results(request, student_id):
 
+    # =========================================================
+    # SCHOOL / PARENT SECURITY
+    # =========================================================
+
     school = get_user_school(request.user)
 
     if not school:
@@ -157,7 +175,7 @@ def parent_results(request, student_id):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     student = get_object_or_404(
         Student,
@@ -165,6 +183,28 @@ def parent_results(request, student_id):
         parent_user=request.user,
         school=school,
     )
+
+    # =========================================================
+    # CURRENT SCHOOL ACADEMIC PERIOD
+    # =========================================================
+
+    academic_year = str(school.academic_year)
+
+    selected_term = str(school.current_term)
+
+    # Handle installations where current_term may be stored
+    # as "Term 1", "Term 2", or "Term 3".
+    if selected_term.lower().startswith("term "):
+        selected_term = selected_term.split()[-1]
+
+    elif selected_term.upper().startswith("T"):
+        selected_term = selected_term[1:]
+
+    # =========================================================
+    # LEGACY EXAMINATION RESULTS
+    #
+    # Keep the existing Mark workflow untouched.
+    # =========================================================
 
     marks = (
         Mark.objects
@@ -195,11 +235,278 @@ def parent_results(request, student_id):
         else 0
     )
 
+    # =========================================================
+    # FIND THE STUDENT'S CBC CURRICULUM FOR THIS YEAR
+    # =========================================================
+
+    school_class_curriculum = None
+
+    if student.school_class_id:
+
+        school_class_curriculum = (
+            student.school_class.curriculum_assignments
+            .filter(
+                academic_year=academic_year,
+            )
+            .select_related(
+                "curriculum_grade",
+                "pathway",
+            )
+            .first()
+        )
+
+    curriculum_grade = (
+        school_class_curriculum.curriculum_grade
+        if school_class_curriculum
+        else None
+    )
+
+    grade_code = ""
+
+    if curriculum_grade:
+
+        grade_code = (
+            getattr(curriculum_grade, "grade", None)
+            or getattr(curriculum_grade, "display_name", "")
+            or ""
+        )
+
+        grade_code = (
+            str(grade_code)
+            .upper()
+            .replace(" ", "")
+        )
+
+    # =========================================================
+    # PP1 – GRADE 9 CBC SUBJECT RESULTS
+    #
+    # Learner-facing values are ONLY:
+    # EE / ME / AE / BE
+    #
+    # Internal numerical scores are never displayed.
+    # =========================================================
+
+    cbc_subject_rows = []
+
+    lower_assessments = (
+        CBCSubjectAssessment.objects
+        .filter(
+            student=student,
+            academic_year=academic_year,
+            term=selected_term,
+        )
+        .select_related(
+            "learning_area",
+            "submission",
+        )
+        .order_by(
+            "learning_area__name",
+            "assessment_component",
+        )
+    )
+
+    lower_by_learning_area = {}
+
+    for assessment in lower_assessments:
+
+        learning_area_id = assessment.learning_area_id
+
+        if learning_area_id not in lower_by_learning_area:
+
+            lower_by_learning_area[learning_area_id] = {
+                "learning_area": assessment.learning_area,
+                "CAT1": None,
+                "MID": None,
+                "END": None,
+            }
+
+        lower_by_learning_area[
+            learning_area_id
+        ][assessment.assessment_component] = assessment
+
+    performance_labels = {
+        1: "BE",
+        2: "AE",
+        3: "ME",
+        4: "EE",
+    }
+
+    for row in lower_by_learning_area.values():
+
+        cat1 = row["CAT1"]
+        mid = row["MID"]
+        end = row["END"]
+
+        row["cat1_level"] = (
+            performance_labels.get(cat1.performance_level)
+            if cat1 and cat1.performance_level
+            else None
+        )
+
+        row["mid_level"] = (
+            performance_labels.get(mid.performance_level)
+            if mid and mid.performance_level
+            else None
+        )
+
+        row["end_level"] = (
+            performance_labels.get(end.performance_level)
+            if end and end.performance_level
+            else None
+        )
+
+        cbc_subject_rows.append(row)
+
+    # =========================================================
+    # GRADE 10 – 12 CBC RESULTS
+    #
+    # Uses:
+    #   raw_score
+    #   marks_out_of
+    #   percentage_score
+    #   calculated average
+    #   CBC performance level
+    #   points
+    # =========================================================
+
+    cbc_upper_rows = []
+
+    if grade_code in {"GRADE10", "GRADE11", "GRADE12"}:
+
+        upper_assessments = (
+            CBCUpperSecondaryAssessment.objects
+            .filter(
+                student=student,
+                academic_year=academic_year,
+                term=selected_term,
+            )
+            .select_related(
+                "learning_area",
+                "performance_level",
+                "submission",
+            )
+            .order_by(
+                "learning_area__name",
+                "assessment_component",
+            )
+        )
+
+        upper_by_learning_area = {}
+
+        for assessment in upper_assessments:
+
+            learning_area_id = assessment.learning_area_id
+
+            if learning_area_id not in upper_by_learning_area:
+
+                upper_by_learning_area[learning_area_id] = {
+                    "learning_area": assessment.learning_area,
+                    "CAT1": None,
+                    "MID": None,
+                    "END": None,
+                }
+
+            upper_by_learning_area[
+                learning_area_id
+            ][assessment.assessment_component] = assessment
+
+        for row in upper_by_learning_area.values():
+
+            cat1 = row["CAT1"]
+            mid = row["MID"]
+            end = row["END"]
+
+            scores = []
+
+            for assessment in (cat1, mid, end):
+
+                if (
+                    assessment
+                    and assessment.percentage_score is not None
+                ):
+                    scores.append(
+                        Decimal(
+                            str(
+                                assessment.percentage_score
+                            )
+                        )
+                    )
+
+            row_average = None
+
+            if scores:
+
+                row_average = (
+                    sum(scores) / len(scores)
+                ).quantize(
+                    Decimal("0.01")
+                )
+
+            performance_level = None
+            points = None
+
+            # Use the same rule as the existing
+            # Grade 10–12 examination workflow.
+            if (
+                cat1
+                and mid
+                and end
+                and row_average is not None
+                and curriculum_grade
+            ):
+
+                performance_level = (
+                    CBCPerformanceLevel.objects
+                    .filter(
+                        curriculum_grade=curriculum_grade,
+                        minimum_mark__lte=row_average,
+                        maximum_mark__gte=row_average,
+                    )
+                    .order_by("order")
+                    .first()
+                )
+
+                if performance_level:
+
+                    points = getattr(
+                        performance_level,
+                        "points",
+                        None,
+                    )
+
+            row["average"] = row_average
+            row["performance_level"] = performance_level
+            row["points"] = points
+
+            cbc_upper_rows.append(row)
+
+    # =========================================================
+    # CONTEXT
+    # =========================================================
+
     context = {
+        # Student
         "student": student,
+
+        # Current CBC period
+        "academic_year": academic_year,
+        "selected_term": selected_term,
+
+        # Curriculum
+        "school_class_curriculum": school_class_curriculum,
+        "curriculum_grade": curriculum_grade,
+        "grade_code": grade_code,
+
+        # Legacy results
         "marks": marks,
         "total": total,
         "average": average,
+
+        # CBC PP1–Grade 9
+        "cbc_subject_rows": cbc_subject_rows,
+
+        # CBC Grade 10–12
+        "cbc_upper_rows": cbc_upper_rows,
     }
 
     return render(
@@ -207,8 +514,6 @@ def parent_results(request, student_id):
         "parents/results.html",
         context,
     )
-
-
 @login_required
 def parent_fee_statement(request, student_id):
 
@@ -219,7 +524,7 @@ def parent_fee_statement(request, student_id):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     student = get_object_or_404(
         Student,
@@ -265,9 +570,649 @@ def parent_fee_statement(request, student_id):
         "parents/fee_statement.html",
         context,
     )
-from django.http import HttpResponse
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph
+@login_required
+def parent_assessment_book(request, student_id):
+    """
+    Parent-facing FINAL CBC Assessment Book.
+
+    Security:
+        - Student must belong to the parent's school.
+        - Student must be linked to the logged-in parent.
+
+    This view is completely separate from the teacher CBC
+    assessment-book views.
+
+    PP1 - Grade 9:
+        - Uses the student's exact CBC curriculum.
+        - Displays all applicable learning areas.
+        - Displays strands and sub-strands.
+        - Uses END TERM as the final assessment component.
+        - Displays only EE / ME / AE / BE.
+        - Displays strand summative.
+        - Displays teacher comments.
+
+    Grade 10 - 12:
+        - Uses exact Grade + Pathway.
+        - Displays all applicable learning areas.
+        - Displays CAT 1 / MID / END.
+        - Displays percentage, performance level and points.
+        - Read-only.
+    """
+
+    # =========================================================
+    # 1. SCHOOL / PARENT SECURITY
+    # =========================================================
+
+    school = get_user_school(request.user)
+
+    if not school:
+        messages.error(
+            request,
+            "Your account is not associated with a school."
+        )
+        return redirect("students:home")
+
+    student = get_object_or_404(
+        Student,
+        id=student_id,
+        school=school,
+        parent_user=request.user,
+    )
+
+    # =========================================================
+    # 2. CURRENT SCHOOL ACADEMIC PERIOD
+    # =========================================================
+
+    academic_year = str(school.academic_year)
+
+    selected_term = str(school.current_term)
+
+    if selected_term.lower().startswith("term "):
+        selected_term = selected_term.split()[-1]
+
+    elif selected_term.upper().startswith("T"):
+        selected_term = selected_term[1:]
+
+    if selected_term not in {"1", "2", "3"}:
+        selected_term = "1"
+
+    # =========================================================
+    # 3. STUDENT CLASS / CURRICULUM
+    # =========================================================
+
+    school_class_curriculum = None
+
+    if student.school_class_id:
+
+        school_class_curriculum = (
+            SchoolClassCurriculum.objects
+            .filter(
+                school_class_id=student.school_class_id,
+                academic_year=academic_year,
+            )
+            .select_related(
+                "school_class",
+                "school_class__school",
+                "curriculum_version",
+                "curriculum_grade",
+                "pathway",
+            )
+            .first()
+        )
+
+    if not school_class_curriculum:
+
+        return render(
+            request,
+            "parents/assessment_book.html",
+            {
+                "student": student,
+                "school": school,
+                "academic_year": academic_year,
+                "selected_term": selected_term,
+                "school_class_curriculum": None,
+                "curriculum_grade": None,
+                "pathway": None,
+                "is_upper_secondary": False,
+                "learning_area_sections": [],
+                "upper_learning_area_rows": [],
+                "message": (
+                    "No CBC curriculum is configured for "
+                    f"{student.first_name} {student.last_name} "
+                    f"for academic year {academic_year}."
+                ),
+            },
+        )
+
+    curriculum_grade = (
+        school_class_curriculum.curriculum_grade
+    )
+
+    pathway = (
+        school_class_curriculum.pathway
+    )
+
+    school_class = (
+        school_class_curriculum.school_class
+    )
+
+    grade_code = str(
+        curriculum_grade.grade
+    ).upper()
+
+    is_upper_secondary = (
+        grade_code in {
+            "GRADE10",
+            "GRADE11",
+            "GRADE12",
+        }
+    )
+
+    # =========================================================
+    # 4. PP1 - GRADE 9
+    # =========================================================
+
+    learning_area_sections = []
+
+    if not is_upper_secondary:
+
+        learning_areas = (
+            CurriculumLearningArea.objects
+            .filter(
+                curriculum_grade=curriculum_grade,
+                pathway__isnull=True,
+                assessment_enabled=True,
+            )
+            .prefetch_related(
+                "strands__sub_strands",
+            )
+            .order_by(
+                "name",
+                "id",
+            )
+        )
+
+        # -----------------------------------------------------
+        # FINAL COMPONENT
+        #
+        # For the parent final book we use END TERM.
+        # -----------------------------------------------------
+
+        final_component = "END"
+
+        assessments = (
+            CBCSubStrandAssessment.objects
+            .filter(
+                student=student,
+                academic_year=academic_year,
+                term=selected_term,
+                assessment_component=final_component,
+                submission__school_class_curriculum=(
+                    school_class_curriculum
+                ),
+                submission__learning_area__curriculum_grade=(
+                    curriculum_grade
+                ),
+                submission__status="APPROVED",
+            )
+            .select_related(
+                "sub_strand",
+                "sub_strand__strand",
+                "submission",
+            )
+        )
+
+        assessment_map = {}
+
+        for assessment in assessments:
+
+            assessment_map[
+                assessment.sub_strand_id
+            ] = assessment
+
+        # -----------------------------------------------------
+        # STRAND SUMMATIVES
+        # -----------------------------------------------------
+
+        summatives = (
+            CBCStrandSummativeAssessment.objects
+            .filter(
+                student=student,
+                academic_year=academic_year,
+                term=selected_term,
+                assessment_component=final_component,
+                strand__learning_area__curriculum_grade=(
+                    curriculum_grade
+                ),
+                submission__school_class_curriculum=(
+                    school_class_curriculum
+                ),
+                submission__status="APPROVED",
+            )
+            .select_related(
+                "strand",
+                "submission",
+            )
+        )
+
+        summative_map = {}
+
+        for summative in summatives:
+
+            summative_map[
+                summative.strand_id
+            ] = summative
+
+        # -----------------------------------------------------
+        # PERFORMANCE LEVEL DISPLAY
+        # -----------------------------------------------------
+
+        performance_labels = {
+            1: "BE",
+            2: "AE",
+            3: "ME",
+            4: "EE",
+        }
+
+        # -----------------------------------------------------
+        # BUILD COMPLETE LEARNING AREA BOOK
+        # -----------------------------------------------------
+
+        for learning_area in learning_areas:
+
+            strand_rows = []
+
+            strands = (
+                learning_area.strands
+                .all()
+                .order_by(
+                    "order",
+                    "id",
+                )
+            )
+
+            for strand in strands:
+
+                sub_strand_rows = []
+
+                sub_strands = (
+                    strand.sub_strands
+                    .all()
+                    .order_by(
+                        "order",
+                        "id",
+                    )
+                )
+
+                for sub_strand in sub_strands:
+
+                    assessment = (
+                        assessment_map.get(
+                            sub_strand.id
+                        )
+                    )
+
+                    qualitative_level = None
+                    comment = ""
+
+                    if assessment:
+
+                        qualitative_level = (
+                            performance_labels.get(
+                                assessment.performance_level
+                            )
+                        )
+
+                        comment = (
+                            assessment.teacher_comment
+                            or ""
+                        )
+
+                    sub_strand_rows.append(
+                        {
+                            "sub_strand": sub_strand,
+                            "qualitative_level": (
+                                qualitative_level
+                            ),
+                            "comment": comment,
+                        }
+                    )
+
+                summative = (
+                    summative_map.get(
+                        strand.id
+                    )
+                )
+
+                summative_label = None
+
+                if summative:
+
+                    summative_label = (
+                        performance_labels.get(
+                            summative.performance_level
+                        )
+                    )
+
+                strand_rows.append(
+                    {
+                        "strand": strand,
+                        "sub_strands": sub_strand_rows,
+                        "summative_label": (
+                            summative_label
+                        ),
+                        "summative_comment": (
+                            summative.teacher_comment
+                            if summative
+                            else ""
+                        ),
+                    }
+                )
+
+            learning_area_sections.append(
+                {
+                    "learning_area": learning_area,
+                    "strands": strand_rows,
+                }
+            )
+
+    # =========================================================
+    # 5. GRADE 10 - 12
+    # =========================================================
+
+    upper_learning_area_rows = []
+
+    if is_upper_secondary:
+
+        learning_areas = (
+            CurriculumLearningArea.objects
+            .filter(
+                curriculum_grade=curriculum_grade,
+                assessment_enabled=True,
+                pathway=pathway,
+            )
+            .order_by(
+                "name",
+                "id",
+            )
+        )
+
+        upper_assessments = (
+            CBCUpperSecondaryAssessment.objects
+            .filter(
+                student=student,
+                academic_year=academic_year,
+                term=selected_term,
+                learning_area__in=learning_areas,
+                submission__school_class_curriculum=(
+                    school_class_curriculum
+                ),
+                submission__status="APPROVED",
+            )
+            .select_related(
+                "learning_area",
+                "performance_level",
+                "submission",
+            )
+            .order_by(
+                "learning_area__name",
+                "assessment_component",
+            )
+        )
+
+        assessment_map = {}
+
+        for assessment in upper_assessments:
+
+            assessment_map[
+                (
+                    assessment.learning_area_id,
+                    assessment.assessment_component,
+                )
+            ] = assessment
+
+        total_percentages = []
+        total_points_list = []
+
+        for learning_area in learning_areas:
+
+            components = {}
+
+            for component in (
+                "CAT1",
+                "MID",
+                "END",
+            ):
+
+                assessment = assessment_map.get(
+                    (
+                        learning_area.id,
+                        component,
+                    )
+                )
+
+                percentage = None
+                performance = None
+                points = None
+                teacher_comment = ""
+
+                if assessment:
+
+                    if (
+                        assessment.percentage_score
+                        is not None
+                    ):
+                        percentage = Decimal(
+                            str(
+                                assessment.percentage_score
+                            )
+                        )
+
+                    performance = (
+                        assessment.performance_level
+                    )
+
+                    points = (
+                        assessment.points
+                    )
+
+                    teacher_comment = (
+                        assessment.teacher_comment
+                        or ""
+                    )
+
+                components[component] = {
+                    "assessment": assessment,
+                    "percentage": percentage,
+                    "performance": performance,
+                    "points": points,
+                    "teacher_comment": (
+                        teacher_comment
+                    ),
+                }
+
+            # -------------------------------------------------
+            # AVERAGE PERCENTAGE
+            # -------------------------------------------------
+
+            percentage_values = [
+                components[component]["percentage"]
+                for component in (
+                    "CAT1",
+                    "MID",
+                    "END",
+                )
+                if components[component]["percentage"]
+                is not None
+            ]
+
+            average_percentage = None
+
+            if percentage_values:
+
+                average_percentage = (
+                    sum(percentage_values)
+                    / len(percentage_values)
+                ).quantize(
+                    Decimal("0.01")
+                )
+
+                total_percentages.append(
+                    average_percentage
+                )
+
+            # -------------------------------------------------
+            # AVERAGE POINTS
+            # -------------------------------------------------
+
+            point_values = [
+                Decimal(
+                    str(
+                        components[component]["points"]
+                    )
+                )
+                for component in (
+                    "CAT1",
+                    "MID",
+                    "END",
+                )
+                if components[component]["points"]
+                is not None
+            ]
+
+            average_points = None
+
+            if point_values:
+
+                average_points = (
+                    sum(point_values)
+                    / len(point_values)
+                ).quantize(
+                    Decimal("0.01")
+                )
+
+                total_points_list.append(
+                    average_points
+                )
+
+            # -------------------------------------------------
+            # FINAL PERFORMANCE LEVEL
+            #
+            # Use the stored performance level from the
+            # completed components. If all three are present,
+            # calculate from the average, matching the existing
+            # Grade 10-12 workflow.
+            # -------------------------------------------------
+
+            final_performance = None
+
+            if (
+                len(percentage_values) == 3
+                and average_percentage is not None
+            ):
+
+                final_performance = (
+                    CBCPerformanceLevel.objects
+                    .filter(
+                        curriculum_grade=curriculum_grade,
+                        minimum_mark__lte=(
+                            average_percentage
+                        ),
+                        maximum_mark__gte=(
+                            average_percentage
+                        ),
+                    )
+                    .order_by("order")
+                    .first()
+                )
+
+            upper_learning_area_rows.append(
+                {
+                    "learning_area": learning_area,
+                    "components": components,
+                    "average_percentage": (
+                        average_percentage
+                    ),
+                    "average_points": (
+                        average_points
+                    ),
+                    "final_performance": (
+                        final_performance
+                    ),
+                }
+            )
+
+        # -----------------------------------------------------
+        # OVERALL FINAL VALUES
+        # -----------------------------------------------------
+
+        total_marks = None
+        total_points = None
+
+        if total_percentages:
+
+            total_marks = (
+                sum(total_percentages)
+                / len(total_percentages)
+            ).quantize(
+                Decimal("0.01")
+            )
+
+        if total_points_list:
+
+            total_points = (
+                sum(total_points_list)
+                / len(total_points_list)
+            ).quantize(
+                Decimal("0.01")
+            )
+
+    else:
+
+        total_marks = None
+        total_points = None
+
+    # =========================================================
+    # 6. CONTEXT
+    # =========================================================
+
+    context = {
+        "school": school,
+        "student": student,
+        "school_class": school_class,
+        "school_class_curriculum": (
+            school_class_curriculum
+        ),
+        "curriculum_grade": curriculum_grade,
+        "curriculum_version": (
+            school_class_curriculum.curriculum_version
+        ),
+        "pathway": pathway,
+        "academic_year": academic_year,
+        "selected_term": selected_term,
+        "grade_code": grade_code,
+        "is_upper_secondary": is_upper_secondary,
+
+        # PP1 - Grade 9
+        "learning_area_sections": (
+            learning_area_sections
+        ),
+
+        # Grade 10 - 12
+        "upper_learning_area_rows": (
+            upper_learning_area_rows
+        ),
+        "total_marks": total_marks,
+        "total_points": total_points,
+
+        "message": None,
+    }
+
+    return render(
+        request,
+        "parents/assessment_book.html",
+        context,
+    )
 
 
 @login_required
@@ -399,7 +1344,7 @@ def parent_fee_balance(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     children = Student.objects.filter(
         parent_user=request.user,
@@ -509,7 +1454,7 @@ def homework_list(request):
             "Your account is not associated with a school."
         )
 
-        return redirect("home")
+        return redirect("students:home")
 
     # Administrator
     if (
@@ -622,7 +1567,7 @@ def add_homework(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     subjects = Subject.objects.filter(
         school=school
@@ -739,7 +1684,7 @@ def edit_homework(request, pk):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     homework = get_object_or_404(
         Homework.objects.select_related(
@@ -865,7 +1810,7 @@ def delete_homework(request, pk):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     homework = get_object_or_404(
         Homework,
@@ -902,7 +1847,7 @@ def parent_homework(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     children = Student.objects.filter(
         parent_user=request.user,
@@ -951,14 +1896,14 @@ def submit_homework(request, homework_id):
             request,
             "Student profile not found."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     if not student.school:
         messages.error(
             request,
             "Your student account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     homework = get_object_or_404(
         Homework.objects.select_related(
@@ -1046,7 +1991,7 @@ def homework_submissions(request, homework_id):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     homework = get_object_or_404(
         Homework.objects.select_related(
@@ -1108,7 +2053,7 @@ def mark_homework(request, submission_id):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
     
     submission = get_object_or_404(
         HomeworkSubmission.objects.select_related(

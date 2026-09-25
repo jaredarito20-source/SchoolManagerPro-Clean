@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h4 class="mb-0">
+                Academic Year Archive
+            </h4>
+        </div>
+
+        <div class="card-body">
+
+            <p class="text-muted">
+                Historical academic years for all registered schools.
+                Archived years are retained for reference.
+            </p>
+
+            {% if archive %}
+
+                {% for item in archive %}
+
+                    <div class="card mb-4">
+
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                {{ item.school.name }}
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+
+                            {% if item.years %}
+
+                                <div class="row">
+
+                                    {% for year in item.years %}
+
+                                        <div class="col-md-4 mb-3">
+
+                                            <div class="card h-100 border">
+
+                                                <div class="card-body">
+
+                                                    <h5 class="card-title">
+                                                        {{ year.year }}
+                                                    </h5>
+
+                                                    {% if year.is_current %}
+
+                                                        <span class="badge bg-success">
+                                                            Current Academic Year
+                                                        </span>
+
+                                                    {% else %}
+
+                                                        <span class="badge bg-secondary">
+                                                            Archived
+                                                        </span>
+
+                                                    {% endif %}
+
+                                                    {% if year.opening_date %}
+                                                        <p class="mt-3 mb-1">
+                                                            <strong>Opening:</strong>
+                                                            {{ year.opening_date }}
+                                                        </p>
+                                                    {% endif %}
+
+                                                    {% if year.closing_date %}
+                                                        <p class="mb-0">
+                                                            <strong>Closing:</strong>
+                                                            {{ year.closing_date }}
+                                                        </p>
+                                                    {% endif %}
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            {% else %}
+
+                                <p class="text-muted mb-0">
+                                    No academic-year records have been registered for this school yet.
+                                </p>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div class="alert alert-info">
+                    No academic-year archive records are available yet.
+                </div>
+
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

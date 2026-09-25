@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Set Up CBC Exams</h2>
+
+<p>
+    This will create the standard CBC exams for the selected
+    school, academic year, and term:
+</p>
+
+<ul>
+    <li>CAT 1</li>
+    <li>MID TERM</li>
+    <li>END TERM</li>
+</ul>
+
+<p>
+    Existing exams will not be changed or duplicated.
+    Newly created exams will start as <strong>OPEN</strong>.
+</p>
+
+<form method="post">
+    {% csrf_token %}
+
+    {% if user.is_superuser %}
+        <p>
+            <label for="school">School</label><br>
+
+            <select name="school" id="school" required>
+                <option value="">Select School</option>
+
+                {% for school in schools %}
+                    <option value="{{ school.id }}">
+                        {{ school.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+    {% endif %}
+
+    <p>
+        <label for="year">Academic Year</label><br>
+
+        <input
+            type="number"
+            name="year"
+            id="year"
+            value="2026"
+            required
+        >
+    </p>
+
+    <p>
+        <label for="term">Term</label><br>
+
+        <select name="term" id="term" required>
+            <option value="1">Term 1</option>
+            <option value="2">Term 2</option>
+            <option value="3">Term 3</option>
+        </select>
+    </p>
+        <p>
+        <label for="cat1_marks_out_of">CAT 1 — Marks Out Of</label><br>
+
+        <input
+            type="number"
+            name="cat1_marks_out_of"
+            id="cat1_marks_out_of"
+            min="0.01"
+            step="0.01"
+            required
+            placeholder="e.g. 30"
+        >
+    </p>
+
+    <p>
+        <label for="mid_marks_out_of">MID TERM — Marks Out Of</label><br>
+
+        <input
+            type="number"
+            name="mid_marks_out_of"
+            id="mid_marks_out_of"
+            min="0.01"
+            step="0.01"
+            required
+            placeholder="e.g. 50"
+        >
+    </p>
+
+    <p>
+        <label for="end_marks_out_of">END TERM — Marks Out Of</label><br>
+
+        <input
+            type="number"
+            name="end_marks_out_of"
+            id="end_marks_out_of"
+            min="0.01"
+            step="0.01"
+            required
+            placeholder="e.g. 100"
+        >
+    </p>
+
+    <button type="submit">
+        Set Up CBC Exams
+    </button>
+
+    <a href="{% url 'students:exam_list' %}">
+        Cancel
+    </a>
+</form>
+
+{% endblock %}

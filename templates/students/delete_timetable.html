@@ -5,17 +5,88 @@
 <h2>Delete Timetable</h2>
 
 <p>
-Are you sure you want to delete this timetable entry?
+    Are you sure you want to delete this timetable entry?
 </p>
 
+<table border="1" cellpadding="8">
+
+
+<tr>
+    <th>Class</th>
+    <td>{{ timetable.school_class.name }}</td>
+</tr>
+
+<tr>
+    <th>Subject</th>
+    <td>{{ timetable.subject.name }}</td>
+</tr>
+
+<tr>
+    <th>Teacher</th>
+    <td>
+        {{ timetable.teacher.first_name }}
+        {{ timetable.teacher.last_name }}
+    </td>
+</tr>
+
+<tr>
+    <th>Day</th>
+    <td>{{ timetable.day.name }}</td>
+</tr>
+
+<tr>
+    <th>Period</th>
+    <td>
+        {{ timetable.period.name }}
+        ({{ timetable.period.start_time|time:"H:i" }} -
+        {{ timetable.period.end_time|time:"H:i" }})
+    </td>
+</tr>
+
+<tr>
+    <th>Status</th>
+    <td>
+        {% if timetable.locked %}
+            🔒 Locked
+        {% else %}
+            Active
+        {% endif %}
+    </td>
+</tr>
+```
+
+</table>
+
+<br>
+
+{% if timetable.locked %}
+
+```
+<p>
+    <strong>This timetable entry is locked and cannot be deleted.</strong>
+</p>
+
+<a href="{% url 'students:timetable_list' %}">
+    Back to Timetable
+</a>
+```
+
+{% else %}
+
+```
 <form method="post">
     {% csrf_token %}
 
-    <button type="submit">Yes, Delete</button>
+    <button type="submit">
+        Yes, Delete
+    </button>
 
     <a href="{% url 'students:timetable_list' %}">
         Cancel
     </a>
 </form>
+
+
+{% endif %}
 
 {% endblock %}

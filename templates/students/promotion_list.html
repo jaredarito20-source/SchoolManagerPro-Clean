@@ -1,217 +1,434 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<h2>?? Student Promotion</h2>
-
-{% if messages %}
-    {% for message in messages %}
-        <p style="color:green;">
-            {{ message }}
-        </p>
-    {% endfor %}
-{% endif %}
-
-<form method="get" action="{% url 'students:promotion_list' %}">
-
-    <p>
-        <strong>Promote From</strong><br>
-        <select name="from_class" id="from_class" required>
-            <option value="">-- Select Current Class --</option>
-
-            {% for class in classes %}
-                <option
-                    value="{{ class.id }}"
-                    {% if from_class_id == class.id|stringformat:"s" %}
-                        selected
-                    {% endif %}
-                >
-                    {{ class.name }}
-                </option>
-            {% endfor %}
-        </select>
-    </p>
-
-    <p>
-        <strong>Promote To</strong><br>
-        <select name="to_class" id="to_class" required>
-            <option value="">-- Select Destination Class --</option>
-
-            {% for class in classes %}
-                <option
-                    value="{{ class.id }}"
-                    {% if to_class_id == class.id|stringformat:"s" %}
-                        selected
-                    {% endif %}
-                >
-                    {{ class.name }}
-                </option>
-            {% endfor %}
-        </select>
-    </p>
-
-    <button type="submit">
-        Load Students
-    </button>
-
-</form>
-
-{% if from_class_id and to_class_id %}
-
-<hr>
-
-<form method="post" action="{% url 'promote_students' %}">
-
-    {% csrf_token %}
-
-    <input type="hidden" name="from_class" value="{{ from_class_id }}">
-    <input type="hidden" name="to_class" value="{{ to_class_id }}">
-
-    <h3>Promotion Option</h3>
-
-    <label>
-        <input
-            type="radio"
-            name="promotion_mode"
-            value="all"
-            checked
-            onchange="toggleIndividualStudents()"
-        >
-        Promote All Students
-    </label>
-
-    <br><br>
-
-    <label>
-        <input
-            type="radio"
-            name="promotion_mode"
-            value="individual"
-            onchange="toggleIndividualStudents()"
-        >
-        Promote Individual Students
-    </label>
-
-    <div id="individual_students" style="display:none; margin-top:20px;">
-
-        <h3>Select Students</h3>
-
-        {% if students %}
-
-            <label>
-                <input type="checkbox" id="select_all">
-                <strong>Select All</strong>
-            </label>
-
-            <hr>
-
-            {% for student in students %}
-
-                <label style="display:block; margin:8px 0;">
-
-                    <input
-                        type="checkbox"
-                        name="student_ids"
-                        value="{{ student.id }}"
-                        class="student_checkbox"
-                    >
-
-                    {{ student.first_name }}
-                    {{ student.last_name }}
-                    — {{ student.admission_number }}
-
-                </label>
-
-            {% endfor %}
-
-        {% else %}
-
-            <p>No students found in the selected class.</p>
-
-        {% endif %}
-
-    </div>
-
-    <br>
-
-    <button type="submit">
-        ?? Promote Students
-    </button>
-
-</form>
-
-{% endif %}
-
-<script>
-
-const fromClass = document.getElementById("from_class");
-const toClass = document.getElementById("to_class");
-const individualStudents =
-    document.getElementById("individual_students");
-const selectAll =
-    document.getElementById("select_all");
-
-function preventSameClass() {
-
-    const selectedFrom = fromClass.value;
-
-    for (const option of toClass.options) {
-
-        option.disabled =
-            option.value !== "" &&
-            option.value === selectedFrom;
-    }
-
-    if (toClass.value === selectedFrom) {
-        toClass.value = "";
-    }
-}
-
-function toggleIndividualStudents() {
-
-    const selected =
-        document.querySelector(
-            'input[name="promotion_mode"]:checked'
-        );
-
-    if (!individualStudents || !selected) {
-        return;
-    }
-
-    individualStudents.style.display =
-        selected.value === "individual"
-            ? "block"
-            : "none";
-}
-
-if (fromClass && toClass) {
-    fromClass.addEventListener(
-        "change",
-        preventSameClass
-    );
-}
-
-if (selectAll) {
-
-    selectAll.addEventListener(
-        "change",
-        function () {
-
-            document
-                .querySelectorAll(".student_checkbox")
-                .forEach(function (checkbox) {
-
-                    checkbox.checked =
-                        selectAll.checked;
-
-                });
-
-        }
-    );
-}
-
-toggleIndividualStudents();
-
-</script>
-
-{% endblock %}
+﻿{% extends "base.html" %}
+
+
+
+{% block content %}
+
+
+
+<h2>?? Student Promotion</h2>
+
+
+
+{% if messages %}
+
+    {% for message in messages %}
+
+        <p style="color:green;">
+
+            {{ message }}
+
+        </p>
+
+    {% endfor %}
+
+{% endif %}
+
+
+
+<form method="get" action="{% url 'students:promotion_list' %}">
+
+
+
+    <p>
+
+        <strong>Promote From</strong><br>
+
+        <select name="from_class" id="from_class" required>
+
+            <option value="">-- Select Current Class --</option>
+
+
+
+            {% for class in classes %}
+
+                <option
+
+                    value="{{ class.id }}"
+
+                    {% if from_class_id == class.id|stringformat:"s" %}
+
+                        selected
+
+                    {% endif %}
+
+                >
+
+                    {{ class.name }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+
+
+    <p>
+
+        <strong>Promote To</strong><br>
+
+        <select name="to_class" id="to_class" required>
+
+            <option value="">-- Select Destination Class --</option>
+
+
+
+            {% for class in classes %}
+
+                <option
+
+                    value="{{ class.id }}"
+
+                    {% if to_class_id == class.id|stringformat:"s" %}
+
+                        selected
+
+                    {% endif %}
+
+                >
+
+                    {{ class.name }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+
+
+    <button type="submit">
+
+        Load Students
+
+    </button>
+
+
+
+</form>
+
+
+
+{% if from_class_id and to_class_id %}
+
+
+
+<hr>
+
+
+
+<form method="post" action="{% url 'students:promote_students' %}">
+
+
+
+    {% csrf_token %}
+
+
+
+    <input type="hidden" name="from_class" value="{{ from_class_id }}">
+
+    <input type="hidden" name="to_class" value="{{ to_class_id }}">
+
+
+
+    <h3>Promotion Option</h3>
+
+
+
+    <label>
+
+        <input
+
+            type="radio"
+
+            name="promotion_mode"
+
+            value="all"
+
+            checked
+
+            onchange="toggleIndividualStudents()"
+
+        >
+
+        Promote All Students
+
+    </label>
+
+
+
+    <br><br>
+
+
+
+    <label>
+
+        <input
+
+            type="radio"
+
+            name="promotion_mode"
+
+            value="individual"
+
+            onchange="toggleIndividualStudents()"
+
+        >
+
+        Promote Individual Students
+
+    </label>
+
+
+
+    <div id="individual_students" style="display:none; margin-top:20px;">
+
+
+
+        <h3>Select Students</h3>
+
+
+
+        {% if students %}
+
+
+
+            <label>
+
+                <input type="checkbox" id="select_all">
+
+                <strong>Select All</strong>
+
+            </label>
+
+
+
+            <hr>
+
+
+
+            {% for student in students %}
+
+
+
+                <label style="display:block; margin:8px 0;">
+
+
+
+                    <input
+
+                        type="checkbox"
+
+                        name="student_ids"
+
+                        value="{{ student.id }}"
+
+                        class="student_checkbox"
+
+                    >
+
+
+
+                    {{ student.first_name }}
+
+                    {{ student.last_name }}
+
+                    — {{ student.admission_number }}
+
+
+
+                </label>
+
+
+
+            {% endfor %}
+
+
+
+        {% else %}
+
+
+
+            <p>No students found in the selected class.</p>
+
+
+
+        {% endif %}
+
+
+
+    </div>
+
+
+
+    <br>
+
+
+
+    <button type="submit">
+
+        ?? Promote Students
+
+    </button>
+
+
+
+</form>
+
+
+
+{% endif %}
+
+
+
+<script>
+
+
+
+const fromClass = document.getElementById("from_class");
+
+const toClass = document.getElementById("to_class");
+
+const individualStudents =
+
+    document.getElementById("individual_students");
+
+const selectAll =
+
+    document.getElementById("select_all");
+
+
+
+function preventSameClass() {
+
+
+
+    const selectedFrom = fromClass.value;
+
+
+
+    for (const option of toClass.options) {
+
+
+
+        option.disabled =
+
+            option.value !== "" &&
+
+            option.value === selectedFrom;
+
+    }
+
+
+
+    if (toClass.value === selectedFrom) {
+
+        toClass.value = "";
+
+    }
+
+}
+
+
+
+function toggleIndividualStudents() {
+
+
+
+    const selected =
+
+        document.querySelector(
+
+            'input[name="promotion_mode"]:checked'
+
+        );
+
+
+
+    if (!individualStudents || !selected) {
+
+        return;
+
+    }
+
+
+
+    individualStudents.style.display =
+
+        selected.value === "individual"
+
+            ? "block"
+
+            : "none";
+
+}
+
+
+
+if (fromClass && toClass) {
+
+    fromClass.addEventListener(
+
+        "change",
+
+        preventSameClass
+
+    );
+
+}
+
+
+
+if (selectAll) {
+
+
+
+    selectAll.addEventListener(
+
+        "change",
+
+        function () {
+
+
+
+            document
+
+                .querySelectorAll(".student_checkbox")
+
+                .forEach(function (checkbox) {
+
+
+
+                    checkbox.checked =
+
+                        selectAll.checked;
+
+
+
+                });
+
+
+
+        }
+
+    );
+
+}
+
+
+
+toggleIndividualStudents();
+
+
+
+</script>
+
+
+
+{% endblock %}
+

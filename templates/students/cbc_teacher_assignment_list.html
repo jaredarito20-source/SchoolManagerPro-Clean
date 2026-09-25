@@ -4,188 +4,183 @@
 
 <div class="container">
 
-    <h2>📘 CBC Teacher Assignments</h2>
 
-    <p>
-        Manage teachers assigned to CBC classes and learning areas.
-    </p>
+<h2>📘 CBC Teacher Assignments</h2>
 
-    <p>
-        <a href="{% url 'students:cbc_teacher_assignment_add' %}">
-            ➕ Add CBC Teacher Assignment
-        </a>
-    </p>
+<p>
+    Manage teachers assigned to CBC classes and learning areas.
+</p>
 
-    <hr>
+<p>
+    <a href="{% url 'students:cbc_teacher_assignment_add' %}">
+        ➕ Add CBC Teacher Assignment
+    </a>
+</p>
 
-    <form method="get">
+<hr>
 
-        {% if request.user.is_superuser %}
-            <label>School</label>
+<form method="get">
 
-            <select name="school">
-                <option value="">All Schools</option>
+    {% if request.user.is_superuser %}
+        <label>School</label>
 
-                {% for item in schools %}
-                    <option
-                        value="{{ item.id }}"
-                        {% if selected_school == item.id|stringformat:"s" %}
-                            selected
-                        {% endif %}
-                    >
-                        {{ item.school_name }}
-                    </option>
-                {% endfor %}
-            </select>
-        {% endif %}
+        <select name="school">
+            <option value="">All Schools</option>
 
-        <label>Academic Year</label>
-
-        <input
-            type="text"
-            name="academic_year"
-            value="{{ selected_year }}"
-            placeholder="2026"
-        >
-
-        <label>Term</label>
-
-        <select name="term">
-
-            <option value="">All Terms</option>
-
-            <option
-                value="1"
-                {% if selected_term == "1" %}selected{% endif %}
-            >
-                Term 1
-            </option>
-
-            <option
-                value="2"
-                {% if selected_term == "2" %}selected{% endif %}
-            >
-                Term 2
-            </option>
-
-            <option
-                value="3"
-                {% if selected_term == "3" %}selected{% endif %}
-            >
-                Term 3
-            </option>
-
-        </select>
-
-        <label>Class</label>
-
-        <select name="class_id">
-
-            <option value="">All CBC Classes</option>
-
-            {% for class in classes %}
-
+            {% for item in schools %}
                 <option
-                    value="{{ class.id }}"
-                    {% if selected_class == class.id|stringformat:"s" %}
+                    value="{{ item.id }}"
+                    {% if selected_school == item.id|stringformat:"s" %}
                         selected
                     {% endif %}
                 >
-                    {{ class.name }}
+                    {{ item.school_name }}
                 </option>
+            {% endfor %}
+        </select>
+    {% endif %}
+
+
+    <label>Academic Year</label>
+
+    <input
+        type="text"
+        name="academic_year"
+        value="{{ selected_year }}"
+        placeholder="2026"
+    >
+
+
+    <label>Class</label>
+
+    <select name="class_id">
+
+        <option value="">
+            All CBC Classes
+        </option>
+
+        {% for class in classes %}
+            <option
+                value="{{ class.id }}"
+                {% if selected_class == class.id|stringformat:"s" %}
+                    selected
+                {% endif %}
+            >
+                {{ class.name }}
+            </option>
+        {% endfor %}
+
+    </select>
+
+
+    <button type="submit">
+        🔎 Filter
+    </button>
+
+    <a href="{% url 'students:cbc_teacher_assignment_list' %}">
+        Clear
+    </a>
+
+</form>
+
+<hr>
+
+
+{% if assignments %}
+
+    <table border="1" cellpadding="8" cellspacing="0">
+
+        <thead>
+
+            <tr>
+
+                <th>School</th>
+
+                <th>Class</th>
+
+                <th>Grade</th>
+
+                <th>Pathway</th>
+
+                <th>Learning Area</th>
+
+                <th>Teacher</th>
+
+                <th>Academic Year</th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody>
+
+            {% for assignment in assignments %}
+
+                <tr>
+
+                    <td>
+                        {{ assignment.school_class_curriculum.school_class.school.school_name }}
+                    </td>
+
+
+                    <td>
+                        {{ assignment.school_class_curriculum.school_class.name }}
+                    </td>
+
+
+                    <td>
+                        {{ assignment.school_class_curriculum.curriculum_grade.display_name }}
+                    </td>
+
+
+                    <td>
+
+                        {% if assignment.school_class_curriculum.pathway %}
+
+                            {{ assignment.school_class_curriculum.pathway.get_name_display }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <td>
+                        {{ assignment.learning_area.name }}
+                    </td>
+
+
+                    <td>
+
+                        {{ assignment.teacher.user.get_full_name|default:assignment.teacher.user.username }}
+
+                    </td>
+
+
+                    <td>
+                        {{ assignment.academic_year }}
+                    </td>
+
+                </tr>
 
             {% endfor %}
 
-        </select>
+        </tbody>
 
-        <button type="submit">
-            🔎 Filter
-        </button>
+    </table>
 
-        <a href="{% url 'students:cbc_teacher_assignment_list' %}">
-            Clear
-        </a>
+{% else %}
 
-    </form>
+    <p>
+        No CBC teacher assignments found.
+    </p>
 
-    <hr>
+{% endif %}
 
-    {% if assignments %}
-
-        <table border="1" cellpadding="8" cellspacing="0">
-
-            <thead>
-
-                <tr>
-                    <th>School</th>
-                    <th>Class</th>
-                    <th>Grade</th>
-                    <th>Pathway</th>
-                    <th>Learning Area</th>
-                    <th>Teacher</th>
-                    <th>Academic Year</th>
-                    <th>Term</th>
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                {% for assignment in assignments %}
-
-                    <tr>
-
-                        <td>
-                            {{ assignment.school_class_curriculum.school_class.school.school_name }}
-                        </td>
-
-                        <td>
-                            {{ assignment.school_class_curriculum.school_class.name }}
-                        </td>
-
-                        <td>
-                            {{ assignment.school_class_curriculum.curriculum_grade.display_name }}
-                        </td>
-
-                        <td>
-                            {% if assignment.school_class_curriculum.pathway %}
-                                {{ assignment.school_class_curriculum.pathway.get_name_display }}
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {{ assignment.learning_area.name }}
-                        </td>
-
-                        <td>
-                            {{ assignment.teacher.user.get_full_name|default:assignment.teacher.user.username }}
-                        </td>
-
-                        <td>
-                            {{ assignment.academic_year }}
-                        </td>
-
-                        <td>
-                            Term {{ assignment.term }}
-                        </td>
-
-                    </tr>
-
-                {% endfor %}
-
-            </tbody>
-
-        </table>
-
-    {% else %}
-
-        <p>
-            No CBC teacher assignments found.
-        </p>
-
-    {% endif %}
 
 </div>
 

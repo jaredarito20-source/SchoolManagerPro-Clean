@@ -5,82 +5,145 @@
 <h2>Edit Timetable</h2>
 
 <form method="post">
-    {% csrf_token %}
+
+
+{% csrf_token %}
+
+<p>
+    <label for="school_class">Class</label><br>
+
+    <select name="school_class" id="school_class" required>
+
+        {% for class in classes %}
+
+            <option value="{{ class.id }}"
+                {% if timetable.school_class.id == class.id %}
+                    selected
+                {% endif %}
+            >
+                {{ class.name }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+</p>
+
+
+<p>
+    <label for="subject">Subject</label><br>
+
+    <select name="subject" id="subject" required>
+
+        {% for subject in subjects %}
+
+            <option value="{{ subject.id }}"
+                {% if timetable.subject.id == subject.id %}
+                    selected
+                {% endif %}
+            >
+                {{ subject.name }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+</p>
+
+
+<p>
+    <label for="teacher">Teacher</label><br>
+
+    <select name="teacher" id="teacher" required>
+
+        {% for teacher in teachers %}
+
+            <option value="{{ teacher.id }}"
+                {% if timetable.teacher.id == teacher.id %}
+                    selected
+                {% endif %}
+            >
+                {{ teacher.first_name }} {{ teacher.last_name }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+</p>
+
+
+<p>
+    <label for="day">Day</label><br>
+
+    <select name="day" id="day" required>
+
+        <option value="">-- Select Day --</option>
+
+        {% for day in days %}
+
+            <option value="{{ day.id }}"
+                {% if timetable.day.id == day.id %}
+                    selected
+                {% endif %}
+            >
+                {{ day.name }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+</p>
+
+
+<p>
+    <label for="period">Period</label><br>
+
+    <select name="period" id="period" required>
+
+        <option value="">-- Select Period --</option>
+
+        {% for period in periods %}
+
+            <option value="{{ period.id }}"
+                {% if timetable.period.id == period.id %}
+                    selected
+                {% endif %}
+            >
+                {{ period.name }}
+                ({{ period.start_time|time:"H:i" }} -
+                {{ period.end_time|time:"H:i" }})
+
+                {% if period.is_break %}
+                    - Break
+                {% endif %}
+            </option>
+
+        {% endfor %}
+
+    </select>
+</p>
+
+
+{% if timetable.locked %}
 
     <p>
-        <label>Class</label><br>
-
-        <select name="school_class" required>
-            {% for class in classes %}
-                <option value="{{ class.id }}"
-                    {% if timetable.school_class.id == class.id %}
-                        selected
-                    {% endif %}
-                >
-                    {{ class.name }}
-                </option>
-            {% endfor %}
-        </select>
+        <strong>This timetable entry is locked.</strong>
+        It cannot be edited.
     </p>
 
-    <p>
-        <label>Subject</label><br>
+{% else %}
 
-        <select name="subject" required>
-            {% for subject in subjects %}
-                <option value="{{ subject.id }}"
-                    {% if timetable.subject.id == subject.id %}
-                        selected
-                    {% endif %}
-                >
-                    {{ subject.name }}
-                </option>
-            {% endfor %}
-        </select>
-    </p>
+    <button type="submit">
+        Update Timetable
+    </button>
 
-    <p>
-        <label>Teacher</label><br>
+{% endif %}
 
-        <select name="teacher" required>
-            {% for teacher in teachers %}
-                <option value="{{ teacher.id }}"
-                    {% if timetable.teacher.id == teacher.id %}
-                        selected
-                    {% endif %}
-                >
-                    {{ teacher.first_name }} {{ teacher.last_name }}
-                </option>
-            {% endfor %}
-        </select>
-    </p>
 
-    <p>
-        <label>Day</label><br>
+<a href="{% url 'students:timetable_list' %}">
+    Cancel
+</a>
 
-        <select name="day" required>
-            <option value="Monday" {% if timetable.day == "Monday" %}selected{% endif %}>Monday</option>
-            <option value="Tuesday" {% if timetable.day == "Tuesday" %}selected{% endif %}>Tuesday</option>
-            <option value="Wednesday" {% if timetable.day == "Wednesday" %}selected{% endif %}>Wednesday</option>
-            <option value="Thursday" {% if timetable.day == "Thursday" %}selected{% endif %}>Thursday</option>
-            <option value="Friday" {% if timetable.day == "Friday" %}selected{% endif %}>Friday</option>
-        </select>
-    </p>
-
-    <p>
-        <label>Start Time</label><br>
-        <input type="time" name="start_time"
-               value="{{ timetable.start_time|time:'H:i' }}" required>
-    </p>
-
-    <p>
-        <label>End Time</label><br>
-        <input type="time" name="end_time"
-               value="{{ timetable.end_time|time:'H:i' }}" required>
-    </p>
-
-    <button type="submit">Update Timetable</button>
-    <a href="{% url 'students:timetable_list' %}">Cancel</a>
 
 </form>
 

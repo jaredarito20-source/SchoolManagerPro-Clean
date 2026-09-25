@@ -1,0 +1,990 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+    /* =========================================================
+       PRINT PAGE
+       ========================================================= */
+
+    .print-page {
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .print-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .print-header h2 {
+        margin-bottom: 4px;
+        font-weight: 700;
+    }
+
+    .print-header h4 {
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+
+    .school-details {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+
+    .school-details strong {
+        font-size: 18px;
+    }
+
+    .assessment-details {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .assessment-details td {
+        padding: 4px 8px;
+        vertical-align: top;
+    }
+
+    .assessment-details .label {
+        font-weight: 700;
+        width: 13%;
+    }
+
+    /* =========================================================
+       ASSESSMENT TABLE
+       ========================================================= */
+
+    .assessment-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+    }
+
+    .assessment-table th,
+    .assessment-table td {
+        border: 1px solid #000;
+        padding: 5px 4px;
+    }
+
+    .assessment-table th {
+        text-align: center;
+        vertical-align: middle;
+        font-weight: 700;
+    }
+
+    .assessment-table td {
+        vertical-align: middle;
+    }
+
+    .assessment-table .center {
+        text-align: center;
+    }
+
+    .assessment-table .learning-area-column {
+        min-width: 180px;
+    }
+
+    .assessment-table .mark-column {
+        width: 65px;
+        text-align: center;
+    }
+
+    .assessment-table .perf-column {
+        width: 55px;
+        text-align: center;
+    }
+
+    .assessment-table .points-column {
+        width: 55px;
+        text-align: center;
+    }
+
+    .assessment-table .average-column {
+        width: 75px;
+        text-align: center;
+    }
+
+    /* =========================================================
+       TOTAL ROWS
+       ========================================================= */
+
+    .assessment-table .totals-row td {
+        font-weight: 700;
+        border-top: 2px solid #000;
+    }
+
+    .assessment-table .totals-row:last-child td {
+        border-bottom: 2px solid #000;
+    }
+
+    .assessment-table .totals-label {
+        font-weight: 700;
+    }
+
+    .assessment-table .total-value {
+        text-align: center;
+        font-weight: 700;
+    }
+
+    /* =========================================================
+       BUTTONS
+       ========================================================= */
+
+    .print-actions {
+        margin-bottom: 20px;
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    .print-footer {
+        margin-top: 25px;
+        font-size: 11px;
+    }
+
+    .signature-area {
+        margin-top: 35px;
+    }
+
+    .signature-line {
+        display: inline-block;
+        min-width: 220px;
+        border-bottom: 1px solid #000;
+        margin-left: 10px;
+    }
+
+    /* =========================================================
+       PRINT RULES
+       ========================================================= */
+
+    @media print {
+
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+        }
+
+        .no-print,
+        nav,
+        .navbar,
+        .sidebar,
+        footer {
+            display: none !important;
+        }
+
+        .container,
+        .container-fluid {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .card,
+        .card-body,
+        .card-header {
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .assessment-table {
+            page-break-inside: auto;
+        }
+
+        .assessment-table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        .assessment-table thead {
+            display: table-header-group;
+        }
+
+        .assessment-table tfoot {
+            display: table-footer-group;
+        }
+
+        .print-header {
+            margin-bottom: 10px;
+        }
+
+        .print-footer {
+            page-break-inside: avoid;
+        }
+
+        .totals-row {
+            page-break-inside: avoid;
+        }
+
+    }
+
+</style>
+
+<div class="container-fluid mt-4">
+
+```
+<div class="print-page">
+
+
+    <!-- =====================================================
+         ACTION BUTTONS
+         ===================================================== -->
+
+    <div class="print-actions no-print">
+
+        <button
+            type="button"
+            class="btn btn-primary"
+            onclick="window.print()"
+        >
+            <i class="bi bi-printer"></i>
+            Print Assessment Book
+        </button>
+
+        <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="window.history.back()"
+        >
+            Back
+        </button>
+
+    </div>
+
+
+    <!-- =====================================================
+         SCHOOL HEADER
+         ===================================================== -->
+
+    <div class="print-header">
+
+        {% if school.logo %}
+
+            <div class="mb-2">
+
+                <img
+                    src="{{ school.logo.url }}"
+                    alt="School Logo"
+                    style="
+                        max-height: 75px;
+                        max-width: 100px;
+                    "
+                >
+
+            </div>
+
+        {% endif %}
+
+
+        <div class="school-details">
+
+            <strong>
+                {{ school.name }}
+            </strong>
+
+            {% if school.address %}
+                <br>
+                {{ school.address }}
+            {% endif %}
+
+            {% if school.phone %}
+                <br>
+                Tel: {{ school.phone }}
+            {% endif %}
+
+        </div>
+
+
+        <h2>
+            CBC UPPER SECONDARY ASSESSMENT BOOK
+        </h2>
+
+        <h4>
+            {{ learning_area.name }}
+        </h4>
+
+    </div>
+
+
+    <!-- =====================================================
+         ASSESSMENT INFORMATION
+         ===================================================== -->
+
+    <table class="assessment-details">
+
+        <tr>
+
+            <td class="label">
+                Academic Year:
+            </td>
+
+            <td>
+                {{ academic_year }}
+            </td>
+
+            <td class="label">
+                Term:
+            </td>
+
+            <td>
+                Term {{ term }}
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td class="label">
+                Grade:
+            </td>
+
+            <td>
+                {{ curriculum_grade.display_name }}
+            </td>
+
+            <td class="label">
+                Pathway:
+            </td>
+
+            <td>
+
+                {% if pathway %}
+                    {{ pathway.get_name_display }}
+                {% else %}
+                    -
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td class="label">
+                Student:
+            </td>
+
+            <td>
+
+                {{ student.first_name }}
+
+                {% if student.middle_name %}
+                    {{ student.middle_name }}
+                {% endif %}
+
+                {{ student.last_name }}
+
+                {% if student.admission_number %}
+                    <small class="text-muted">
+                        — {{ student.admission_number }}
+                    </small>
+                {% endif %}
+
+            </td>
+
+            <td class="label">
+                Class:
+            </td>
+
+            <td>
+                {{ school_class.name }}
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td class="label">
+                Learning Area:
+            </td>
+
+            <td>
+                {{ learning_area.name }}
+            </td>
+
+            <td class="label">
+                Teacher:
+            </td>
+
+            <td>
+
+                {% if assignment.teacher %}
+                    {{ assignment.teacher }}
+                {% else %}
+                    -
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+    </table>
+
+
+    <!-- =====================================================
+         ASSESSMENT TABLE
+         ===================================================== -->
+
+    <table class="assessment-table">
+
+        <thead>
+
+            <!-- =================================================
+                 MAIN HEADER
+                 ================================================= -->
+
+            <tr>
+
+                <th rowspan="2">
+                    S/NO
+                </th>
+
+                <th rowspan="2">
+                    LEARNING AREA
+                </th>
+
+                <th colspan="3">
+                    CAT 1
+                </th>
+
+                <th colspan="3">
+                    MID TERM
+                </th>
+
+                <th colspan="3">
+                    END TERM
+                </th>
+
+                <th rowspan="2">
+                    AVG MARK
+                </th>
+
+                <th rowspan="2">
+                    AVG POINTS
+                </th>
+
+            </tr>
+
+
+            <!-- =================================================
+                 SUB HEADER
+                 ================================================= -->
+
+            <tr>
+
+                <th>
+                    Mark
+                </th>
+
+                <th>
+                    Perf
+                </th>
+
+                <th>
+                    Points
+                </th>
+
+
+                <th>
+                    Mark
+                </th>
+
+                <th>
+                    Perf
+                </th>
+
+                <th>
+                    Points
+                </th>
+
+
+                <th>
+                    Mark
+                </th>
+
+                <th>
+                    Perf
+                </th>
+
+                <th>
+                    Points
+                </th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody>
+
+
+            <!-- =================================================
+                 LEARNING AREA ROWS
+                 ================================================= -->
+
+            {% for row in learning_area_rows %}
+
+                <tr>
+
+                    <!-- S/NO -->
+
+                    <td class="center">
+                        {{ forloop.counter }}
+                    </td>
+
+
+                    <!-- LEARNING AREA -->
+
+                    <td class="learning-area-column">
+
+                        <strong>
+                            {{ row.learning_area.name }}
+                        </strong>
+
+                    </td>
+
+
+                    <!-- =================================================
+                         CAT 1 MARK
+                         PERCENTAGE ONLY
+                         ================================================= -->
+
+                    <td class="mark-column">
+
+                        {% if row.components.CAT1.percentage is not None %}
+
+                            {{ row.components.CAT1.percentage|floatformat:0 }}%
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- CAT 1 PERFORMANCE -->
+
+                    <td class="perf-column center">
+
+                        {% if row.components.CAT1.performance %}
+
+                            {{ row.components.CAT1.performance.code }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- CAT 1 POINTS -->
+
+                    <td class="points-column center">
+
+                        {% if row.components.CAT1.points is not None %}
+
+                            {{ row.components.CAT1.points|floatformat:0 }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- =================================================
+                         MID TERM MARK
+                         PERCENTAGE ONLY
+                         ================================================= -->
+
+                    <td class="mark-column">
+
+                        {% if row.components.MID.percentage is not None %}
+
+                            {{ row.components.MID.percentage|floatformat:0 }}%
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- MID PERFORMANCE -->
+
+                    <td class="perf-column center">
+
+                        {% if row.components.MID.performance %}
+
+                            {{ row.components.MID.performance.code }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- MID POINTS -->
+
+                    <td class="points-column center">
+
+                        {% if row.components.MID.points is not None %}
+
+                            {{ row.components.MID.points|floatformat:0 }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- =================================================
+                         END TERM MARK
+                         PERCENTAGE ONLY
+                         ================================================= -->
+
+                    <td class="mark-column">
+
+                        {% if row.components.END.percentage is not None %}
+
+                            {{ row.components.END.percentage|floatformat:0 }}%
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- END PERFORMANCE -->
+
+                    <td class="perf-column center">
+
+                        {% if row.components.END.performance %}
+
+                            {{ row.components.END.performance.code }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- END POINTS -->
+
+                    <td class="points-column center">
+
+                        {% if row.components.END.points is not None %}
+
+                            {{ row.components.END.points|floatformat:0 }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- =================================================
+                         AVERAGE MARK
+                         ================================================= -->
+
+                    <td class="average-column center">
+
+                        {% if row.average_percentage is not None %}
+
+                            {{ row.average_percentage|floatformat:0 }}%
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- =================================================
+                         AVERAGE POINTS
+                         ================================================= -->
+
+                    <td class="average-column center">
+
+                        {% if row.average_points is not None %}
+
+                            {{ row.average_points|floatformat:0 }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+
+            {% empty %}
+
+                <tr>
+
+                    <td
+                        colspan="13"
+                        class="text-center"
+                    >
+
+                        No learning areas are configured for
+                        {{ student.first_name }}
+                        {{ student.last_name }}
+                        in {{ academic_year }},
+                        Term {{ term }}.
+
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+
+            <!-- =================================================
+                 TOTAL MARKS
+                 DIRECTLY BELOW ALL LEARNING AREAS
+                 ================================================= -->
+
+            {% if learning_area_rows %}
+
+                <tr class="totals-row">
+
+                    <!-- S/NO -->
+
+                    <td></td>
+
+
+                    <!-- TOTAL MARKS LABEL
+                         INSIDE LEARNING AREA COLUMN -->
+
+                    <td class="learning-area-column">
+
+                        <strong>
+                            TOTAL MARKS
+                        </strong>
+
+                    </td>
+
+
+                    <!-- CAT 1 -->
+
+                    <td></td>
+                    <td></td>
+                    <td></td>
+
+
+                    <!-- MID TERM -->
+
+                    <td></td>
+                    <td></td>
+                    <td></td>
+
+
+                    <!-- END TERM -->
+
+                    <td></td>
+                    <td></td>
+                    <td></td>
+
+
+                    <!-- TOTAL MARKS VALUE -->
+
+                    <td class="average-column total-value">
+
+                        <strong>
+                            {{ total_marks|floatformat:0 }}%
+                        </strong>
+
+                    </td>
+
+
+                    <!-- EMPTY TOTAL POINTS -->
+
+                    <td></td>
+
+                </tr>
+
+
+                <!-- =================================================
+                     TOTAL POINTS
+                     DIRECTLY BELOW TOTAL MARKS
+                     ================================================= -->
+
+                <tr class="totals-row">
+
+                    <!-- S/NO -->
+
+                    <td></td>
+
+
+                    <!-- TOTAL POINTS LABEL
+                         INSIDE LEARNING AREA COLUMN -->
+
+                    <td class="learning-area-column">
+
+                        <strong>
+                            TOTAL POINTS
+                        </strong>
+
+                    </td>
+
+
+                    <!-- CAT 1 -->
+
+                    <td></td>
+                    <td></td>
+                    <td></td>
+
+
+                    <!-- MID TERM -->
+
+                    <td></td>
+                    <td></td>
+                    <td></td>
+
+
+                    <!-- END TERM -->
+
+                    <td></td>
+                    <td></td>
+                    <td></td>
+
+
+                    <!-- EMPTY TOTAL MARKS -->
+
+                    <td></td>
+
+
+                    <!-- TOTAL POINTS VALUE -->
+
+                    <td class="average-column total-value">
+
+                        <strong>
+                            {{ total_points|floatformat:0 }}
+                        </strong>
+
+                    </td>
+
+                </tr>
+
+            {% endif %}
+
+
+        </tbody>
+
+    </table>
+
+
+    <!-- =====================================================
+         LEGEND
+         ===================================================== -->
+
+    <div class="print-footer">
+
+        <strong>
+            Assessment Legend
+        </strong>
+
+        <br>
+
+        <strong>
+            Mark:
+        </strong>
+
+        Percentage score.
+
+        &nbsp;&nbsp;&nbsp;
+
+        <strong>
+            Perf:
+        </strong>
+
+        CBC performance level.
+
+        &nbsp;&nbsp;&nbsp;
+
+        <strong>
+            Points:
+        </strong>
+
+        CBC points derived from the performance level.
+
+
+        <!-- =================================================
+             SIGNATURES
+             ================================================= -->
+
+        <div class="signature-area">
+
+            <span>
+                Class Teacher:
+            </span>
+
+            <span class="signature-line"></span>
+
+            <span style="margin-left: 50px;">
+                Date:
+            </span>
+
+            <span
+                class="signature-line"
+                style="min-width: 120px;"
+            ></span>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+
+</div>
+
+{% endblock %}
+
+
+

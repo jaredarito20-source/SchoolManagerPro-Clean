@@ -9,15 +9,37 @@ from .view_modules.cbc_assessment import (
     cbc_my_classes,
     cbc_learning_areas,
     cbc_assessment_book,
+    cbc_assessment_book_print,
+    cbc_subject_score_sheet,
+    cbc_submission_review,
+    cbc_submission_approve,
+    cbc_submission_reject,
+    cbc_mark_edit,
+    cbc_subject_assessment_print,
+    cbc_subject_assessment_book,
+    cbc_upper_secondary_assessment_book,
+    cbc_upper_secondary_mark_entry,
+    cbc_upper_secondary_mark_list,
+    cbc_upper_secondary_assessment_book_print,
+    cbc_upper_secondary_mark_list_print,
+    cbc_upper_secondary_strand_classes,
+    cbc_upper_secondary_mark_edit,
+    
 )
 from . import views
 from students.view_modules.administration import register_school
-from .view_modules.administration import assign_student_parent
+from .view_modules.administration import assign_student_parent, academic_year_archive
 from .view_modules.sms_admin import (
     sms_packages,
     sms_buy_package,
     sms_checkout,
 )
+from .view_modules.parent import (
+    parent_dashboard,
+    parent_students,
+    parent_assessment_book,)
+
+
 
 
 urlpatterns = [
@@ -53,6 +75,11 @@ path('schools/<int:id>/delete/',views.delete_school,name='delete_school'),
 path('schools/credentials/', views.school_credentials, name='school_credentials'),
 path('schools/<int:id>/reset-password/',views.reset_school_password,name='reset_school_password'),
 path('schools/',views.school_list,name='school_list'),
+path(
+    'academic-year-archive/',
+    academic_year_archive,
+    name='academic_year_archive',
+),
 path('teachers/', views.teacher_list, name='teacher_list'),
 
 path('teachers/add/', views.add_teacher, name='add_teacher'),
@@ -96,6 +123,7 @@ path('exams/', views.exam_list, name='exam_list'),
 path('exams/add/', views.add_exam, name='add_exam'),
 
 path('exams/edit/<int:id>/', views.edit_exam, name='edit_exam'),
+path('exams/setup-cbc/', views.setup_cbc_exams, name='setup_cbc_exams'),
 
 path('exams/delete/<int:id>/', views.delete_exam, name='delete_exam'),
 
@@ -118,12 +146,118 @@ path(
     cbc_my_classes,
     name="cbc_my_classes",
 ),
+path(
+    "cbc/upper-secondary-mark-edit/<int:assessment_id>/",
+    cbc_upper_secondary_mark_edit,
+    name="cbc_upper_secondary_mark_edit",
+),
 
 path(
     "cbc/learning-areas/<int:school_class_curriculum_id>/<str:term>/",
     cbc_learning_areas,
     name="cbc_learning_areas",
 ),
+path(
+    "cbc/assessment-book/<int:assignment_id>/student/<int:student_id>/print/",
+        cbc_assessment_book_print,
+        name="cbc_assessment_book_print",
+    ),
+
+path(
+    "cbc/subject-score-sheet/",
+    cbc_subject_score_sheet,
+    name="cbc_subject_score_sheet",
+),
+
+path(
+    "cbc/upper-secondary-assessment-book/<int:assignment_id>/",
+    cbc_upper_secondary_assessment_book,
+    name="cbc_upper_secondary_assessment_book",
+),
+
+path(
+    "cbc/upper-secondary-assessment-book/<int:assignment_id>/print/",
+    cbc_upper_secondary_assessment_book_print,
+    name="cbc_upper_secondary_assessment_book_print",
+),
+
+path(
+    "cbc/upper-secondary-mark-list/",
+    cbc_upper_secondary_mark_list,
+    name="cbc_upper_secondary_mark_list",
+),
+path(
+    "cbc/upper-secondary-mark-list/print/",
+    cbc_upper_secondary_mark_list_print,
+    name="cbc_upper_secondary_mark_list_print",
+),
+
+
+
+
+path(
+    "cbc/upper-secondary-mark-entry/<int:assignment_id>/",
+    cbc_upper_secondary_mark_entry,
+    name="cbc_upper_secondary_mark_entry",
+),
+
+path(
+    "cbc/subject-assessment-book/<int:student_id>/",
+    cbc_subject_assessment_book,
+    name="cbc_subject_assessment_book",
+),
+
+path(
+    "cbc/result/<int:assignment_id>/<int:student_id>/",
+    views.cbc_student_result,
+    name="cbc_student_result",
+),
+
+path(
+    "cbc/submissions/",
+    cbc_submission_review,
+    name="cbc_submission_review",
+),
+path(
+    "cbc/submissions/<int:submission_id>/approve/",
+    cbc_submission_approve,
+    name="cbc_submission_approve",
+),
+path(
+    "cbc/upper-secondary-strand-assessment/",
+    views.cbc_upper_secondary_strand_classes,
+    name="cbc_upper_secondary_strand_classes",
+),
+
+path(
+    "cbc/upper-secondary-strand-assessment/<int:assignment_id>/",
+    views.cbc_upper_secondary_strands,
+    name="cbc_upper_secondary_strands",
+),
+
+path(
+    "cbc/upper-secondary-strand-assessment/<int:assignment_id>/strand/<int:strand_id>/",
+    views.cbc_upper_secondary_strand_assessment,
+    name="cbc_upper_secondary_strand_assessment",
+),
+
+path(
+    "cbc/subject-assessment-print/<int:assignment_id>/<int:student_id>/",
+    cbc_subject_assessment_print,
+    name="cbc_subject_assessment_print",
+),
+
+path(
+    "cbc/submissions/<int:submission_id>/reject/",
+    cbc_submission_reject,
+    name="cbc_submission_reject",
+),
+path(
+    "cbc/mark-edit/<int:assessment_id>/",
+    cbc_mark_edit,
+    name="cbc_mark_edit",
+),
+
 
 path(
     "cbc/assessment-book/<int:assignment_id>/",
@@ -208,7 +342,11 @@ path('mark-submissions/<int:id>/submit/', views.submit_mark_submission, name='su
 path('administration/mark-submissions/', views.admin_mark_submission_list, name='admin_mark_submission_list'),
 
 path('administration/mark-submissions/<int:id>/view/', views.view_mark_submission, name='view_mark_submission'),
-
+path(
+    "administration/cbc-mark-list/",
+    views.cbc_mark_list,
+    name="cbc_mark_list",
+),
 path('administration/mark-submissions/<int:id>/approve/', views.approve_mark_submission, name='approve_mark_submission'),
 
 path('administration/mark-submissions/<int:id>/reject/', views.reject_mark_submission, name='reject_mark_submission'),
@@ -230,7 +368,11 @@ path('parents/attendance/', views.parent_attendance, name='parent_attendance'),
 path('parents/results/<int:student_id>/', views.parent_results, name='parent_results'),
 
 path('parents/fee-statement/<int:student_id>/', views.parent_fee_statement, name='parent_fee_statement'),
-
+path(
+    "parents/assessment-book/<int:student_id>/",
+    parent_assessment_book,
+    name="parent_assessment_book",
+),
 path('parents/fee-statement/<int:student_id>/print/', views.print_fee_statement, name='parent_print_fee_statement'),
 
 path('parents/fee-balance/', views.parent_fee_balance, name='parent_fee_balance'),

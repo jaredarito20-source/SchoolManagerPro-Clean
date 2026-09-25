@@ -33,6 +33,20 @@ from .view_modules.administration import (
 )
 from .view_modules.sms import *
 from .view_modules.mpesa import mpesa_callback
+from students.view_modules.cbc_assessment import (
+    cbc_my_classes,
+    cbc_learning_areas,
+    cbc_assessment_book,
+    cbc_assessment_book_print,
+    cbc_subject_score_sheet,
+    cbc_student_result,
+)
+
+from .view_modules.cbc_assessment import (
+    cbc_upper_secondary_strand_classes,
+    cbc_upper_secondary_strands,
+    cbc_upper_secondary_strand_assessment,
+)
 
 
 

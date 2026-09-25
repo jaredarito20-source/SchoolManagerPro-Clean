@@ -1,0 +1,877 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <!-- =========================================================
+         PAGE HEADER
+         ========================================================= -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+            <h4 class="mb-1">
+                CBC Upper Secondary Mark Entry
+            </h4>
+
+            <div class="text-muted">
+                {{ school.name }}
+                |
+                {{ learning_area.name }}
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            <div class="row g-3">
+
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">
+                        Academic Year
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="{{ academic_year }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">
+                        Grade
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="{{ curriculum_grade.display_name }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">
+                        Pathway
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="{{ pathway.get_name_display }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">
+                        Class / Stream
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="{{ school_class.name }}"
+                        readonly
+                    >
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">
+                        Learning Area
+                    </label>
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="{{ learning_area.name }}"
+                        readonly
+                    >
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         TERM + COMPONENT SELECTION
+         ========================================================= -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+            <h5 class="mb-0">
+                Assessment Selection
+            </h5>
+        </div>
+
+        <div class="card-body">
+
+            <form method="get">
+
+                <div class="row g-3 align-items-end">
+
+                    <!-- TERM -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label fw-bold">
+                            Term
+                        </label>
+
+                        <select
+                            name="term"
+                            class="form-select"
+                        >
+
+                            <option
+                                value="1"
+                                {% if term == "1" %}
+                                    selected
+                                {% endif %}
+                            >
+                                Term 1
+                            </option>
+
+                            <option
+                                value="2"
+                                {% if term == "2" %}
+                                    selected
+                                {% endif %}
+                            >
+                                Term 2
+                            </option>
+
+                            <option
+                                value="3"
+                                {% if term == "3" %}
+                                    selected
+                                {% endif %}
+                            >
+                                Term 3
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- COMPONENT -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label fw-bold">
+                            Assessment Component
+                        </label>
+
+                        <select
+                            name="assessment_component"
+                            class="form-select"
+                        >
+
+                            <option
+                                value="CAT1"
+                                {% if assessment_component == "CAT1" %}
+                                    selected
+                                {% endif %}
+                            >
+                                CAT 1
+                            </option>
+
+                            <option
+                                value="MID"
+                                {% if assessment_component == "MID" %}
+                                    selected
+                                {% endif %}
+                            >
+                                MID TERM
+                            </option>
+
+                            <option
+                                value="END"
+                                {% if assessment_component == "END" %}
+                                    selected
+                                {% endif %}
+                            >
+                                END TERM
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- LOAD -->
+
+                    <div class="col-md-3">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                        >
+                            Load Assessment
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         EXAM INFORMATION
+         ========================================================= -->
+
+    {% if selected_exam %}
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body">
+
+                <div class="row g-3">
+
+                    <div class="col-md-4">
+
+                        <strong>
+                            Exam:
+                        </strong>
+
+                        {{ selected_exam.name }}
+
+                    </div>
+
+
+                    <div class="col-md-3">
+
+                        <strong>
+                            Marks Out Of:
+                        </strong>
+
+                        <span class="badge bg-primary fs-6">
+
+                            {{ selected_exam.marks_out_of }}
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="col-md-3">
+
+                        <strong>
+                            Status:
+                        </strong>
+
+                        <span class="badge bg-success">
+
+                            {{ selected_exam.status }}
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="col-md-2">
+
+                        <strong>
+                            Term:
+                        </strong>
+
+                        {{ term }}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    {% else %}
+
+        <div class="alert alert-warning">
+
+            <strong>
+                No Open Exam
+            </strong>
+
+            <br>
+
+            The selected assessment cannot be entered because
+            the corresponding exam is not currently open.
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =========================================================
+         MARK ENTRY TABLE
+         ========================================================= -->
+
+    <div class="card shadow-sm">
+
+        <div class="card-header">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div>
+
+                    <h5 class="mb-0">
+                        {{ learning_area.name }}
+                    </h5>
+
+                    <small class="text-muted">
+
+                        Enter raw marks only.
+                        Percentage, performance level and points
+                        are calculated automatically.
+
+                    </small>
+
+                </div>
+
+
+                {% if submission %}
+
+                    {% if submission.status == "DRAFT" %}
+
+                        <span class="badge bg-warning text-dark">
+                            DRAFT
+                        </span>
+
+                    {% elif submission.status == "SUBMITTED" %}
+
+                        <span class="badge bg-info">
+                            SUBMITTED
+                        </span>
+
+                    {% elif submission.status == "APPROVED" %}
+
+                        <span class="badge bg-success">
+                            APPROVED
+                        </span>
+
+                    {% elif submission.status == "REJECTED" %}
+
+                        <span class="badge bg-danger">
+                            REJECTED
+                        </span>
+
+                    {% endif %}
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <input
+                type="hidden"
+                name="term"
+                value="{{ term }}"
+            >
+
+            <input
+                type="hidden"
+                name="assessment_component"
+                value="{{ assessment_component }}"
+            >
+
+
+            <div class="table-responsive">
+
+                <table class="table table-bordered table-hover mb-0 align-middle">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th>
+                                S/NO
+                            </th>
+
+                            <th>
+                                Admission No.
+                            </th>
+
+                            <th>
+                                Student Name
+                            </th>
+
+                            <th>
+                                Mark /
+                                {% if selected_exam %}
+                                    {{ selected_exam.marks_out_of }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </th>
+
+                            <th>
+                                %
+                            </th>
+
+                            <th>
+                                Performance
+                            </th>
+
+                            <th>
+                                Points
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for row in students %}
+
+                            <tr>
+
+                                <!-- S/NO -->
+
+                                <td>
+                                    {{ forloop.counter }}
+                                </td>
+
+
+                                <!-- ADMISSION -->
+
+                                <td>
+                                    {{ row.student.admission_number }}
+                                </td>
+
+
+                                <!-- NAME -->
+
+                                <td>
+
+                                    <strong>
+
+                                        {{ row.student.first_name }}
+
+                                        {% if row.student.middle_name %}
+                                            {{ row.student.middle_name }}
+                                        {% endif %}
+
+                                        {{ row.student.last_name }}
+
+                                    </strong>
+
+                                </td>
+
+
+                                <!-- RAW MARK -->
+
+                                <td>
+
+                                    <input
+                                        type="number"
+                                        name="score_{{ row.student.id }}"
+                                        value="{{ row.raw_score|default_if_none:'' }}"
+                                        class="form-control mark-input"
+                                        step="0.01"
+                                        min="0"
+
+                                        {% if selected_exam %}
+                                            max="{{ selected_exam.marks_out_of }}"
+                                        {% endif %}
+
+                                        {% if not selected_exam %}
+                                            disabled
+                                        {% endif %}
+
+                                        {% if submission %}
+
+                                            {% if submission.status == "SUBMITTED" %}
+                                                disabled
+                                            {% endif %}
+
+                                            {% if submission.status == "APPROVED" %}
+                                                disabled
+                                            {% endif %}
+
+                                        {% endif %}
+
+                                    >
+
+                                </td>
+
+
+                                <!-- PERCENTAGE -->
+
+                                <td>
+
+                                    {% if row.percentage is not None %}
+
+                                        <span
+                                            id="percentage-{{ row.student.id }}"
+                                        >
+                                            {{ row.percentage|floatformat:2 }}%
+                                        </span>
+
+                                    {% else %}
+
+                                        <span
+                                            id="percentage-{{ row.student.id }}"
+                                            class="text-muted"
+                                        >
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <!-- PERFORMANCE -->
+
+                                <td>
+
+                                    {% if row.performance %}
+
+                                        <span
+                                            id="performance-{{ row.student.id }}"
+                                            class="badge bg-success"
+                                        >
+                                            {{ row.performance.code }}
+                                        </span>
+
+                                    {% else %}
+
+                                        <span
+                                            id="performance-{{ row.student.id }}"
+                                            class="text-muted"
+                                        >
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <!-- POINTS -->
+
+                                <td>
+
+                                    {% if row.points is not None %}
+
+                                        <span
+                                            id="points-{{ row.student.id }}"
+                                        >
+                                            {{ row.points|floatformat:0 }}
+                                        </span>
+
+                                    {% else %}
+
+                                        <span
+                                            id="points-{{ row.student.id }}"
+                                            class="text-muted"
+                                        >
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+
+                                <td
+                                    colspan="7"
+                                    class="text-center py-4"
+                                >
+
+                                    <span class="text-muted">
+
+                                        No students are enrolled in this
+                                        class for the selected academic
+                                        year and term.
+
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <!-- =================================================
+                 ACTIONS
+                 ================================================= -->
+
+            <div class="card-footer">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <div class="text-muted">
+
+                        {% if selected_exam %}
+
+                            Enter marks between
+                            0 and
+                            {{ selected_exam.marks_out_of }}.
+
+                        {% else %}
+
+                            No open exam.
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="d-flex gap-2">
+
+                        <button
+                            type="submit"
+                            name="action"
+                            value="save"
+                            class="btn btn-secondary"
+
+                            {% if not selected_exam %}
+                                disabled
+                            {% endif %}
+
+                            {% if submission %}
+
+                                {% if submission.status == "SUBMITTED" %}
+                                    disabled
+                                {% endif %}
+
+                                {% if submission.status == "APPROVED" %}
+                                    disabled
+                                {% endif %}
+
+                            {% endif %}
+                        >
+                            Save Draft
+                        </button>
+
+
+                        <button
+                            type="submit"
+                            name="action"
+                            value="submit"
+                            class="btn btn-primary"
+
+                            {% if not selected_exam %}
+                                disabled
+                            {% endif %}
+
+                            {% if submission %}
+
+                                {% if submission.status == "SUBMITTED" %}
+                                    disabled
+                                {% endif %}
+
+                                {% if submission.status == "APPROVED" %}
+                                    disabled
+                                {% endif %}
+
+                            {% endif %}
+                        >
+                            Submit for Approval
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =============================================================
+     LIVE PERCENTAGE CALCULATION
+     ============================================================= -->
+
+{% if selected_exam %}
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const marksOutOf = Number(
+        "{{ selected_exam.marks_out_of }}"
+    );
+
+    const inputs = document.querySelectorAll(
+        ".mark-input"
+    );
+
+
+    inputs.forEach(function (input) {
+
+        input.addEventListener("input", function () {
+
+            const studentId = input.name.replace(
+                "score_",
+                ""
+            );
+
+
+            const percentageElement =
+                document.getElementById(
+                    "percentage-" + studentId
+                );
+
+
+            const performanceElement =
+                document.getElementById(
+                    "performance-" + studentId
+                );
+
+
+            const pointsElement =
+                document.getElementById(
+                    "points-" + studentId
+                );
+
+
+            const rawValue =
+                input.value.trim();
+
+
+            /*
+             * Blank mark
+             */
+
+            if (
+                rawValue === ""
+                || !marksOutOf
+            ) {
+
+                if (percentageElement) {
+                    percentageElement.textContent = "—";
+                }
+
+                if (performanceElement) {
+                    performanceElement.textContent = "—";
+                }
+
+                if (pointsElement) {
+                    pointsElement.textContent = "—";
+                }
+
+                return;
+            }
+
+
+            const rawMark = Number(rawValue);
+
+
+            /*
+             * Invalid mark
+             */
+
+            if (
+                Number.isNaN(rawMark)
+                || rawMark < 0
+                || rawMark > marksOutOf
+            ) {
+
+                if (percentageElement) {
+                    percentageElement.textContent = "Invalid";
+                }
+
+                if (performanceElement) {
+                    performanceElement.textContent = "—";
+                }
+
+                if (pointsElement) {
+                    pointsElement.textContent = "—";
+                }
+
+                return;
+            }
+
+
+            /*
+             * Calculate normalized percentage.
+             *
+             * Example:
+             *
+             * 24 / 30 * 100 = 80%
+             */
+
+            const percentage =
+                (rawMark / marksOutOf) * 100;
+
+
+            if (percentageElement) {
+
+                percentageElement.textContent =
+                    percentage.toFixed(2) + "%";
+
+            }
+
+
+            /*
+             * Performance level and points are deliberately
+             * NOT calculated in JavaScript.
+             *
+             * The server remains authoritative.
+             */
+
+            if (performanceElement) {
+
+                performanceElement.textContent =
+                    "Calculated on save";
+
+            }
+
+
+            if (pointsElement) {
+
+                pointsElement.textContent =
+                    "—";
+
+            }
+
+        });
+
+    });
+
+});
+
+</script>
+
+{% endif %}
+
+{% endblock %}

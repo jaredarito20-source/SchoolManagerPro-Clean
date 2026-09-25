@@ -1,0 +1,575 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <!-- ===================================================== -->
+    <!-- HEADER                                                -->
+    <!-- ===================================================== -->
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h4 class="mb-1">
+                Upper Secondary Strand Assessment
+            </h4>
+
+            <div class="text-muted">
+                {{ school.name }}
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3">
+
+                <div class="col-md-3">
+                    <strong>Class</strong><br>
+                    {{ school_class.name }}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>Grade</strong><br>
+                    {{ curriculum_grade.grade }}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>Pathway</strong><br>
+
+                    {% if pathway %}
+                        {{ pathway.name }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>Learning Area</strong><br>
+                    {{ learning_area.name }}
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- TERM / COMPONENT                                     -->
+    <!-- ===================================================== -->
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get">
+
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-md-4">
+
+                        <label class="form-label fw-bold">
+                            Term
+                        </label>
+
+                        <select
+                            name="term"
+                            class="form-select"
+                            onchange="this.form.submit()"
+                        >
+
+                            {% for value, label in terms %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if value == selected_term %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ label }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-md-4">
+
+                        <label class="form-label fw-bold">
+                            Assessment Component
+                        </label>
+
+                        <select
+                            name="assessment_component"
+                            class="form-select"
+                            onchange="this.form.submit()"
+                        >
+
+                            {% for value, label in components %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if value == assessment_component %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ label }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-md-4">
+
+                        <div class="alert alert-info mb-0">
+                            <strong>Academic Year:</strong>
+                            {{ academic_year }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- STRAND INFORMATION                                    -->
+    <!-- ===================================================== -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div>
+
+                    <h5 class="mb-1">
+                        {{ strand.name }}
+                    </h5>
+
+                    {% if strand.code %}
+
+                        <small class="text-muted">
+                            Code: {{ strand.code }}
+                        </small>
+
+                    {% endif %}
+
+                </div>
+
+                <span class="badge bg-primary">
+                    {{ sub_strands|length }} Sub-Strands
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="card-body">
+
+            {% if strand.description %}
+
+                <p class="text-muted mb-3">
+                    {{ strand.description }}
+                </p>
+
+            {% endif %}
+
+
+            <div class="alert alert-secondary mb-0">
+
+                <strong>Strand Summative:</strong>
+
+                This result is automatically calculated from
+                <strong>all assessed sub-strands</strong> in this
+                strand.
+
+                The most frequently occurring performance level
+                is used. Where levels are tied, the higher level
+                is selected.
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- ASSESSMENT FORM                                       -->
+    <!-- ===================================================== -->
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <input
+            type="hidden"
+            name="term"
+            value="{{ selected_term }}"
+        >
+
+        <input
+            type="hidden"
+            name="assessment_component"
+            value="{{ assessment_component }}"
+        >
+
+
+        <!-- ================================================= -->
+        <!-- ASSESSMENT TABLE                                  -->
+        <!-- ================================================= -->
+
+        <div class="card shadow-sm">
+
+            <div class="card-header">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <h5 class="mb-0">
+                        Sub-Strand Assessment
+                    </h5>
+
+                    <span class="badge bg-secondary">
+                        {{ students|length }} Learners
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="card-body p-0">
+
+                {% if students and sub_strands %}
+
+                    <div
+                        class="table-responsive"
+                        style="max-height: 70vh;"
+                    >
+
+                        <table
+                            class="table table-bordered table-hover align-middle mb-0"
+                        >
+
+                            <thead class="table-light sticky-top">
+
+                                <tr>
+
+                                    <th
+                                        rowspan="2"
+                                        class="text-center"
+                                        style="min-width: 55px;"
+                                    >
+                                        #
+                                    </th>
+
+                                    <th
+                                        rowspan="2"
+                                        style="min-width: 220px;"
+                                    >
+                                        Learner
+                                    </th>
+
+
+                                    {% for sub_strand in sub_strands %}
+
+                                        <th
+                                            class="text-center"
+                                            style="min-width: 180px;"
+                                        >
+
+                                            <div>
+                                                {{ sub_strand.name }}
+                                            </div>
+
+                                            {% if sub_strand.code %}
+
+                                                <small class="text-muted">
+                                                    {{ sub_strand.code }}
+                                                </small>
+
+                                            {% endif %}
+
+                                        </th>
+
+                                    {% endfor %}
+
+
+                                    <th
+                                        rowspan="2"
+                                        class="text-center"
+                                        style="min-width: 130px;"
+                                    >
+                                        Strand<br>
+                                        Summative
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody>
+
+                                {% for row in student_rows %}
+
+                                    <tr>
+
+                                        <td class="text-center fw-bold">
+                                            {{ row.number }}
+                                        </td>
+
+
+                                        <td>
+
+                                            <div class="fw-semibold">
+
+                                                {{ row.student.first_name }}
+                                                {{ row.student.last_name }}
+
+                                            </div>
+
+                                            {% if row.student.admission_number %}
+
+                                                <small class="text-muted">
+
+                                                    Adm:
+                                                    {{ row.student.admission_number }}
+
+                                                </small>
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        {% for sub_row in row.sub_strands %}
+
+                                            {% with sub_strand=sub_row.sub_strand record=sub_row.record %}
+
+                                                <td class="text-center">
+
+                                                    <select
+                                                        name="level_{{ row.student.id }}_{{ sub_strand.id }}"
+                                                        class="form-select form-select-sm text-center"
+                                                        {% if submission_status == "APPROVED" %}
+                                                            disabled
+                                                        {% endif %}
+                                                    >
+
+                                                        <option value="">
+                                                            —
+                                                        </option>
+
+
+                                                        <option
+                                                            value="EE"
+                                                            {% if record and record.performance_level == "EE" %}
+                                                                selected
+                                                            {% endif %}
+                                                        >
+                                                            EE
+                                                        </option>
+
+
+                                                        <option
+                                                            value="ME"
+                                                            {% if record and record.performance_level == "ME" %}
+                                                                selected
+                                                            {% endif %}
+                                                        >
+                                                            ME
+                                                        </option>
+
+
+                                                        <option
+                                                            value="AE"
+                                                            {% if record and record.performance_level == "AE" %}
+                                                                selected
+                                                            {% endif %}
+                                                        >
+                                                            AE
+                                                        </option>
+
+
+                                                        <option
+                                                            value="BE"
+                                                            {% if record and record.performance_level == "BE" %}
+                                                                selected
+                                                            {% endif %}
+                                                        >
+                                                            BE
+                                                        </option>
+
+                                                    </select>
+
+                                                </td>
+
+                                            {% endwith %}
+
+                                        {% endfor %}
+
+
+                                        <!-- =============================== -->
+                                        <!-- STRAND SUMMATIVE                -->
+                                        <!-- =============================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.summative %}
+
+                                                {% if row.summative.performance_level == "EE" %}
+
+                                                    <span class="badge bg-success fs-6">
+                                                        EE
+                                                    </span>
+
+                                                {% elif row.summative.performance_level == "ME" %}
+
+                                                    <span class="badge bg-primary fs-6">
+                                                        ME
+                                                    </span>
+
+                                                {% elif row.summative.performance_level == "AE" %}
+
+                                                    <span class="badge bg-warning text-dark fs-6">
+                                                        AE
+                                                    </span>
+
+                                                {% elif row.summative.performance_level == "BE" %}
+
+                                                    <span class="badge bg-danger fs-6">
+                                                        BE
+                                                    </span>
+
+                                                {% else %}
+
+                                                    <span class="text-muted">
+                                                        —
+                                                    </span>
+
+                                                {% endif %}
+
+                                            {% else %}
+
+                                                <span class="text-muted">
+                                                    —
+                                                </span>
+
+                                            {% endif %}
+
+                                        </td>
+
+                                    </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+
+                    <!-- ================================================= -->
+                    <!-- SAVE AREA                                        -->
+                    <!-- ================================================= -->
+
+                    <div class="p-3 border-top">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div class="text-muted">
+
+                                <strong>EE</strong> =
+                                Exceeding Expectations
+
+                                &nbsp; | &nbsp;
+
+                                <strong>ME</strong> =
+                                Meeting Expectations
+
+                                &nbsp; | &nbsp;
+
+                                <strong>AE</strong> =
+                                Approaching Expectations
+
+                                &nbsp; | &nbsp;
+
+                                <strong>BE</strong> =
+                                Below Expectations
+
+                            </div>
+
+
+                            {% if submission_status == "APPROVED" %}
+
+                                <div>
+
+                                    <span class="badge bg-success fs-6">
+                                        Assessment Approved
+                                    </span>
+
+                                </div>
+
+                            {% else %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary"
+                                >
+                                    Save Assessment
+                                </button>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+
+                {% elif not sub_strands %}
+
+                    <div class="alert alert-warning m-3">
+
+                        No sub-strands have been configured for
+                        <strong>{{ strand.name }}</strong>.
+
+                    </div>
+
+
+                {% else %}
+
+                    <div class="alert alert-warning m-3">
+
+                        No learners are enrolled in
+                        <strong>{{ school_class.name }}</strong>
+                        for Term {{ selected_term }}
+                        of {{ academic_year }}.
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}
+

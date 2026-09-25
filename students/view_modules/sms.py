@@ -28,7 +28,7 @@ def sms_dashboard(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     wallet, created = SMSWallet.objects.get_or_create(
         school=school

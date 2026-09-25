@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from reportlab.lib import colors
 from datetime import date
 from reportlab.lib.units import inch
+from django.utils import timezone
 
 import uuid
 from reportlab.lib.styles import getSampleStyleSheet
@@ -97,7 +98,7 @@ def salary_structure_list(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -154,7 +155,7 @@ def add_salary_structure(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -353,7 +354,7 @@ def generate_payroll(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -500,35 +501,72 @@ def generate_payroll(request):
             "name"
         )
 
+    # -----------------------------------------
+    # CALENDAR YEARS
+    # -----------------------------------------
+
+    current_year = timezone.now().year
+
+    if request.user.is_superuser:
+
+        existing_years = (
+            Payroll.objects
+            .values_list(
+                "year",
+                flat=True,
+            )
+            .distinct()
+        )
+
+    else:
+
+        existing_years = (
+            Payroll.objects
+            .filter(
+                school=school
+            )
+            .values_list(
+                "year",
+                flat=True,
+            )
+            .distinct()
+        )
+
+    calendar_years = {
+        int(year)
+        for year in existing_years
+        if year
+    }
+
+    # Always make the current calendar year available.
+    calendar_years.add(current_year)
+
+    calendar_years = sorted(
+        calendar_years,
+        reverse=True,
+    )
+
     return render(
         request,
         "students/generate_payroll.html",
         {
             "schools": schools,
+            "calendar_years": calendar_years,
         },
     )
-
 @login_required
 @admin_or_bursar
 def payroll_list(request):
 
+
     # -----------------------------------------
-    # SUPERUSER
+    # DETERMINE SCHOOL ACCESS
     # -----------------------------------------
+
     if request.user.is_superuser:
 
-        payrolls = Payroll.objects.select_related(
-            "teacher",
-            "school",
-        ).all().order_by(
-            "-year",
-            "-generated_on",
-            "teacher__first_name",
-        )
+        school = None
 
-    # -----------------------------------------
-    # NORMAL SCHOOL USER
-    # -----------------------------------------
     else:
 
         school_user = getattr(
@@ -544,28 +582,144 @@ def payroll_list(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
-        payrolls = Payroll.objects.select_related(
-            "teacher",
-            "school",
-        ).filter(
+    # -----------------------------------------
+    # BASE PAYROLL QUERYSET
+    # -----------------------------------------
+
+    payrolls = Payroll.objects.select_related(
+        "teacher",
+        "school",
+    )
+
+    # -----------------------------------------
+    # SCHOOL FILTER
+    # -----------------------------------------
+
+    if school:
+
+        payrolls = payrolls.filter(
             school=school
-        ).order_by(
-            "-year",
-            "-generated_on",
-            "teacher__first_name",
         )
+
+    # -----------------------------------------
+    # FILTER VALUES
+    # -----------------------------------------
+
+    selected_year = request.GET.get("year", "")
+    selected_month = request.GET.get("month", "")
+
+    # -----------------------------------------
+    # FILTER BY CALENDAR YEAR
+    # -----------------------------------------
+
+    if selected_year:
+
+        try:
+
+            selected_year = int(selected_year)
+
+            payrolls = payrolls.filter(
+                year=selected_year
+            )
+
+        except (TypeError, ValueError):
+
+            selected_year = ""
+
+    # -----------------------------------------
+    # FILTER BY MONTH
+    # -----------------------------------------
+
+    if selected_month:
+
+        payrolls = payrolls.filter(
+            month=selected_month
+        )
+
+    # -----------------------------------------
+    # CALENDAR YEARS
+    # -----------------------------------------
+
+    if school:
+
+        existing_years = (
+            Payroll.objects
+            .filter(
+                school=school
+            )
+            .values_list(
+                "year",
+                flat=True,
+            )
+            .distinct()
+        )
+
+    else:
+
+        existing_years = (
+            Payroll.objects
+            .values_list(
+                "year",
+                flat=True,
+            )
+            .distinct()
+        )
+
+    calendar_years = sorted(
+        {
+            int(year)
+            for year in existing_years
+            if year
+        },
+        reverse=True,
+    )
+
+    # -----------------------------------------
+    # MONTHS
+    # -----------------------------------------
+
+    months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+
+    # -----------------------------------------
+    # ORDER RESULTS
+    # -----------------------------------------
+
+    payrolls = payrolls.order_by(
+        "-year",
+        "-generated_on",
+        "teacher__first_name",
+    )
 
     return render(
         request,
         "students/payroll_list.html",
         {
             "payrolls": payrolls,
+            "calendar_years": calendar_years,
+            "months": months,
+            "selected_year": selected_year,
+            "selected_month": selected_month,
         },
     )
+
+
 @login_required
 @admin_or_bursar
 def print_payslip(request, id):
@@ -601,7 +755,7 @@ def print_payslip(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -983,7 +1137,7 @@ def print_salary_structure(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 

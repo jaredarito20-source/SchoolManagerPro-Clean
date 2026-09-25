@@ -1,0 +1,1572 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        CBC Assessment Book -
+        {{ student.first_name }}
+        {{ student.last_name }}
+    </title>
+
+
+<style>
+
+/* =========================================================
+   CBC PRINT PAGE — ISOLATED STYLES
+   ========================================================= */
+
+.cbc-ab-print-page,
+.cbc-ab-print-page * {
+    box-sizing: border-box;
+}
+
+.cbc-ab-print-page {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #ffffff;
+    color: #111111;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   TOOLBAR
+   ========================================================= */
+
+.cbc-ab-toolbar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border: 1px solid #cccccc;
+    background: #f5f5f5;
+}
+
+.cbc-ab-toolbar-title {
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.cbc-ab-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cbc-ab-toolbar-button {
+    display: inline-block !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 9px 16px !important;
+    border: 0 !important;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px !important;
+    font-weight: 700;
+    line-height: normal !important;
+    text-decoration: none;
+}
+
+.cbc-ab-back-button {
+    background: #6c757d !important;
+    color: #ffffff !important;
+}
+
+.cbc-ab-print-button {
+    background: #198754 !important;
+    color: #ffffff !important;
+}
+
+
+/* =========================================================
+   SCHOOL HEADER
+   ========================================================= */
+
+.cbc-ab-school-header {
+    width: 100%;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #111111;
+}
+
+.cbc-ab-school-header-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    table-layout: fixed !important;
+    margin: 0 !important;
+}
+
+.cbc-ab-school-header-table td {
+    border: 0 !important;
+    padding: 4px !important;
+    vertical-align: middle !important;
+}
+
+.cbc-ab-logo-cell {
+    width: 90px !important;
+    text-align: left !important;
+}
+
+.cbc-ab-logo {
+    display: block;
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+}
+
+.cbc-ab-school-name-cell {
+    text-align: center !important;
+}
+
+.cbc-ab-school-name {
+    font-size: 21px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.cbc-ab-school-contact {
+    margin-top: 4px;
+    font-size: 9px;
+}
+
+.cbc-ab-school-meta {
+    width: 120px !important;
+    text-align: right !important;
+    font-size: 9px;
+}
+
+
+/* =========================================================
+   TITLE
+   ========================================================= */
+
+.cbc-ab-title {
+    width: 100%;
+    margin: 12px 0;
+    text-align: center;
+}
+
+.cbc-ab-title-main {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.cbc-ab-title-sub {
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   INFORMATION TABLES
+   ========================================================= */
+
+.cbc-ab-info-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    table-layout: fixed !important;
+    margin: 0 0 12px 0 !important;
+}
+
+.cbc-ab-info-table td {
+    border: 1px solid #333333 !important;
+    padding: 6px !important;
+    vertical-align: middle !important;
+}
+
+.cbc-ab-info-label {
+    width: 17% !important;
+    background: #eeeeee !important;
+    font-weight: 700;
+}
+
+.cbc-ab-info-value {
+    width: 33% !important;
+}
+
+
+/* =========================================================
+   LEARNING AREA
+   ========================================================= */
+
+.cbc-ab-learning-area {
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 0;
+    padding: 8px;
+    border: 1px solid #222222;
+    background: #e9ecef;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+
+/* =========================================================
+   STRAND
+   ========================================================= */
+
+.cbc-ab-strand {
+    width: 100%;
+    margin-top: 12px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.cbc-ab-strand-title {
+    width: 100%;
+    padding: 7px 8px;
+    border: 1px solid #333333;
+    border-bottom: 0;
+    background: #f3f3f3;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   ASSESSMENT TABLE
+   ========================================================= */
+
+.cbc-ab-assessment-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    table-layout: fixed !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 9px;
+}
+
+.cbc-ab-assessment-table th,
+.cbc-ab-assessment-table td {
+    border: 1px solid #333333 !important;
+    padding: 5px !important;
+    vertical-align: middle !important;
+}
+
+.cbc-ab-assessment-table th {
+    background: #eeeeee !important;
+    text-align: center !important;
+    font-weight: 700 !important;
+}
+
+
+/* =========================================================
+   GRADE 10 COLUMN WIDTHS
+   ========================================================= */
+
+.cbc-ab-col-substrand {
+    width: 30% !important;
+}
+
+.cbc-ab-col-mark {
+    width: 10% !important;
+    text-align: center !important;
+}
+
+.cbc-ab-col-level {
+    width: 20% !important;
+    text-align: center !important;
+}
+
+.cbc-ab-col-points {
+    width: 10% !important;
+    text-align: center !important;
+}
+
+.cbc-ab-col-comment {
+    width: 30% !important;
+}
+
+
+/* =========================================================
+   QUALITATIVE CBC COLUMN WIDTHS
+   ========================================================= */
+
+.cbc-ab-col-qualitative-substrand {
+    width: 40% !important;
+}
+
+.cbc-ab-col-qualitative-level {
+    width: 20% !important;
+    text-align: center !important;
+}
+
+.cbc-ab-col-qualitative-comment {
+    width: 40% !important;
+}
+
+
+/* =========================================================
+   SUMMATIVE COLUMN
+   ========================================================= */
+
+.cbc-ab-col-summative {
+    width: 20% !important;
+    text-align: center !important;
+}
+
+
+/* =========================================================
+   CELLS
+   ========================================================= */
+
+.cbc-ab-mark-cell {
+    text-align: center !important;
+    font-weight: 700;
+}
+
+.cbc-ab-level-cell {
+    text-align: center !important;
+    font-weight: 700;
+}
+
+.cbc-ab-points-cell {
+    text-align: center !important;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   STRAND SUMMATIVE
+   ========================================================= */
+
+.cbc-ab-summative {
+    width: 100%;
+    margin-top: 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.cbc-ab-summative-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    table-layout: fixed !important;
+}
+
+.cbc-ab-summative-table td {
+    border: 1px solid #333333 !important;
+    padding: 6px !important;
+    vertical-align: middle !important;
+}
+
+.cbc-ab-summative-label {
+    width: 80% !important;
+    background: #eeeeee !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+}
+
+.cbc-ab-summative-value {
+    width: 20% !important;
+    text-align: center !important;
+    font-size: 12px;
+    font-weight: 700 !important;
+}
+
+
+/* =========================================================
+   PERFORMANCE LEVEL REFERENCE
+   ========================================================= */
+
+.cbc-ab-performance-reference {
+    width: 100%;
+    margin-top: 18px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.cbc-ab-reference-title {
+    margin-bottom: 5px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.cbc-ab-reference-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    table-layout: fixed !important;
+    font-size: 8px;
+}
+
+.cbc-ab-reference-table th,
+.cbc-ab-reference-table td {
+    border: 1px solid #444444 !important;
+    padding: 4px !important;
+    text-align: center !important;
+}
+
+.cbc-ab-reference-table th {
+    background: #eeeeee !important;
+}
+
+
+/* =========================================================
+   QUALITATIVE REFERENCE
+   ========================================================= */
+
+.cbc-ab-qualitative-reference {
+    width: 100%;
+    margin-top: 18px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.cbc-ab-qualitative-reference-title {
+    margin-bottom: 5px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.cbc-ab-qualitative-reference-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    table-layout: fixed !important;
+    font-size: 8px;
+}
+
+.cbc-ab-qualitative-reference-table th,
+.cbc-ab-qualitative-reference-table td {
+    border: 1px solid #444444 !important;
+    padding: 5px !important;
+    text-align: center !important;
+}
+
+.cbc-ab-qualitative-reference-table th {
+    background: #eeeeee !important;
+}
+
+.cbc-ab-qualitative-code {
+    width: 25% !important;
+    text-align: center !important;
+    font-weight: 700;
+}
+
+.cbc-ab-qualitative-description {
+    width: 75% !important;
+}
+
+
+/* =========================================================
+   COMMENTS
+   ========================================================= */
+
+.cbc-ab-comments {
+    width: 100%;
+    margin-top: 18px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.cbc-ab-comments-title {
+    padding: 7px;
+    border: 1px solid #333333;
+    background: #e9ecef;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.cbc-ab-comments-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    table-layout: fixed !important;
+}
+
+.cbc-ab-comments-table td {
+    border: 1px solid #333333 !important;
+    padding: 8px !important;
+}
+
+.cbc-ab-comments-label {
+    width: 25% !important;
+    background: #f5f5f5 !important;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   SIGNATURES
+   ========================================================= */
+
+.cbc-ab-signatures {
+    width: 100%;
+    margin-top: 30px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.cbc-ab-signature-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    table-layout: fixed !important;
+}
+
+.cbc-ab-signature-table td {
+    width: 33.333% !important;
+    border: 0 !important;
+    padding: 5px 15px !important;
+    text-align: center !important;
+}
+
+.cbc-ab-signature-line {
+    height: 35px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #222222;
+}
+
+.cbc-ab-signature-label {
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.cbc-ab-footer {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding-top: 5px;
+    border-top: 1px solid #555555;
+    font-size: 8px;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.cbc-ab-empty {
+    padding: 10px;
+    border: 1px solid #cccccc;
+    font-size: 9px;
+}
+
+
+/* =========================================================
+   PRINT
+   ========================================================= */
+
+@page {
+    size: A4 portrait;
+    margin: 10mm;
+}
+
+@media print {
+
+    html,
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .cbc-ab-print-page {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .cbc-ab-assessment-table {
+        page-break-inside: auto;
+    }
+
+    .cbc-ab-assessment-table thead {
+        display: table-header-group;
+    }
+
+    .cbc-ab-assessment-table tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .cbc-ab-strand,
+    .cbc-ab-summative,
+    .cbc-ab-performance-reference,
+    .cbc-ab-qualitative-reference,
+    .cbc-ab-comments,
+    .cbc-ab-signatures {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .cbc-ab-learning-area,
+    .cbc-ab-strand-title,
+    .cbc-ab-assessment-table th,
+    .cbc-ab-info-label,
+    .cbc-ab-reference-table th,
+    .cbc-ab-qualitative-reference-table th,
+    .cbc-ab-comments-label,
+    .cbc-ab-summative-label {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="cbc-ab-print-page">
+
+
+    <!-- =====================================================
+         TOOLBAR
+         ===================================================== -->
+
+    <div class="cbc-ab-toolbar no-print">
+
+        <div class="cbc-ab-toolbar-title">
+            CBC Assessment Book
+        </div>
+
+        <div class="cbc-ab-toolbar-actions">
+
+            <a
+                href="{% url 'students:cbc_assessment_book' assignment.id %}?class_id={{ school_class.id }}&term={{ term }}&assessment_component={{ assessment_component }}&strand_id={{ selected_strand.id }}&sub_strand_id={{ selected_sub_strand.id }}"
+                class="cbc-ab-toolbar-button cbc-ab-back-button"
+            >
+                Back to CBC Assessment Book
+            </a>
+
+            <button
+                type="button"
+                class="cbc-ab-toolbar-button cbc-ab-print-button"
+                onclick="window.print();"
+            >
+                Print Assessment Book
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SCHOOL HEADER
+         ===================================================== -->
+
+    <div class="cbc-ab-school-header">
+
+        <table class="cbc-ab-school-header-table">
+
+            <tr>
+
+                <td class="cbc-ab-logo-cell">
+
+                    {% if school.logo %}
+
+                        <img
+                            src="{{ school.logo.url }}"
+                            alt="School Logo"
+                            class="cbc-ab-logo"
+                        >
+
+                    {% endif %}
+
+                </td>
+
+
+                <td class="cbc-ab-school-name-cell">
+
+                    <div class="cbc-ab-school-name">
+                        {{ school.name }}
+                    </div>
+
+                    {% if school.address or school.phone or school.email %}
+
+                        <div class="cbc-ab-school-contact">
+
+                            {% if school.address %}
+                                {{ school.address }}
+                            {% endif %}
+
+                            {% if school.phone %}
+                                &nbsp; | &nbsp;
+                                Tel: {{ school.phone }}
+                            {% endif %}
+
+                            {% if school.email %}
+                                &nbsp; | &nbsp;
+                                {{ school.email }}
+                            {% endif %}
+
+                        </div>
+
+                    {% endif %}
+
+                </td>
+
+
+                <td class="cbc-ab-school-meta">
+
+                    <div>
+                        <strong>Year:</strong>
+                        {{ academic_year }}
+                    </div>
+
+                    <div>
+                        <strong>Term:</strong>
+                        {{ term }}
+                    </div>
+
+                </td>
+
+            </tr>
+
+        </table>
+
+    </div>
+
+
+    <!-- =====================================================
+         TITLE
+         ===================================================== -->
+
+    <div class="cbc-ab-title">
+
+        <div class="cbc-ab-title-main">
+            CBC Learner Assessment Book
+        </div>
+
+        <div class="cbc-ab-title-sub">
+            {{ learning_area.name }}
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         LEARNER INFORMATION
+         ===================================================== -->
+
+    <table class="cbc-ab-info-table">
+
+        <tr>
+
+            <td class="cbc-ab-info-label">
+                Learner Name
+            </td>
+
+            <td class="cbc-ab-info-value">
+
+                {{ student.first_name }}
+
+                {% if student.middle_name %}
+                    {{ student.middle_name }}
+                {% endif %}
+
+                {% if student.last_name %}
+                    {{ student.last_name }}
+                {% endif %}
+
+            </td>
+
+
+            <td class="cbc-ab-info-label">
+                Admission No.
+            </td>
+
+            <td class="cbc-ab-info-value">
+                {{ student.admission_number }}
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td class="cbc-ab-info-label">
+                Class
+            </td>
+
+            <td class="cbc-ab-info-value">
+                {{ school_class.name }}
+            </td>
+
+
+            <td class="cbc-ab-info-label">
+                Curriculum
+            </td>
+
+            <td class="cbc-ab-info-value">
+
+                {% if curriculum.curriculum_version %}
+                    {{ curriculum.curriculum_version.name }}
+                {% else %}
+                    CBC
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+    </table>
+
+
+    <!-- =====================================================
+         ASSESSMENT INFORMATION
+         ===================================================== -->
+
+    <table class="cbc-ab-info-table">
+
+        <tr>
+
+            <td class="cbc-ab-info-label">
+                Learning Area
+            </td>
+
+            <td class="cbc-ab-info-value">
+                {{ learning_area.name }}
+            </td>
+
+
+            <td class="cbc-ab-info-label">
+                Academic Year
+            </td>
+
+            <td class="cbc-ab-info-value">
+                {{ academic_year }}
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td class="cbc-ab-info-label">
+                Term
+            </td>
+
+            <td class="cbc-ab-info-value">
+                {{ term }}
+            </td>
+
+
+            <td class="cbc-ab-info-label">
+                Assessment
+            </td>
+
+            <td class="cbc-ab-info-value">
+                {{ assessment_component }}
+            </td>
+
+        </tr>
+
+    </table>
+
+
+    <!-- =====================================================
+         LEARNING AREA
+         ===================================================== -->
+
+    <div class="cbc-ab-learning-area">
+        {{ learning_area.name }}
+    </div>
+
+
+    <!-- =====================================================
+         STRANDS
+         ===================================================== -->
+
+    {% for strand_data in strands %}
+
+        <div class="cbc-ab-strand">
+
+            <div class="cbc-ab-strand-title">
+                Strand: {{ strand_data.strand.name }}
+            </div>
+
+
+            {% if is_qualitative_cbc %}
+
+                <!-- =============================================
+                     PP1 — GRADE 9
+                     QUALITATIVE ASSESSMENT
+                     ============================================= -->
+
+                <table class="cbc-ab-assessment-table">
+
+                    <colgroup>
+
+                        <col class="cbc-ab-col-qualitative-substrand">
+
+                        <col class="cbc-ab-col-qualitative-level">
+
+                        <col class="cbc-ab-col-qualitative-comment">
+
+                    </colgroup>
+
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Sub-Strand
+                            </th>
+
+                            <th>
+                                Performance Level
+                            </th>
+
+                            <th>
+                                Teacher Comment
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for sub_data in strand_data.sub_strands %}
+
+                            <tr>
+
+                                <td>
+                                    {{ sub_data.sub_strand.name }}
+                                </td>
+
+
+                                <td class="cbc-ab-level-cell">
+
+                                    {% if sub_data.qualitative_level %}
+
+                                        {{ sub_data.qualitative_level }}
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if sub_data.comment %}
+
+                                        {{ sub_data.comment }}
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+
+                                <td
+                                    colspan="3"
+                                    class="cbc-ab-empty"
+                                >
+                                    No sub-strands recorded for this strand.
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+
+                <!-- =============================================
+                     STRAND SUMMATIVE
+                     ============================================= -->
+
+                <div class="cbc-ab-summative">
+
+                    <table class="cbc-ab-summative-table">
+
+                        <tr>
+
+                            <td class="cbc-ab-summative-label">
+                                Strand Summative
+                            </td>
+
+                            <td class="cbc-ab-summative-value">
+
+                                {% if strand_data.summative_label %}
+
+                                    {{ strand_data.summative_label }}
+
+                                {% else %}
+
+                                    —
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                    </table>
+
+                </div>
+
+
+            {% else %}
+
+                <!-- =============================================
+                     GRADE 10
+                     NUMERICAL ASSESSMENT
+                     ============================================= -->
+
+                <table class="cbc-ab-assessment-table">
+
+                    <colgroup>
+
+                        <col class="cbc-ab-col-substrand">
+
+                        <col class="cbc-ab-col-mark">
+
+                        <col class="cbc-ab-col-level">
+
+                        <col class="cbc-ab-col-points">
+
+                        <col class="cbc-ab-col-comment">
+
+                    </colgroup>
+
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Sub-Strand
+                            </th>
+
+                            <th>
+                                Mark
+                            </th>
+
+                            <th>
+                                Performance Level
+                            </th>
+
+                            <th>
+                                Points
+                            </th>
+
+                            <th>
+                                Teacher Comment
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for sub_data in strand_data.sub_strands %}
+
+                            <tr>
+
+                                <td>
+                                    {{ sub_data.sub_strand.name }}
+                                </td>
+
+
+                                <td class="cbc-ab-mark-cell">
+
+                                    {% if sub_data.mark is not None %}
+                                        {{ sub_data.mark }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td class="cbc-ab-level-cell">
+
+                                    {% if sub_data.performance_level %}
+
+                                        {{ sub_data.performance_level.code }}
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td class="cbc-ab-points-cell">
+
+                                    {% if sub_data.points is not None %}
+                                        {{ sub_data.points }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if sub_data.comment %}
+                                        {{ sub_data.comment }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+
+                                <td
+                                    colspan="5"
+                                    class="cbc-ab-empty"
+                                >
+                                    No sub-strands recorded for this strand.
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            {% endif %}
+
+        </div>
+
+    {% empty %}
+
+        <div class="cbc-ab-empty">
+            No curriculum strands found for this learning area.
+        </div>
+
+    {% endfor %}
+
+
+        <!-- =====================================================
+         QUALITATIVE PERFORMANCE REFERENCE
+         ===================================================== -->
+
+        {% if is_qualitative_cbc %}
+
+            <div class="cbc-ab-qualitative-reference">
+
+                <div class="cbc-ab-qualitative-reference-title">
+                    Performance Level Reference
+                </div>
+
+
+                <table class="cbc-ab-qualitative-reference-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th style="width: 20%;">
+                                Numerical
+                            </th>
+
+                            <th style="width: 20%;">
+                                Performance Level
+                            </th>
+
+                            <th style="width: 60%;">
+                                Description
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        <tr>
+
+                            <td class="cbc-ab-qualitative-code">
+                                4
+                            </td>
+
+                            <td class="cbc-ab-qualitative-code">
+                                EE
+                            </td>
+
+                            <td class="cbc-ab-qualitative-description">
+                                Exceeding Expectations
+                            </td>
+
+                        </tr>
+
+
+                        <tr>
+
+                            <td class="cbc-ab-qualitative-code">
+                                3
+                            </td>
+
+                            <td class="cbc-ab-qualitative-code">
+                                ME
+                            </td>
+
+                            <td class="cbc-ab-qualitative-description">
+                                Meeting Expectations
+                            </td>
+
+                        </tr>
+
+
+                        <tr>
+
+                            <td class="cbc-ab-qualitative-code">
+                                2
+                            </td>
+
+                            <td class="cbc-ab-qualitative-code">
+                                AE
+                            </td>
+
+                            <td class="cbc-ab-qualitative-description">
+                                Approaching Expectations
+                            </td>
+
+                        </tr>
+
+
+                        <tr>
+
+                            <td class="cbc-ab-qualitative-code">
+                                1
+                            </td>
+
+                            <td class="cbc-ab-qualitative-code">
+                                BE
+                            </td>
+
+                            <td class="cbc-ab-qualitative-description">
+                                Below Expectations
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+        {% elif performance_levels %}
+
+            <!-- =============================================
+                GRADE 10 REFERENCE
+                ============================================= -->
+
+            <div class="cbc-ab-performance-reference">
+
+                <div class="cbc-ab-reference-title">
+                    Performance Level Reference
+                </div>
+
+
+                <table class="cbc-ab-reference-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Level
+                            </th>
+
+                            <th>
+                                Minimum Mark
+                            </th>
+
+                            <th>
+                                Maximum Mark
+                            </th>
+
+                            <th>
+                                Points
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for level in performance_levels %}
+
+                            <tr>
+
+                                <td>
+                                    {{ level.code }}
+                                </td>
+
+                                <td>
+                                    {{ level.minimum_mark }}
+                                </td>
+
+                                <td>
+                                    {{ level.maximum_mark }}
+                                </td>
+
+                                <td>
+                                    {{ level.points }}
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% endif %}
+
+    <!-- =====================================================
+         COMMENTS
+         ===================================================== -->
+
+    <div class="cbc-ab-comments">
+
+        <div class="cbc-ab-comments-title">
+            Learner Assessment Comment
+        </div>
+
+
+        <table class="cbc-ab-comments-table">
+
+            <tr>
+
+                <td class="cbc-ab-comments-label">
+                    Teacher's Comment
+                </td>
+
+                <td>
+
+                    {% for strand_data in strands %}
+
+                        {% for sub_data in strand_data.sub_strands %}
+
+                            {% if sub_data.comment %}
+
+                                {{ sub_data.comment }}
+
+                                {% if not forloop.last %}
+                                    <br>
+                                {% endif %}
+
+                            {% endif %}
+
+                        {% endfor %}
+
+                    {% empty %}
+
+                        No comments recorded.
+
+                    {% endfor %}
+
+                </td>
+
+            </tr>
+
+
+            <tr>
+
+                <td class="cbc-ab-comments-label">
+                    General Comment
+                </td>
+
+                <td>
+                    &nbsp;<br><br>
+                </td>
+
+            </tr>
+
+        </table>
+
+    </div>
+
+
+    <!-- =====================================================
+         SIGNATURES
+         ===================================================== -->
+
+    <div class="cbc-ab-signatures">
+
+        <table class="cbc-ab-signature-table">
+
+            <tr>
+
+                <td>
+
+                    <div class="cbc-ab-signature-line"></div>
+
+                    <div class="cbc-ab-signature-label">
+                        Class Teacher
+                    </div>
+
+                </td>
+
+
+                <td>
+
+                    <div class="cbc-ab-signature-line"></div>
+
+                    <div class="cbc-ab-signature-label">
+                        Head Teacher
+                    </div>
+
+                </td>
+
+
+                <td>
+
+                    <div class="cbc-ab-signature-line"></div>
+
+                    <div class="cbc-ab-signature-label">
+                        Parent / Guardian
+                    </div>
+
+                </td>
+
+            </tr>
+
+        </table>
+
+    </div>
+
+
+    <!-- =====================================================
+         FOOTER
+         ===================================================== -->
+
+    <div class="cbc-ab-footer">
+
+        <div>
+
+            {{ school.name }}
+
+            &nbsp; | &nbsp;
+
+            {{ learning_area.name }}
+
+        </div>
+
+
+        <div>
+
+            {{ academic_year }}
+
+            &nbsp; | &nbsp;
+
+            {{ term }}
+
+            &nbsp; | &nbsp;
+
+            {{ assessment_component }}
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        if (
+            params.get("autoprint") === "1"
+        ) {
+
+            setTimeout(
+                function () {
+                    window.print();
+                },
+                500
+            );
+
+        }
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>

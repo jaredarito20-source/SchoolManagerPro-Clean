@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -7,7 +8,7 @@
     <h2>➕ Add CBC Teacher Assignment</h2>
 
     <p>
-        Assign a teacher to a CBC learning area for a specific class and term.
+        Assign a teacher to a CBC learning area for a specific class and academic year.
     </p>
 
     <hr>
@@ -16,9 +17,14 @@
 
         {% csrf_token %}
 
+
         {% if request.user.is_superuser %}
 
-            <label>
+            <!-- =========================================
+                 SCHOOL
+            ========================================== -->
+
+            <label for="school">
                 School
             </label>
 
@@ -33,8 +39,15 @@
 
                 {% for item in schools %}
 
-                    <option value="{{ item.id }}">
+                    <option
+                        value="{{ item.id }}"
+                        {% if school and school.id == item.id %}
+                            selected
+                        {% endif %}
+                    >
+
                         {{ item.school_name }}
+
                     </option>
 
                 {% endfor %}
@@ -46,7 +59,50 @@
         {% endif %}
 
 
-        <label>
+        <!-- =========================================
+             ACADEMIC YEAR
+             Source: SchoolAcademicYear
+        ========================================== -->
+
+        <label for="academic_year">
+            Academic Year
+        </label>
+
+        <select
+            name="academic_year"
+            id="academic_year"
+            required
+        >
+
+            <option value="">
+                -- Select Academic Year --
+            </option>
+
+            {% for academic_year in academic_years %}
+
+                <option
+                    value="{{ academic_year.year }}"
+                    {% if selected_year == academic_year.year|stringformat:"s" %}
+                        selected
+                    {% endif %}
+                >
+
+                    {{ academic_year.year }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+
+        <!-- =========================================
+             CBC CLASS
+        ========================================== -->
+
+        <label for="school_class_curriculum">
             CBC Class
         </label>
 
@@ -91,7 +147,11 @@
         <br><br>
 
 
-        <label>
+        <!-- =========================================
+             TEACHER
+        ========================================== -->
+
+        <label for="teacher">
             Teacher
         </label>
 
@@ -123,7 +183,11 @@
         <br><br>
 
 
-        <label>
+        <!-- =========================================
+             LEARNING AREA
+        ========================================== -->
+
+        <label for="learning_area">
             Learning Area
         </label>
 
@@ -164,35 +228,9 @@
         <br><br>
 
 
-        <label>
-            Term
-        </label>
-
-        <select
-            name="term"
-            required
-        >
-
-            <option value="">
-                -- Select Term --
-            </option>
-
-            <option value="1">
-                Term 1
-            </option>
-
-            <option value="2">
-                Term 2
-            </option>
-
-            <option value="3">
-                Term 3
-            </option>
-
-        </select>
-
-        <br><br>
-
+        <!-- =========================================
+             ACTIONS
+        ========================================== -->
 
         <button type="submit">
             💾 Save Assignment
@@ -211,6 +249,12 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
+    const schoolSelect =
+        document.getElementById("school");
+
+    const academicYearSelect =
+        document.getElementById("academic_year");
+
     const classSelect =
         document.getElementById("school_class_curriculum");
 
@@ -221,24 +265,138 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("learning_area");
 
 
+    /* ================================================
+       SCHOOL CHANGE
+       Reload the page so the server can load the
+       correct SchoolAcademicYear records.
+    ================================================= */
+
+    if (schoolSelect) {
+
+        schoolSelect.addEventListener(
+            "change",
+            function () {
+
+                const schoolId =
+                    this.value;
+
+                const url =
+                    new URL(
+                        window.location.href
+                    );
+
+                if (schoolId) {
+
+                    url.searchParams.set(
+                        "school",
+                        schoolId
+                    );
+
+                } else {
+
+                    url.searchParams.delete(
+                        "school"
+                    );
+
+                }
+
+                /*
+                 * Changing school means the old academic
+                 * year may no longer be valid.
+                 */
+                url.searchParams.delete(
+                    "academic_year"
+                );
+
+                window.location.href =
+                    url.toString();
+
+            }
+        );
+
+    }
+
+
+    /* ================================================
+       ACADEMIC YEAR CHANGE
+       Reload the page so the server filters CBC
+       class curricula using SchoolAcademicYear.
+    ================================================= */
+
+    academicYearSelect.addEventListener(
+        "change",
+        function () {
+
+            const year =
+                this.value;
+
+            const url =
+                new URL(
+                    window.location.href
+                );
+
+            if (year) {
+
+                url.searchParams.set(
+                    "academic_year",
+                    year
+                );
+
+            } else {
+
+                url.searchParams.delete(
+                    "academic_year"
+                );
+
+            }
+
+            window.location.href =
+                url.toString();
+
+        }
+    );
+
+
+    /* ================================================
+       FILTER TEACHERS
+       Teachers must belong to the same school as
+       the selected CBC class.
+    ================================================= */
+
     function filterTeachers() {
 
         if (!classSelect.value) {
+
+            teacherSelect.value = "";
+
+            Array.from(
+                teacherSelect.options
+            ).forEach(function (option) {
+
+                option.hidden = false;
+
+            });
+
             return;
         }
 
         const selectedClass =
-            classSelect.options[classSelect.selectedIndex];
+            classSelect.options[
+                classSelect.selectedIndex
+            ];
 
         const schoolId =
             selectedClass.dataset.school;
+
 
         Array.from(
             teacherSelect.options
         ).forEach(function (option) {
 
             if (!option.value) {
+
                 option.hidden = false;
+
                 return;
             }
 
@@ -247,19 +405,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
         });
 
+
         teacherSelect.value = "";
 
     }
 
 
+    /* ================================================
+       FILTER LEARNING AREAS
+       Learning areas must match the selected class
+       grade and pathway.
+    ================================================= */
+
     function filterLearningAreas() {
 
         if (!classSelect.value) {
+
+            learningAreaSelect.value = "";
+
+            Array.from(
+                learningAreaSelect.options
+            ).forEach(function (option) {
+
+                option.hidden = false;
+
+            });
+
             return;
         }
 
         const selectedClass =
-            classSelect.options[classSelect.selectedIndex];
+            classSelect.options[
+                classSelect.selectedIndex
+            ];
 
         const grade =
             selectedClass.dataset.grade;
@@ -267,12 +445,15 @@ document.addEventListener("DOMContentLoaded", function () {
         const pathway =
             selectedClass.dataset.pathway;
 
+
         Array.from(
             learningAreaSelect.options
         ).forEach(function (option) {
 
             if (!option.value) {
+
                 option.hidden = false;
+
                 return;
             }
 
@@ -282,28 +463,51 @@ document.addEventListener("DOMContentLoaded", function () {
             const samePathway =
                 option.dataset.pathway === pathway;
 
+
             option.hidden =
                 !(sameGrade && samePathway);
 
         });
+
 
         learningAreaSelect.value = "";
 
     }
 
 
+    /* ================================================
+       CLASS CHANGE
+    ================================================= */
+
     classSelect.addEventListener(
         "change",
         function () {
 
             filterTeachers();
+
             filterLearningAreas();
 
         }
     );
+
+
+    /* ================================================
+       INITIAL FILTER
+       Useful when the page loads with a selected
+       academic year and available classes.
+    ================================================= */
+
+    if (classSelect.value) {
+
+        filterTeachers();
+
+        filterLearningAreas();
+
+    }
 
 });
 
 </script>
 
 {% endblock %}
+

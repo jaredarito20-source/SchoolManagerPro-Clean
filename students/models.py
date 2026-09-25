@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import Sum
 from django.contrib.auth.models import User
 from django.contrib import admin
+from django.conf import settings
 
 
 
@@ -53,6 +54,68 @@ class SchoolProfile(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SchoolAcademicYear(models.Model):
+    """
+    Historical academic-year record for a school.
+
+    Keeps each school's academic years available for
+    historical reference without replacing the existing
+    SchoolProfile.academic_year current-setting field.
+    """
+
+    school = models.ForeignKey(
+        SchoolProfile,
+        on_delete=models.CASCADE,
+        related_name="academic_years",
+    )
+
+    year = models.CharField(
+        max_length=20,
+    )
+
+    opening_date = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    closing_date = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    is_current = models.BooleanField(
+        default=False,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-year"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "year"],
+                name="unique_school_academic_year",
+            ),
+        ]
+
+        indexes = [
+            models.Index(
+                fields=["school", "year"],
+                name="school_academic_year_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.school.name} - {self.year}"
 
 class Teacher(models.Model):
     user = models.OneToOneField(
@@ -265,6 +328,11 @@ class Exam(models.Model):
     term = models.CharField(max_length=50)
 
     year = models.IntegerField()
+
+    marks_out_of = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+    )
 
     school = models.ForeignKey(
         SchoolProfile,
@@ -2930,24 +2998,10 @@ class TeacherAssessmentAssignment(models.Model):
 
     academic_year = models.CharField(max_length=20)
 
-    term = models.CharField(
-        max_length=1,
-        choices=[
-            ("1", "Term 1"),
-            ("2", "Term 2"),
-            ("3", "Term 3"),
-        ],
-    )
-
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = [
-            "academic_year",
-            "term",
-            "school_class_curriculum",
-            "learning_area",
-        ]
         constraints = [
             models.UniqueConstraint(
                 fields=[
@@ -2955,7 +3009,6 @@ class TeacherAssessmentAssignment(models.Model):
                     "school_class_curriculum",
                     "learning_area",
                     "academic_year",
-                    "term",
                 ],
                 name="unique_teacher_cbc_assignment",
             ),
@@ -3042,7 +3095,7 @@ class TeacherAssessmentAssignment(models.Model):
             f"{self.teacher} - "
             f"{self.learning_area.name} - "
             f"{self.school_class_curriculum.school_class} - "
-            f"T{self.term}"
+            f"{self.academic_year}"
         )
 
 
@@ -3112,12 +3165,6 @@ class CBCAssessmentRecord(models.Model):
         blank=True,
     )
 
-    points = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
-        null=True,
-        blank=True,
-    )
     points = models.DecimalField(
         max_digits=6,
         decimal_places=2,
@@ -3286,6 +3333,17 @@ class CBCAssessmentSubmission(models.Model):
         ],
     )
 
+    assessment_component = models.CharField(
+        max_length=10,
+        choices=[
+            ("CAT1", "CAT 1"),
+            ("MID", "Mid-Term"),
+            ("END", "End-Term"),
+        ],
+        null=True,
+        blank=True,
+    )
+
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -3337,11 +3395,12 @@ class CBCAssessmentSubmission(models.Model):
                     "learning_area",
                     "academic_year",
                     "term",
+                    "assessment_component",
                 ],
                 name="unique_cbc_assessment_submission",
             ),
+            
         ]
-
     def clean(self):
         from django.core.exceptions import ValidationError
 
@@ -3621,7 +3680,6 @@ class CBCSubStrandAssessment(models.Model):
                 name="cbc_assess_substrand_idx",
             ),
         ]
-
     def clean(self):
         from django.core.exceptions import ValidationError
 
@@ -3771,4 +3829,752 @@ class CBCSubStrandAssessment(models.Model):
             f"{self.academic_year} T{self.term} "
             f"{self.assessment_component}"
         )
+class CBCStrandSummativeAssessment(models.Model):
+    """
+    Stores the learner's system-calculated summative performance
+    level for a complete CBC strand.
 
+    Used for PP1–Grade 9.
+
+    Grade 10–12 continues using its existing assessment structure.
+
+    Performance levels:
+        4 = EE — Exceeding Expectations
+        3 = ME — Meeting Expectations
+        2 = AE — Approaching Expectations
+        1 = BE — Below Expectations
+    """
+
+    PERFORMANCE_LEVEL_CHOICES = [
+        (1, "1 — BE — Below Expectations"),
+        (2, "2 — AE — Approaching Expectations"),
+        (3, "3 — ME — Meeting Expectations"),
+        (4, "4 — EE — Exceeding Expectations"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="cbc_strand_summative_assessments",
+    )
+
+    submission = models.ForeignKey(
+        CBCAssessmentSubmission,
+        on_delete=models.CASCADE,
+        related_name="strand_summatives",
+        null=True,
+        blank=True,
+    )
+
+    strand = models.ForeignKey(
+        CurriculumStrand,
+        on_delete=models.PROTECT,
+        related_name="summative_assessments",
+    )
+
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=1,
+        choices=[
+            ("1", "Term 1"),
+            ("2", "Term 2"),
+            ("3", "Term 3"),
+        ],
+    )
+
+    assessment_component = models.CharField(
+        max_length=10,
+        choices=CBCSubStrandAssessment.ASSESSMENT_COMPONENT_CHOICES,
+    )
+
+    performance_level = models.PositiveSmallIntegerField(
+        choices=PERFORMANCE_LEVEL_CHOICES,
+        null=True,
+        blank=True,
+    )
+
+    teacher_comment = models.TextField(
+        blank=True,
+    )
+
+    entered_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="cbc_strand_summatives_entered",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "student",
+                    "strand",
+                    "academic_year",
+                    "term",
+                    "assessment_component",
+                ],
+                name="unique_cbc_strand_summative",
+            ),
+        ]
+
+        
+    def __str__(self):
+        return (
+            f"{self.student} - "
+            f"{self.strand} - "
+            f"{self.academic_year} T{self.term} "
+            f"{self.assessment_component} - "
+            f"PL {self.performance_level}"
+        )
+
+class CBCSubjectAssessment(models.Model):
+        """
+        Stores subject/learning-area assessment scores for PP1–Grade 9.
+
+        The numerical score is stored internally.
+        The learner-facing report displays only the derived
+        CBC performance level: EE / ME / AE / BE.
+
+        Grade 10 continues using the existing assessment structure.
+        """
+
+        ASSESSMENT_COMPONENT_CHOICES = (
+            ("CAT1", "CAT 1"),
+            ("MID", "Mid-Term"),
+            ("END", "End-Term"),
+        )
+
+        student = models.ForeignKey(
+            Student,
+            on_delete=models.CASCADE,
+            related_name="cbc_subject_assessments",
+        )
+        submission = models.ForeignKey(
+            CBCAssessmentSubmission,
+            on_delete=models.CASCADE,
+            null=True,
+            blank=True,
+            related_name="subject_assessments",
+        )
+
+        learning_area = models.ForeignKey(
+            CurriculumLearningArea,
+            on_delete=models.PROTECT,
+            related_name="subject_assessments",
+        )
+
+        academic_year = models.CharField(
+            max_length=20
+        )
+
+        term = models.CharField(
+            max_length=1,
+            choices=[
+                ("1", "Term 1"),
+                ("2", "Term 2"),
+                ("3", "Term 3"),
+            ],
+        )
+
+        assessment_component = models.CharField(
+            max_length=10,
+            choices=ASSESSMENT_COMPONENT_CHOICES,
+        )
+
+        score = models.DecimalField(
+            max_digits=6,
+            decimal_places=2,
+            null=True,
+            blank=True,
+        )
+
+        performance_level = models.PositiveSmallIntegerField(
+            choices=[
+                (1, "BE"),
+                (2, "AE"),
+                (3, "ME"),
+                (4, "EE"),
+            ],
+            null=True,
+            blank=True,
+        )
+
+        teacher_comment = models.TextField(
+            blank=True
+        )
+
+        entered_by = models.ForeignKey(
+            User,
+            on_delete=models.PROTECT,
+            related_name="cbc_subject_assessments_entered",
+        )
+
+        created_at = models.DateTimeField(
+            auto_now_add=True
+        )
+
+        updated_at = models.DateTimeField(
+            auto_now=True
+        )
+
+        class Meta:
+            constraints = [
+                models.UniqueConstraint(
+                    fields=[
+                        "student",
+                        "learning_area",
+                        "academic_year",
+                        "term",
+                        "assessment_component",
+                    ],
+                    name="unique_cbc_subject_assessment",
+                ),
+            ]
+
+            indexes = [
+                models.Index(
+                    fields=[
+                        "student",
+                        "academic_year",
+                        "term",
+                    ],
+                    name="cbc_subj_stu_period_idx",
+                ),
+                models.Index(
+                    fields=[
+                        "learning_area",
+                        "academic_year",
+                        "term",
+                    ],
+                    name="cbc_subj_area_period_idx",
+                ),
+            ]
+        def __str__(self):
+            return (
+                f"{self.student} - "
+                f"{self.learning_area} - "
+                f"{self.academic_year} "
+                f"T{self.term} "
+                f"{self.assessment_component}"
+            )
+
+
+class CBCUpperSecondaryAssessment(models.Model):
+    """
+    Stores subject/learning-area assessments for Grade 10–12.
+
+    Grade 10–12 use:
+        - raw teacher-entered marks
+        - configurable marks_out_of (e.g. 30, 50, 100)
+        - normalized percentage
+        - CBC performance level
+        - points
+
+    This model is separate from the PP1–Grade 9 CBC assessment
+    structures.
+    """
+
+    ASSESSMENT_COMPONENT_CHOICES = [
+        ("CAT1", "CAT 1"),
+        ("MID", "MID TERM"),
+        ("END", "END TERM"),
+    ]
+
+    TERM_CHOICES = [
+        ("1", "Term 1"),
+        ("2", "Term 2"),
+        ("3", "Term 3"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="upper_secondary_assessments",
+    )
+
+    submission = models.ForeignKey(
+        CBCAssessmentSubmission,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="upper_secondary_assessments",
+    )
+
+    learning_area = models.ForeignKey(
+        CurriculumLearningArea,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_assessments",
+    )
+
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_assessments",
+    )
+
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=1,
+        choices=TERM_CHOICES,
+    )
+
+    assessment_component = models.CharField(
+        max_length=10,
+        choices=ASSESSMENT_COMPONENT_CHOICES,
+    )
+
+    # ---------------------------------------------------------
+    # What the teacher actually entered
+    # ---------------------------------------------------------
+    raw_score = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+    )
+
+    marks_out_of = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+    )
+
+    # ---------------------------------------------------------
+    # System-calculated percentage
+    # ---------------------------------------------------------
+    percentage_score = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+    )
+
+    # ---------------------------------------------------------
+    # System-derived CBC performance
+    # ---------------------------------------------------------
+    performance_level = models.ForeignKey(
+        CBCPerformanceLevel,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="upper_secondary_assessments",
+    )
+
+    points = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    teacher_comment = models.TextField(
+        blank=True,
+    )
+
+    entered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_assessments_entered",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "academic_year",
+            "term",
+            "assessment_component",
+            "student",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "student",
+                    "learning_area",
+                    "academic_year",
+                    "term",
+                    "assessment_component",
+                ],
+                name="unique_upper_secondary_assessment",
+            ),
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "academic_year",
+                    "term",
+                    "assessment_component",
+                ],
+                name="cbc_upper_yr_term",
+            ),
+            models.Index(
+                fields=[
+                    "student",
+                    "academic_year",
+                    "term",
+                ],
+                name="cbc_upper_stu_term",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.student} - "
+            f"{self.learning_area.name} - "
+            f"{self.get_assessment_component_display()} - "
+            f"{self.academic_year} T{self.term}"
+        )
+
+class CBCUpperSecondarySubStrandAssessment(models.Model):
+    """
+    Stores qualitative sub-strand assessments for Grade 10–12.
+
+    This is separate from:
+
+        CBCUpperSecondaryAssessment
+            -> numerical subject/learning-area assessment
+
+        CBCSubStrandAssessment
+            -> PP1–Grade 9 assessment
+
+    For Grade 10–12, the teacher records:
+
+        EE = Exceeding Expectations
+        ME = Meeting Expectations
+        AE = Approaching Expectations
+        BE = Below Expectations
+
+    No numerical marks, percentages, or points are stored.
+    """
+
+    ASSESSMENT_COMPONENT_CHOICES = [
+        ("CAT1", "CAT 1"),
+        ("MID", "MID TERM"),
+        ("END", "END TERM"),
+    ]
+
+    TERM_CHOICES = [
+        ("1", "Term 1"),
+        ("2", "Term 2"),
+        ("3", "Term 3"),
+    ]
+
+    PERFORMANCE_LEVEL_CHOICES = [
+        ("EE", "EE — Exceeding Expectations"),
+        ("ME", "ME — Meeting Expectations"),
+        ("AE", "AE — Approaching Expectations"),
+        ("BE", "BE — Below Expectations"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="upper_secondary_substrand_assessments",
+    )
+
+    submission = models.ForeignKey(
+        CBCAssessmentSubmission,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="upper_secondary_substrand_assessments",
+    )
+
+    learning_area = models.ForeignKey(
+        CurriculumLearningArea,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_substrand_assessments",
+    )
+
+    strand = models.ForeignKey(
+        CurriculumStrand,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_substrand_assessments",
+    )
+
+    sub_strand = models.ForeignKey(
+        CurriculumSubStrand,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_substrand_assessments",
+    )
+
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=1,
+        choices=TERM_CHOICES,
+    )
+
+    assessment_component = models.CharField(
+        max_length=10,
+        choices=ASSESSMENT_COMPONENT_CHOICES,
+    )
+
+    performance_level = models.CharField(
+        max_length=2,
+        choices=PERFORMANCE_LEVEL_CHOICES,
+    )
+
+    teacher_comment = models.TextField(
+        blank=True,
+    )
+
+    entered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_substrand_assessments_entered",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "academic_year",
+            "term",
+            "assessment_component",
+            "student",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "student",
+                    "sub_strand",
+                    "academic_year",
+                    "term",
+                    "assessment_component",
+                ],
+                name="unique_upper_secondary_substrand_assessment",
+            ),
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "academic_year",
+                    "term",
+                    "assessment_component",
+                ],
+                name="cbc_upper_ss_yr_term",
+            ),
+            models.Index(
+                fields=[
+                    "student",
+                    "academic_year",
+                    "term",
+                ],
+                name="cbc_upper_ss_stu_term",
+            ),
+            models.Index(
+                fields=[
+                    "learning_area",
+                    "academic_year",
+                    "term",
+                ],
+                name="cbc_upper_ss_la_term",
+            ),
+            models.Index(
+                fields=[
+                    "sub_strand",
+                    "academic_year",
+                    "term",
+                ],
+                name="cbc_upper_ss_term",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.student} - "
+            f"{self.learning_area.name} - "
+            f"{self.sub_strand.name} - "
+            f"{self.get_assessment_component_display()} - "
+            f"{self.academic_year} T{self.term}"
+        )
+class CBCUpperSecondaryStrandSummativeAssessment(models.Model):
+    """
+    Stores the system-calculated qualitative performance
+    level for a complete Grade 10–12 CBC strand.
+
+    The result is derived from the learner's
+    sub-strand assessments.
+
+    Performance levels:
+
+        EE = Exceeding Expectations
+        ME = Meeting Expectations
+        AE = Approaching Expectations
+        BE = Below Expectations
+
+    No numerical marks, percentages, or points are stored.
+    """
+
+    PERFORMANCE_LEVEL_CHOICES = [
+        ("EE", "EE — Exceeding Expectations"),
+        ("ME", "ME — Meeting Expectations"),
+        ("AE", "AE — Approaching Expectations"),
+        ("BE", "BE — Below Expectations"),
+    ]
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="upper_secondary_strand_summative_assessments",
+    )
+
+    submission = models.ForeignKey(
+        CBCAssessmentSubmission,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="upper_secondary_strand_summatives",
+    )
+
+    learning_area = models.ForeignKey(
+        CurriculumLearningArea,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_strand_summatives",
+    )
+
+    strand = models.ForeignKey(
+        CurriculumStrand,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_strand_summatives",
+    )
+
+    academic_year = models.CharField(
+        max_length=20,
+    )
+
+    term = models.CharField(
+        max_length=1,
+        choices=[
+            ("1", "Term 1"),
+            ("2", "Term 2"),
+            ("3", "Term 3"),
+        ],
+    )
+
+    assessment_component = models.CharField(
+        max_length=10,
+        choices=(
+            CBCUpperSecondarySubStrandAssessment
+            .ASSESSMENT_COMPONENT_CHOICES
+        ),
+    )
+
+    performance_level = models.CharField(
+        max_length=2,
+        choices=PERFORMANCE_LEVEL_CHOICES,
+        null=True,
+        blank=True,
+    )
+
+    teacher_comment = models.TextField(
+        blank=True,
+    )
+
+    entered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="upper_secondary_strand_summatives_entered",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "academic_year",
+            "term",
+            "assessment_component",
+            "student",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "student",
+                    "strand",
+                    "academic_year",
+                    "term",
+                    "assessment_component",
+                ],
+                name="unique_upper_secondary_strand_summative",
+            ),
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "academic_year",
+                    "term",
+                    "assessment_component",
+                ],
+                name="cbc_upper_summ_yr_term",
+            ),
+            models.Index(
+                fields=[
+                    "student",
+                    "academic_year",
+                    "term",
+                ],
+                name="cbc_upper_summ_stu_term",
+            ),
+            models.Index(
+                fields=[
+                    "learning_area",
+                    "academic_year",
+                    "term",
+                ],
+                name="cbc_upper_summ_la_term",
+            ),
+            models.Index(
+                fields=[
+                    "strand",
+                    "academic_year",
+                    "term",
+                ],
+                name="cbc_upper_summ_strand_term",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.student} - "
+            f"{self.learning_area.name} - "
+            f"{self.strand.name} - "
+            f"{self.academic_year} T{self.term} - "
+            f"{self.assessment_component} - "
+            f"{self.performance_level}"
+        )

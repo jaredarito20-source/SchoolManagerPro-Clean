@@ -12,10 +12,13 @@
     {% endfor %}
 {% endif %}
 
-{% if request.user.is_superuser %}
+{% if is_exam_admin %}
 <p>
     <a href="{% url 'students:add_exam' %}">
         <button>Add Exam</button>
+    </a>
+    <a href="{% url 'students:setup_cbc_exams' %}">
+        <button>Set Up CBC Exams</button>
     </a>
 </p>
 {% endif %}
@@ -26,6 +29,7 @@
             <th>Name</th>
             <th>Term</th>
             <th>Year</th>
+            <th>Marks Out Of</th>
             <th>Status</th>
             <th>Actions</th>
         </tr>
@@ -41,6 +45,7 @@
             <td>{{ exam.term }}</td>
 
             <td>{{ exam.year }}</td>
+            <td>{{ exam.marks_out_of }}</td>
 
             <td>
                 {% if exam.status == "OPEN" %}
@@ -56,7 +61,7 @@
 
             <td>
 
-                {% if request.user.is_superuser %}
+                {% if is_exam_admin %}
 
                     <a href="{% url 'students:edit_exam' exam.id %}">
                         ✏ Edit
@@ -99,7 +104,7 @@
     {% empty %}
 
         <tr>
-            <td colspan="5" style="text-align:center;">
+            <td colspan="6" style="text-align:center;">
                 No examinations found.
             </td>
         </tr>

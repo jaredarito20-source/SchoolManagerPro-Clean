@@ -37,6 +37,7 @@ from students.models import (
     SalaryStructure,
     Payroll,
     StudentAcademicEnrollment,
+    SchoolAcademicYear,
 )
 
 from reportlab.platypus import (
@@ -828,19 +829,33 @@ def fee_payment_list(request):
     # -------------------------------------------------
     # Academic years available for this school
     # -------------------------------------------------
-    ledger_years = FeeLedgerEntry.objects.all()
+    if request.user.is_superuser:
 
-    if school_filter:
-        ledger_years = ledger_years.filter(
-            school=school_filter
+        if school_filter:
+            academic_years = (
+                SchoolAcademicYear.objects
+                .filter(school=school_filter)
+                .values_list("year", flat=True)
+                .distinct()
+                .order_by("-year")
+            )
+        else:
+            academic_years = (
+                SchoolAcademicYear.objects
+                .values_list("year", flat=True)
+                .distinct()
+                .order_by("-year")
+            )
+
+    else:
+
+        academic_years = (
+            SchoolAcademicYear.objects
+            .filter(school=user_school)
+            .values_list("year", flat=True)
+            .distinct()
+            .order_by("-year")
         )
-
-    academic_years = (
-        ledger_years
-        .values_list("academic_year", flat=True)
-        .distinct()
-        .order_by("-academic_year")
-    )
 
     # -------------------------------------------------
     # Classes available for this school
@@ -1132,166 +1147,37 @@ def fee_balance_list(request):
     term = enrollment_term
 
 
-        # --------------------------------------------------
+     # --------------------------------------------------
     # ACADEMIC YEARS
+    # FOLLOW SCHOOL ENROLLED ACADEMIC YEARS
     # --------------------------------------------------
 
     if school:
 
-        # Start with academic years already present in
-        # historical student enrollment records.
-        existing_years = (
-            StudentAcademicEnrollment.objects
+        academic_years = (
+            SchoolAcademicYear.objects
             .filter(
-                school_class__school=school
+                school=school
             )
             .values_list(
-                "academic_year",
+                "year",
                 flat=True,
             )
             .distinct()
-        )
-
-        academic_years = set(
-            str(year).strip()
-            for year in existing_years
-            if str(year).strip()
-        )
-
-        # Also provide the same year range used by
-        # Add Student:
-        #
-        # current year - 1
-        # current year
-        # current year + 1
-
-        current_academic_year = (
-            school.academic_year or ""
-        ).strip()
-
-        if current_academic_year:
-
-            try:
-                current_year = int(
-                    current_academic_year
-                )
-
-                academic_years.add(
-                    str(current_year - 1)
-                )
-
-                academic_years.add(
-                    str(current_year)
-                )
-
-                academic_years.add(
-                    str(current_year + 1)
-                )
-
-            except ValueError:
-
-                academic_years.add(
-                    current_academic_year
-                )
-
-        academic_years = sorted(
-            academic_years,
-            key=lambda value: (
-                0,
-                int(value)
-            )
-            if value.isdigit()
-            else (
-                1,
-                value
-            )
-        )
-
-        # Show newest year first.
-        academic_years = list(
-            reversed(academic_years)
+            .order_by("-year")
         )
 
     else:
 
-        # Superuser with no school selected:
-        # combine all existing enrollment years
-        # and configured school years.
-
-        existing_years = (
-            StudentAcademicEnrollment.objects
+        academic_years = (
+            SchoolAcademicYear.objects
             .values_list(
-                "academic_year",
+                "year",
                 flat=True,
             )
             .distinct()
+            .order_by("-year")
         )
-
-        academic_years = set(
-            str(year).strip()
-            for year in existing_years
-            if str(year).strip()
-        )
-
-        configured_years = (
-            SchoolProfile.objects
-            .exclude(
-                academic_year=""
-            )
-            .values_list(
-                "academic_year",
-                flat=True,
-            )
-            .distinct()
-        )
-
-        for year in configured_years:
-
-            try:
-                year_int = int(
-                    str(year).strip()
-                )
-
-                academic_years.add(
-                    str(year_int - 1)
-                )
-
-                academic_years.add(
-                    str(year_int)
-                )
-
-                academic_years.add(
-                    str(year_int + 1)
-                )
-
-            except (TypeError, ValueError):
-
-                cleaned_year = str(
-                    year
-                ).strip()
-
-                if cleaned_year:
-                    academic_years.add(
-                        cleaned_year
-                    )
-
-        academic_years = sorted(
-            academic_years,
-            key=lambda value: (
-                0,
-                int(value)
-            )
-            if value.isdigit()
-            else (
-                1,
-                value
-            )
-        )
-
-        academic_years = list(
-            reversed(academic_years)
-        )
-
     # --------------------------------------------------
     # CLASSES
     # --------------------------------------------------
@@ -1941,68 +1827,37 @@ def add_fee_structure(request):
     # -----------------------------------
     # Academic year dropdown
     # -----------------------------------
-    # Keep all existing historical years,
-    # but also expose current year -1, current year,
-    # and current year +1, just like Add Student.
 
-    existing_years = set(
-        FeeStructure.objects
-        .filter(
-            school_class__school=school
+    if request.user.is_superuser:
+
+        if school:
+
+            academic_years = (
+                SchoolAcademicYear.objects
+                .filter(school=school)
+                .values_list("year", flat=True)
+                .distinct()
+                .order_by("-year")
+            )
+
+        else:
+
+            academic_years = (
+                SchoolAcademicYear.objects
+                .values_list("year", flat=True)
+                .distinct()
+                .order_by("-year")
+            )
+
+    else:
+
+        academic_years = (
+            SchoolAcademicYear.objects
+            .filter(school=school)
+            .values_list("year", flat=True)
+            .distinct()
+            .order_by("-year")
         )
-        .values_list("academic_year", flat=True)
-        .distinct()
-    ) if school else set(
-        FeeStructure.objects
-        .values_list("academic_year", flat=True)
-        .distinct()
-    )
-
-    academic_years = set()
-
-    # Preserve existing historical/future fee-structure years
-    for year in existing_years:
-        try:
-            academic_years.add(int(str(year).strip()))
-        except (TypeError, ValueError):
-            pass
-
-    # Selected school: use its configured academic year
-    if school and current_academic_year:
-        try:
-            current_year = int(str(current_academic_year).strip())
-
-            academic_years.update({
-                current_year - 1,
-                current_year,
-                current_year + 1,
-            })
-        except (TypeError, ValueError):
-            pass
-
-    # Superuser without a selected school:
-    # collect configured years from all schools.
-    elif request.user.is_superuser:
-        configured_years = (
-            SchoolProfile.objects
-            .exclude(academic_year__isnull=True)
-            .exclude(academic_year="")
-            .values_list("academic_year", flat=True)
-        )
-
-        for year in configured_years:
-            try:
-                current_year = int(str(year).strip())
-
-                academic_years.update({
-                    current_year - 1,
-                    current_year,
-                    current_year + 1,
-                })
-            except (TypeError, ValueError):
-                pass
-
-    academic_years = sorted(academic_years, reverse=True)
     # -----------------------------------
     # Classes
     # -----------------------------------
@@ -2359,7 +2214,7 @@ def add_fee_payment(request):
         )
 
         return redirect(
-            "fee_statement",
+            "students:fee_statement",
             id=student.id,
         )
 
@@ -2367,76 +2222,66 @@ def add_fee_payment(request):
     # Academic years
     # -----------------------------------
 
-    if school:
+    if request.user.is_superuser:
 
-        existing_years = set(
-            FeeStructure.objects
-            .filter(
-                school_class__school=school
+        if school:
+
+            academic_years = (
+                SchoolAcademicYear.objects
+                .filter(school=school)
+                .values_list(
+                    "year",
+                    flat=True,
+                )
+                .distinct()
+                .order_by("-year")
             )
+
+        else:
+
+            academic_years = (
+                SchoolAcademicYear.objects
+                .values_list(
+                    "year",
+                    flat=True,
+                )
+                .distinct()
+                .order_by("-year")
+            )
+
+    else:
+
+        academic_years = (
+            SchoolAcademicYear.objects
+            .filter(school=school)
             .values_list(
-                "academic_year",
-                flat=True
+                "year",
+                flat=True,
             )
             .distinct()
+            .order_by("-year")
         )
 
-        academic_years = set()
+    # -----------------------------------
+    # Students
+    # -----------------------------------
 
-        for year in existing_years:
-
-            try:
-
-                academic_years.add(
-                    int(str(year).strip())
-                )
-
-            except (TypeError, ValueError):
-                pass
-
-        if current_academic_year:
-
-            try:
-
-                current_year = int(
-                    str(current_academic_year).strip()
-                )
-
-                academic_years.update({
-                    current_year - 1,
-                    current_year,
-                    current_year + 1,
-                })
-
-            except (TypeError, ValueError):
-                pass
-
-        academic_years = sorted(
-            academic_years,
-            reverse=True
-        )
-
-        # -----------------------------------
-        # Students
-        #
-        # Filter by selected class when one
-        # has been selected.
-        # -----------------------------------
+    if school:
 
         students = (
             Student.objects
             .filter(
-                school=school
+                school=school,
             )
             .select_related(
-                "school_class"
+                "school_class",
             )
         )
 
         if selected_class:
 
             students = students.filter(
-                school_class=selected_class
+                school_class=selected_class,
             )
 
         students = students.order_by(
@@ -2446,66 +2291,7 @@ def add_fee_payment(request):
 
     else:
 
-        existing_years = set(
-            FeeStructure.objects
-            .values_list(
-                "academic_year",
-                flat=True
-            )
-            .distinct()
-        )
-
-        academic_years = set()
-
-        for year in existing_years:
-
-            try:
-
-                academic_years.add(
-                    int(str(year).strip())
-                )
-
-            except (TypeError, ValueError):
-                pass
-
-        configured_years = (
-            SchoolProfile.objects
-            .exclude(
-                academic_year__isnull=True
-            )
-            .exclude(
-                academic_year=""
-            )
-            .values_list(
-                "academic_year",
-                flat=True
-            )
-        )
-
-        for year in configured_years:
-
-            try:
-
-                current_year = int(
-                    str(year).strip()
-                )
-
-                academic_years.update({
-                    current_year - 1,
-                    current_year,
-                    current_year + 1,
-                })
-
-            except (TypeError, ValueError):
-                pass
-
-        academic_years = sorted(
-            academic_years,
-            reverse=True
-        )
-
         students = Student.objects.none()
-
     # -----------------------------------
     # Render
     # -----------------------------------
@@ -2569,7 +2355,7 @@ def finance_dashboard(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 

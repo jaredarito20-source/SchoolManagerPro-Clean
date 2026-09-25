@@ -1,0 +1,621 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .cbc-book {
+        max-width: 1200px;
+        margin: 25px auto;
+        padding: 0 15px;
+    }
+
+    .cbc-book-card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 30px;
+    }
+
+    .school-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .school-header h2 {
+        margin: 0;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .school-header h4 {
+        margin: 6px 0;
+        font-weight: 600;
+    }
+
+    .school-header p {
+        margin: 3px 0;
+    }
+
+    .book-title {
+        text-align: center;
+        margin: 25px 0 20px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .learner-details {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .learner-details td {
+        padding: 6px 8px;
+        vertical-align: top;
+    }
+
+    .learner-details .label {
+        font-weight: 700;
+        width: 15%;
+    }
+
+    .assessment-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    .assessment-table th,
+    .assessment-table td {
+        border: 1px solid #333;
+        padding: 9px 8px;
+        text-align: center;
+    }
+
+    .assessment-table th {
+        font-weight: 700;
+        background: #f2f2f2;
+    }
+
+    .assessment-table th:first-child,
+    .assessment-table td:first-child {
+        text-align: left;
+    }
+
+    .assessment-table .total-row {
+        font-weight: 700;
+    }
+
+    .comments-section {
+        margin-top: 30px;
+    }
+
+    .comment-row {
+        margin-bottom: 18px;
+    }
+
+    .comment-label {
+        font-weight: 700;
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .comment-line {
+        border-bottom: 1px solid #333;
+        min-height: 30px;
+    }
+
+    .footer-details {
+        margin-top: 30px;
+        width: 100%;
+    }
+
+    .footer-details td {
+        padding: 8px;
+        vertical-align: bottom;
+    }
+
+    .signature-box {
+        margin-top: 35px;
+        text-align: center;
+    }
+
+    .signature-line {
+        border-bottom: 1px solid #333;
+        display: inline-block;
+        min-width: 220px;
+        margin-bottom: 5px;
+    }
+
+    .stamp-box {
+        text-align: center;
+        min-height: 100px;
+    }
+
+    .action-bar {
+        margin-bottom: 20px;
+    }
+
+    @media print {
+
+        body {
+            background: #fff !important;
+        }
+
+        .action-bar,
+        .navbar,
+        .sidebar,
+        .footer {
+            display: none !important;
+        }
+
+        .cbc-book {
+            max-width: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .cbc-book-card {
+            border: none;
+            border-radius: 0;
+            padding: 0;
+        }
+
+        .assessment-table th {
+            background: #f2f2f2 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 12mm;
+        }
+    }
+</style>
+
+<div class="cbc-book">
+
+    <!-- =====================================================
+         ACTION BAR
+         ===================================================== -->
+
+    <div class="action-bar d-flex justify-content-between align-items-center">
+
+        <div>
+            <a
+                href="javascript:history.back()"
+                class="btn btn-outline-secondary"
+            >
+                ← Back
+            </a>
+        </div>
+
+        <div>
+            <button
+                type="button"
+                onclick="window.print()"
+                class="btn btn-primary"
+            >
+                🖨 Print Assessment Book
+            </button>
+        </div>
+
+    </div>
+
+    <div class="cbc-book-card">
+
+        <!-- =================================================
+             SCHOOL HEADER
+             ================================================= -->
+
+        <div class="school-header">
+
+            <h2>
+                {{ school.name }}
+            </h2>
+
+            {% if school.address %}
+                <p>{{ school.address }}</p>
+            {% endif %}
+
+            {% if school.phone %}
+                <p>{{ school.phone }}</p>
+            {% endif %}
+
+            {% if school.email %}
+                <p>{{ school.email }}</p>
+            {% endif %}
+
+        </div>
+
+        <!-- =================================================
+             TITLE
+             ================================================= -->
+
+        <h3 class="book-title">
+            CBC SUBJECT ASSESSMENT BOOK
+        </h3>
+
+        <!-- =================================================
+             LEARNER DETAILS
+             ================================================= -->
+
+        <table class="learner-details">
+
+            <tr>
+
+                <td class="label">
+                    Learner:
+                </td>
+
+                <td>
+                    {{ student.first_name }}
+                    {{ student.last_name }}
+                </td>
+
+                <td class="label">
+                    Admission No:
+                </td>
+
+                <td>
+                    {{ student.admission_number }}
+                </td>
+
+            </tr>
+
+            <tr>
+
+                <td class="label">
+                    Class:
+                </td>
+
+                <td>
+                    {{ school_class.name }}
+                </td>
+
+                <td class="label">
+                    Academic Year:
+                </td>
+
+                <td>
+                    {{ academic_year }}
+                </td>
+
+            </tr>
+
+            <tr>
+
+                <td class="label">
+                    Term:
+                </td>
+
+                <td>
+                    Term {{ term }}
+                </td>
+
+                <td class="label">
+                    Grade:
+                </td>
+
+                <td>
+                    {{ curriculum_grade.display_name|default:curriculum_grade.grade }}
+                </td>
+
+            </tr>
+
+            {% if curriculum_pathway %}
+
+                <tr>
+
+                    <td class="label">
+                        Pathway:
+                    </td>
+
+                    <td colspan="3">
+                        {{ curriculum_pathway }}
+                    </td>
+
+                </tr>
+
+            {% endif %}
+
+        </table>
+
+        <!-- =================================================
+             ASSESSMENT TABLE
+             ================================================= -->
+
+        <table class="assessment-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        LEARNING AREA
+                    </th>
+
+                    <th>
+                        CAT 1
+                    </th>
+
+                    <th>
+                        MID TERM
+                    </th>
+
+                    <th>
+                        END TERM
+                    </th>
+
+                    <th>
+                        AVERAGE
+                    </th>
+
+                    <th>
+                        PERFORMANCE LEVEL
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for row in result_rows %}
+
+                    <tr>
+
+                        <td>
+                            {{ row.learning_area.name }}
+                        </td>
+
+                        <td>
+                            {% if row.cat1_score is not None %}
+                                {{ row.cat1_score|floatformat:0 }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if row.mid_score is not None %}
+                                {{ row.mid_score|floatformat:0 }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if row.end_score is not None %}
+                                {{ row.end_score|floatformat:0 }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if row.average is not None %}
+                                {{ row.average|floatformat:0 }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if row.performance_label %}
+                                {{ row.performance_label }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+
+                        <td colspan="6">
+                            No CBC subject assessment records
+                            are available for this learner.
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                <!-- =========================================
+                     TOTAL SCORES
+                     ========================================= -->
+
+                <tr class="total-row">
+
+                    <td>
+                        TOTAL SCORES
+                    </td>
+
+                    <td>
+                        {% if total_cat1 is not None %}
+                            {{ total_cat1|floatformat:0 }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if total_mid is not None %}
+                            {{ total_mid|floatformat:0 }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if total_end is not None %}
+                            {{ total_end|floatformat:0 }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if total_average is not None %}
+                            {{ total_average|floatformat:0 }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <!-- =====================================
+                         OVERALL PERFORMANCE LEVEL
+
+                         Calculated in the background:
+                         4 = EE
+                         3 = ME
+                         2 = AE
+                         1 = BE
+
+                         Only the final label is displayed.
+                         ===================================== -->
+
+                    <td>
+                        {% if total_performance_label %}
+                            {{ total_performance_label }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+        <!-- =================================================
+             COMMENTS
+             ================================================= -->
+
+        <div class="comments-section">
+
+            <div class="comment-row">
+
+                <span class="comment-label">
+                    Teacher comment on performance and core competencies achieved:
+                </span>
+
+                <div class="comment-line"></div>
+                <div class="comment-line"></div>
+
+            </div>
+
+            <div class="comment-row">
+
+                <span class="comment-label">
+                    Head Teacher's comments:
+                </span>
+
+                <div class="comment-line"></div>
+                <div class="comment-line"></div>
+
+            </div>
+
+            <div class="comment-row">
+
+                <span class="comment-label">
+                    Comment on learner's behaviour:
+                </span>
+
+                <div class="comment-line"></div>
+                <div class="comment-line"></div>
+
+            </div>
+
+            <div class="comment-row">
+
+                <span class="comment-label">
+                    Comments on transition to the next grade:
+                </span>
+
+                <div class="comment-line"></div>
+                <div class="comment-line"></div>
+
+            </div>
+
+        </div>
+
+        <!-- =================================================
+             TERM / CLOSING INFORMATION
+             ================================================= -->
+
+        <table class="footer-details">
+
+            <tr>
+
+                <td>
+                    <strong>
+                        Next term begins on:
+                    </strong>
+
+                    __________________________
+                </td>
+
+                <td>
+                    <strong>
+                        Closing date:
+                    </strong>
+
+                    __________________________
+                </td>
+
+            </tr>
+
+        </table>
+
+        <!-- =================================================
+             SIGNATURE / STAMP
+             ================================================= -->
+
+        <table style="width: 100%; margin-top: 30px;">
+
+            <tr>
+
+                <td style="width: 50%; text-align: center;">
+
+                    <div class="signature-box">
+
+                        <div class="signature-line"></div>
+
+                        <div>
+                            Teacher's Signature
+                        </div>
+
+                    </div>
+
+                </td>
+
+                <td style="width: 50%; text-align: center;">
+
+                    <div class="stamp-box">
+
+                        <div>
+                            School Stamp
+                        </div>
+
+                        <br><br>
+
+                        ______________________
+
+                    </div>
+
+                </td>
+
+            </tr>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

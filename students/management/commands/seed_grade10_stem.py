@@ -10,6 +10,9 @@ from students.models import (
     CurriculumSubStrand,
     CurriculumAssessmentItem,
 )
+from students.management.commands.cbc_grade10_helpers import (
+    seed_grade10_performance_levels,
+)
 
 
 class Command(BaseCommand):
@@ -401,6 +404,8 @@ class Command(BaseCommand):
         # -------------------------------------------------
 
         grade = self.create_grade(version)
+
+        seed_grade10_performance_levels(grade)
 
         # -------------------------------------------------
         # STEM PATHWAY

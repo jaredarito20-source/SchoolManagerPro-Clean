@@ -154,3 +154,92 @@ def draw_school_footer(pdf, request):
             "%d-%m-%Y %H:%M"
         ),
     )
+
+    # ============================================================
+# CBC ASSESSMENT UTILITIES
+# ============================================================
+
+CBC_NUMERIC_TO_QUALITATIVE = {
+    4: "EE",
+    3: "ME",
+    2: "AE",
+    1: "BE",
+}
+
+
+CBC_QUALITATIVE_TO_NUMERIC = {
+    "EE": 4,
+    "ME": 3,
+    "AE": 2,
+    "BE": 1,
+}
+
+
+def get_cbc_subject_performance_level(score):
+    """
+    Convert a numerical subject assessment score into
+    the internal CBC performance level.
+
+    PP1–Grade 9 subject assessment bands:
+
+        75–100 = EE = 4
+        50–74  = ME = 3
+        25–49  = AE = 2
+        0–24   = BE = 1
+
+    Returns:
+        int | None
+    """
+
+    if score is None:
+        return None
+
+    try:
+        score = float(score)
+    except (TypeError, ValueError):
+        return None
+
+    if score < 0 or score > 100:
+        return None
+
+    if score >= 75:
+        return 4
+
+    if score >= 50:
+        return 3
+
+    if score >= 25:
+        return 2
+
+    return 1
+
+def cbc_performance_level_label(level):
+    """
+    Convert internal CBC numerical level to the
+    learner-facing performance code.
+    """
+
+    if level is None:
+        return ""
+
+    try:
+        level = int(level)
+    except (TypeError, ValueError):
+        return ""
+
+    return CBC_NUMERIC_TO_QUALITATIVE.get(level, "")
+
+
+def cbc_performance_level_number(code):
+    """
+    Convert EE / ME / AE / BE into the internal
+    numerical value.
+    """
+
+    if not code:
+        return None
+
+    code = str(code).strip().upper()
+
+    return CBC_QUALITATIVE_TO_NUMERIC.get(code)
+

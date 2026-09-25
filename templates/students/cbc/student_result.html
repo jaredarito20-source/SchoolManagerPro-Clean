@@ -1,0 +1,831 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .cbc-result-page {
+        max-width: 1100px;
+        margin: 25px auto;
+        padding: 0 20px 40px;
+    }
+
+    .cbc-result-card {
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .school-header {
+        text-align: center;
+        border-bottom: 2px solid #111827;
+        padding-bottom: 18px;
+        margin-bottom: 20px;
+    }
+
+    .school-logo {
+        max-height: 90px;
+        max-width: 120px;
+        margin-bottom: 8px;
+    }
+
+    .school-name {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .school-details {
+        margin-top: 6px;
+        font-size: 13px;
+        color: #4b5563;
+        line-height: 1.6;
+    }
+
+    .result-heading {
+        text-align: center;
+        margin: 20px 0;
+    }
+
+    .result-heading h2 {
+        margin: 0;
+        font-size: 22px;
+        color: #111827;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .result-heading p {
+        margin: 6px 0 0;
+        color: #4b5563;
+        font-size: 14px;
+    }
+
+    .student-info {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px 25px;
+        margin: 20px 0 25px;
+        padding: 15px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #f9fafb;
+    }
+
+    .info-item {
+        display: flex;
+        gap: 8px;
+        font-size: 14px;
+    }
+
+    .info-label {
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .info-value {
+        color: #111827;
+    }
+
+    .result-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .result-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 13px;
+    }
+
+    .result-table th,
+    .result-table td {
+        border: 1px solid #9ca3af;
+        padding: 10px 8px;
+        text-align: center;
+    }
+
+    .result-table th {
+        background: #f3f4f6;
+        color: #111827;
+        font-weight: 800;
+    }
+
+    .result-table td.subject-name {
+        text-align: left;
+        font-weight: 700;
+    }
+
+    .performance {
+        font-weight: 800;
+        font-size: 14px;
+    }
+
+    .summary-box {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .summary-table {
+        border-collapse: collapse;
+        min-width: 380px;
+        font-size: 13px;
+    }
+
+    .summary-table th,
+    .summary-table td {
+        border: 1px solid #9ca3af;
+        padding: 9px 12px;
+    }
+
+    .summary-table th {
+        background: #f3f4f6;
+        text-align: left;
+    }
+
+    .summary-table td {
+        text-align: right;
+        font-weight: 700;
+    }
+
+    .notice {
+        margin-top: 20px;
+        padding: 12px 15px;
+        border: 1px solid #f59e0b;
+        background: #fffbeb;
+        color: #92400e;
+        border-radius: 7px;
+        font-size: 13px;
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 25px;
+        border: 1px solid #d1d5db;
+        color: #6b7280;
+        margin-top: 15px;
+    }
+
+    .signature-section {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 35px;
+        margin-top: 65px;
+    }
+
+    .signature-box {
+        text-align: center;
+    }
+
+    .signature-line {
+        border-top: 1px solid #111827;
+        margin-bottom: 8px;
+    }
+
+    .signature-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .print-controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .print-button {
+        border: none;
+        border-radius: 6px;
+        padding: 9px 16px;
+        background: #111827;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .back-button {
+        display: inline-block;
+        padding: 9px 16px;
+        border-radius: 6px;
+        background: #e5e7eb;
+        color: #111827;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .footer-note {
+        text-align: center;
+        margin-top: 30px;
+        font-size: 11px;
+        color: #6b7280;
+    }
+
+    @media (max-width: 700px) {
+        .student-info {
+            grid-template-columns: 1fr;
+        }
+
+        .signature-section {
+            grid-template-columns: 1fr;
+            gap: 45px;
+        }
+
+        .summary-box {
+            justify-content: stretch;
+        }
+
+        .summary-table {
+            width: 100%;
+            min-width: 0;
+        }
+    }
+
+    @media print {
+
+        body {
+            background: #ffffff !important;
+        }
+
+        .print-controls {
+            display: none !important;
+        }
+
+        .cbc-result-page {
+            max-width: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .cbc-result-card {
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        .school-header {
+            border-bottom: 2px solid #000000;
+        }
+
+        .result-table th {
+            background: #eeeeee !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .student-info {
+            background: #ffffff;
+        }
+
+        .summary-table th {
+            background: #eeeeee !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 12mm;
+        }
+    }
+</style>
+
+
+<div class="cbc-result-page">
+
+    <!-- PRINT / BACK CONTROLS -->
+    <div class="print-controls">
+
+        <button
+            type="button"
+            class="print-button"
+            onclick="window.print();"
+        >
+            🖨 Print Result
+        </button>
+
+        <a
+            href="{% url 'students:cbc_subject_score_sheet' %}?assignment={{ assignment_id }}&assessment_component={{ assessment_component }}"
+            class="back-button"
+        >
+            ← Back to Score Sheet
+        </a>
+
+    </div>
+
+
+    <div class="cbc-result-card">
+
+        <!-- SCHOOL HEADER -->
+        <div class="school-header">
+
+            {% if school.logo %}
+                <img
+                    src="{{ school.logo.url }}"
+                    alt="{{ school.name }}"
+                    class="school-logo"
+                >
+            {% endif %}
+
+            <h1 class="school-name">
+                {{ school.name }}
+            </h1>
+
+            <div class="school-details">
+
+                {% if school.address %}
+                    {{ school.address }}
+                {% endif %}
+
+                {% if school.phone %}
+                    <br>
+                    Tel: {{ school.phone }}
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <!-- RESULT TITLE -->
+        <div class="result-heading">
+
+            <h2>
+                {{ assessment_component_label }} Assessment
+            </h2>
+
+            <p>
+                CBC Learner Assessment Result
+            </p>
+
+        </div>
+
+
+        <!-- STUDENT INFORMATION -->
+        <div class="student-info">
+
+            <div class="info-item">
+
+                <span class="info-label">
+                    Admission No:
+                </span>
+
+                <span class="info-value">
+                    {{ student.admission_number }}
+                </span>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <span class="info-label">
+                    Learner:
+                </span>
+
+                <span class="info-value">
+                    {{ student.first_name }}
+                    {% if student.middle_name %}
+                        {{ student.middle_name }}
+                    {% endif %}
+                    {{ student.last_name }}
+                </span>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <span class="info-label">
+                    Class:
+                </span>
+
+                <span class="info-value">
+                    {{ school_class.name }}
+                </span>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <span class="info-label">
+                    Academic Year:
+                </span>
+
+                <span class="info-value">
+                    {{ academic_year }}
+                </span>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <span class="info-label">
+                    Term:
+                </span>
+
+                <span class="info-value">
+                    Term {{ term }}
+                </span>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <span class="info-label">
+                    Assessment:
+                </span>
+
+                <span class="info-value">
+                    {{ assessment_component_label }}
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- RESULT TABLE -->
+        {% if result_rows %}
+
+            <div class="result-table-wrapper">
+
+                <table class="result-table">
+
+                    <thead>
+
+                        {% if assessment_component == "END" %}
+
+                            <tr>
+
+                                <th>
+                                    No.
+                                </th>
+
+                                <th>
+                                    Learning Area
+                                </th>
+
+                                <th>
+                                    CAT 1
+                                </th>
+
+                                <th>
+                                    Mid-Term
+                                </th>
+
+                                <th>
+                                    End-Term
+                                </th>
+
+                                <th>
+                                    Average
+                                </th>
+
+                                <th>
+                                    Performance
+                                </th>
+
+                            </tr>
+
+                        {% else %}
+
+                            <tr>
+
+                                <th>
+                                    No.
+                                </th>
+
+                                <th>
+                                    Learning Area
+                                </th>
+
+                                <th>
+                                    {{ assessment_component_label }}
+                                </th>
+
+                                <th>
+                                    Performance
+                                </th>
+
+                            </tr>
+
+                        {% endif %}
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for row in result_rows %}
+
+                            {% if assessment_component == "END" %}
+
+                                <tr>
+
+                                    <td>
+                                        {{ forloop.counter }}
+                                    </td>
+
+                                    <td class="subject-name">
+                                        {{ row.learning_area.name }}
+                                    </td>
+
+                                    <td>
+                                        {% if row.cat1_score is not None %}
+                                            {{ row.cat1_score|floatformat:2 }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if row.mid_score is not None %}
+                                            {{ row.mid_score|floatformat:2 }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if row.end_score is not None %}
+                                            {{ row.end_score|floatformat:2 }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if row.average is not None %}
+                                            {{ row.average|floatformat:2 }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="performance">
+
+                                        {% if row.performance_label %}
+                                            {{ row.performance_label }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+
+                                    </td>
+
+                                </tr>
+
+                            {% else %}
+
+                                <tr>
+
+                                    <td>
+                                        {{ forloop.counter }}
+                                    </td>
+
+                                    <td class="subject-name">
+                                        {{ row.learning_area.name }}
+                                    </td>
+
+                                    <td>
+
+                                        {% if assessment_component == "CAT1" %}
+
+                                            {% if row.cat1_score is not None %}
+                                                {{ row.cat1_score|floatformat:2 }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        {% elif assessment_component == "MID" %}
+
+                                            {% if row.mid_score is not None %}
+                                                {{ row.mid_score|floatformat:2 }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        {% endif %}
+
+                                    </td>
+
+                                    <td class="performance">
+
+                                        {% if assessment_component == "CAT1" %}
+
+                                            {% if row.cat1_label %}
+                                                {{ row.cat1_label }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        {% elif assessment_component == "MID" %}
+
+                                            {% if row.mid_label %}
+                                                {{ row.mid_label }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        {% endif %}
+
+                                    </td>
+
+                                </tr>
+
+                            {% endif %}
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <!-- END-TERM INCOMPLETE NOTICE -->
+            {% if assessment_component == "END" and not final_result_complete %}
+
+                <div class="notice">
+
+                    <strong>
+                        End-Term result not yet complete.
+                    </strong>
+
+                    One or more learning areas does not yet have
+                    CAT 1, Mid-Term and End-Term scores.
+                    The final End-Term average and performance level
+                    will be available after all three assessments have
+                    been entered.
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- SUMMARY -->
+            <div class="summary-box">
+
+                <table class="summary-table">
+
+                    {% if assessment_component == "END" %}
+
+                        <tr>
+                            <th>
+                                CAT 1 Total
+                            </th>
+
+                            <td>
+                                {% if cat1_total is not None %}
+                                    {{ cat1_total|floatformat:2 }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+
+
+                        <tr>
+                            <th>
+                                Mid-Term Total
+                            </th>
+
+                            <td>
+                                {% if mid_total is not None %}
+                                    {{ mid_total|floatformat:2 }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+
+
+                        <tr>
+                            <th>
+                                End-Term Total
+                            </th>
+
+                            <td>
+                                {% if end_total is not None %}
+                                    {{ end_total|floatformat:2 }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+
+
+                        <tr>
+                            <th>
+                                Final Average
+                            </th>
+
+                            <td>
+                                {% if average_total is not None %}
+                                    {{ average_total|floatformat:2 }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+
+                    {% else %}
+
+                        <tr>
+
+                            <th>
+                                {{ assessment_component_label }} Total
+                            </th>
+
+                            <td>
+
+                                {% if selected_total is not None %}
+                                    {{ selected_total|floatformat:2 }}
+                                {% else %}
+                                    —
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                    {% endif %}
+
+                </table>
+
+            </div>
+
+
+        {% else %}
+
+            <div class="no-results">
+
+                No assessment results have been entered for this learner
+                for the selected assessment.
+
+            </div>
+
+        {% endif %}
+
+
+        <!-- SIGNATURES -->
+        <div class="signature-section">
+
+            <div class="signature-box">
+
+                <div class="signature-line"></div>
+
+                <div class="signature-label">
+                    Class Teacher
+                </div>
+
+            </div>
+
+
+            <div class="signature-box">
+
+                <div class="signature-line"></div>
+
+                <div class="signature-label">
+                    Head Teacher
+                </div>
+
+            </div>
+
+
+            <div class="signature-box">
+
+                <div class="signature-line"></div>
+
+                <div class="signature-label">
+                    Date
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="footer-note">
+
+            CBC Learner Assessment Report —
+            {{ academic_year }} —
+            Term {{ term }}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

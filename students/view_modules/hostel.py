@@ -70,7 +70,7 @@ def add_hostel_block(request):
             "Your account is not linked to a school."
         )
 
-        return redirect("home")
+        return redirect("students:home")
 
     school = school_user.school
 
@@ -170,7 +170,7 @@ def edit_hostel_block(request, id):
             "Your account is not linked to a school."
         )
 
-        return redirect("home")
+        return redirect("students:home")
 
     school = school_user.school
 

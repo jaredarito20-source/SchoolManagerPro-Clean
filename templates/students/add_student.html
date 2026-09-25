@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block content %}
@@ -7,465 +6,467 @@
 
 <form method="POST" enctype="multipart/form-data">
 
-    {% csrf_token %}
 
-    <table>
+{% csrf_token %}
 
-        <!-- ================================================= -->
-        <!-- SCHOOL -->
-        <!-- ================================================= -->
+<table>
 
-        {% if user.is_superuser %}
+    <!-- ================================================= -->
+    <!-- SCHOOL -->
+    <!-- ================================================= -->
 
-        <tr>
-            <td>School</td>
-            <td>
-                <select name="school" id="school" required>
+    {% if user.is_superuser %}
 
-                    <option value="">
-                        Select School
-                    </option>
+    <tr>
+        <td>School</td>
 
-                    {% for school in schools %}
+        <td>
+            <select
+                name="school"
+                id="school"
+                required
+            >
 
-                        <option
-                            value="{{ school.id }}"
-                            data-academic-year="{{ school.academic_year }}"
-                            data-current-term="{{ school.current_term }}"
-                        >
-                            {{ school.name }}
-                        </option>
+                <option value="">
+                    Select School
+                </option>
 
-                    {% endfor %}
-
-                </select>
-            </td>
-        </tr>
-
-        {% endif %}
-
-
-        <!-- ================================================= -->
-        <!-- ACADEMIC YEAR -->
-        <!-- ================================================= -->
-
-        <tr>
-            <td>Academic Year</td>
-
-            <td>
-
-                <select
-                    name="academic_year"
-                    id="academic_year"
-                    required
-                >
-
-                    <option value="">
-                        Select Academic Year
-                    </option>
-
-                    {% for year in academic_years %}
-
-                        <option
-                            value="{{ year }}"
-                            {% if year == academic_year %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ year }}
-                        </option>
-
-                    {% endfor %}
-
-                </select>
-
-            </td>
-        </tr>
-
-
-        <!-- ================================================= -->
-        <!-- TERM -->
-        <!-- ================================================= -->
-
-        <tr>
-
-            <td>Term</td>
-
-            <td>
-
-                <select
-                    name="enrollment_term"
-                    id="enrollment_term"
-                    required
-                >
-
-                    <option value="">
-                        Select Term
-                    </option>
+                {% for school_item in schools %}
 
                     <option
-                        value="1"
-                        {% if current_term == "1" %}
+                        value="{{ school_item.id }}"
+                    >
+                        {{ school_item.name }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+        </td>
+    </tr>
+
+    {% endif %}
+
+
+    <!-- ================================================= -->
+    <!-- ACADEMIC YEAR -->
+    <!-- ================================================= -->
+
+    <tr>
+        <td>Academic Year</td>
+
+        <td>
+
+            <select
+                name="academic_year"
+                id="academic_year"
+                required
+            >
+
+                <option value="">
+                    Select Academic Year
+                </option>
+
+                {% for year in academic_years %}
+
+                    <option
+                        value="{{ year }}"
+                        {% if year|stringformat:"s" == academic_year|stringformat:"s" %}
                             selected
                         {% endif %}
                     >
-                        Term 1
+                        {{ year }}
                     </option>
+
+                {% endfor %}
+
+            </select>
+
+        </td>
+    </tr>
+
+
+    <!-- ================================================= -->
+    <!-- TERM -->
+    <!-- ================================================= -->
+
+    <tr>
+        <td>Term</td>
+
+        <td>
+
+            <select
+                name="enrollment_term"
+                id="enrollment_term"
+                required
+            >
+
+                <option value="">
+                    Select Term
+                </option>
+
+                <option
+                    value="1"
+                    {% if current_term == "1" %}
+                        selected
+                    {% endif %}
+                >
+                    Term 1
+                </option>
+
+                <option
+                    value="2"
+                    {% if current_term == "2" %}
+                        selected
+                    {% endif %}
+                >
+                    Term 2
+                </option>
+
+                <option
+                    value="3"
+                    {% if current_term == "3" %}
+                        selected
+                    {% endif %}
+                >
+                    Term 3
+                </option>
+
+            </select>
+
+        </td>
+    </tr>
+
+
+    <!-- ================================================= -->
+    <!-- ADMISSION NUMBER -->
+    <!-- ================================================= -->
+
+    <tr>
+        <td>Admission Number</td>
+
+        <td>
+            <input
+                type="text"
+                name="admission_number"
+                required
+            >
+        </td>
+    </tr>
+
+
+    <!-- ================================================= -->
+    <!-- FIRST NAME -->
+    <!-- ================================================= -->
+
+    <tr>
+        <td>First Name</td>
+
+        <td>
+            <input
+                type="text"
+                name="first_name"
+                required
+            >
+        </td>
+    </tr>
+
+
+    <!-- ================================================= -->
+    <!-- LAST NAME -->
+    <!-- ================================================= -->
+
+    <tr>
+        <td>Last Name</td>
+
+        <td>
+            <input
+                type="text"
+                name="last_name"
+                required
+            >
+        </td>
+    </tr>
+
+
+    <!-- ================================================= -->
+    <!-- GENDER -->
+    <!-- ================================================= -->
+
+    <tr>
+        <td>Gender</td>
+
+        <td>
+
+            <select
+                name="gender"
+                required
+            >
+
+                <option value="">
+                    Select Gender
+                </option>
+
+                <option value="Male">
+                    Male
+                </option>
+
+                <option value="Female">
+                    Female
+                </option>
+
+            </select>
+
+        </td>
+    </tr>
+
+
+    <!-- ================================================= -->
+    <!-- DATE OF BIRTH -->
+    <!-- ================================================= -->
+
+    <tr>
+        <td>Date of Birth</td>
+
+        <td>
+
+            <input
+                type="date"
+                name="date_of_birth"
+                required
+            >
+
+        </td>
+    </tr>
+
+
+    <!-- ================================================= -->
+    <!-- CLASS -->
+    <!-- ================================================= -->
+
+    <tr>
+        <td>Class / Grade</td>
+
+        <td>
+
+            <select
+                name="school_class"
+                id="school_class"
+                required
+            >
+
+                <option value="">
+                    Select Class / Grade
+                </option>
+
+                {% for school_class in classes %}
 
                     <option
-                        value="2"
-                        {% if current_term == "2" %}
-                            selected
-                        {% endif %}
+                        value="{{ school_class.id }}"
+                        data-school="{{ school_class.school_id }}"
+                        data-curriculum="{{ school_class.curriculum }}"
                     >
-                        Term 2
-                    </option>
+                        {{ school_class.name }}
 
-                    <option
-                        value="3"
-                        {% if current_term == "3" %}
-                            selected
+                        — {{ school_class.curriculum }}
+
+                        {% if user.is_superuser %}
+                            — {{ school_class.school.name }}
                         {% endif %}
-                    >
-                        Term 3
+
                     </option>
 
-                </select>
+                {% endfor %}
 
-            </td>
+            </select>
 
-        </tr>
+        </td>
+    </tr>
 
 
-        <!-- ================================================= -->
-        <!-- ADMISSION NUMBER -->
-        <!-- ================================================= -->
+    <!-- ================================================= -->
+    <!-- CBC INFORMATION -->
+    <!-- ================================================= -->
 
-        <tr>
+    <tr>
 
-            <td>Admission Number</td>
+        <td colspan="2">
 
-            <td>
+            <fieldset
+                id="cbc_information"
+                style="
+                    display:none;
+                    margin-top:10px;
+                    padding:12px;
+                "
+            >
 
-                <input
-                    type="text"
-                    name="admission_number"
-                    required
-                >
+                <legend>
+                    CBC Curriculum
+                </legend>
 
-            </td>
+                <table>
 
-        </tr>
+                    <tr>
 
+                        <td>
+                            Curriculum
+                        </td>
 
-        <!-- ================================================= -->
-        <!-- FIRST NAME -->
-        <!-- ================================================= -->
+                        <td>
 
-        <tr>
+                            <strong id="cbc_curriculum">
+                                —
+                            </strong>
 
-            <td>First Name</td>
+                        </td>
 
-            <td>
+                    </tr>
 
-                <input
-                    type="text"
-                    name="first_name"
-                    required
-                >
+                    <tr>
 
-            </td>
+                        <td>
+                            Grade
+                        </td>
 
-        </tr>
+                        <td>
 
+                            <strong id="cbc_grade">
+                                —
+                            </strong>
 
-        <!-- ================================================= -->
-        <!-- LAST NAME -->
-        <!-- ================================================= -->
+                        </td>
 
-        <tr>
+                    </tr>
 
-            <td>Last Name</td>
+                    <tr>
 
-            <td>
+                        <td>
+                            Pathway
+                        </td>
 
-                <input
-                    type="text"
-                    name="last_name"
-                    required
-                >
+                        <td>
 
-            </td>
+                            <strong id="cbc_pathway">
+                                —
+                            </strong>
 
-        </tr>
+                        </td>
 
+                    </tr>
 
-        <!-- ================================================= -->
-        <!-- GENDER -->
-        <!-- ================================================= -->
+                </table>
 
-        <tr>
+            </fieldset>
 
-            <td>Gender</td>
+        </td>
 
-            <td>
+    </tr>
 
-                <select
-                    name="gender"
-                    required
-                >
 
-                    <option value="">
-                        Select Gender
-                    </option>
+    <!-- ================================================= -->
+    <!-- PARENT -->
+    <!-- ================================================= -->
 
-                    <option value="Male">
-                        Male
-                    </option>
+    <tr>
 
-                    <option value="Female">
-                        Female
-                    </option>
+        <td>
+            Parent Name
+        </td>
 
-                </select>
+        <td>
 
-            </td>
+            <input
+                type="text"
+                name="parent_name"
+                required
+            >
 
-        </tr>
+        </td>
 
+    </tr>
 
-        <!-- ================================================= -->
-        <!-- DATE OF BIRTH -->
-        <!-- ================================================= -->
 
-        <tr>
+    <!-- ================================================= -->
+    <!-- PHONE -->
+    <!-- ================================================= -->
 
-            <td>Date of Birth</td>
+    <tr>
 
-            <td>
+        <td>
+            Phone Number
+        </td>
 
-                <input
-                    type="date"
-                    name="date_of_birth"
-                    required
-                >
+        <td>
 
-            </td>
+            <input
+                type="text"
+                name="phone"
+                required
+            >
 
-        </tr>
+        </td>
 
+    </tr>
 
-        <!-- ================================================= -->
-        <!-- CLASS -->
-        <!-- ================================================= -->
 
-        <tr>
+    <!-- ================================================= -->
+    <!-- PHOTO -->
+    <!-- ================================================= -->
 
-            <td>Class / Grade</td>
+    <tr>
 
-            <td>
+        <td>
+            Student Photo
+        </td>
 
-                <select
-                    name="school_class"
-                    id="school_class"
-                    required
-                >
+        <td>
 
-                    <option value="">
-                        Select Class / Grade
-                    </option>
+            <input
+                type="file"
+                name="photo"
+                accept="image/*"
+            >
 
-                    {% for class in classes %}
-                            <option
-                                value="{{ class.id }}"
-                                data-school="{{ class.school_id }}"
-                                data-curriculum="{{ class.curriculum }}"
-                            >
-                                {{ class.name }}
-                                — {{ class.curriculum }}
-                                {% if user.is_superuser %}
-                                    — {{ class.school.name }}
-                                {% endif %}
-                            </option>
-                        {% endfor %}
+        </td>
 
-                </select>
+    </tr>
 
-            </td>
 
-        </tr>
+    <!-- ================================================= -->
+    <!-- BUTTONS -->
+    <!-- ================================================= -->
 
+    <tr>
 
-        <!-- ================================================= -->
-        <!-- CBC INFORMATION -->
-        <!-- ================================================= -->
+        <td></td>
 
-        <tr>
+        <td>
 
-            <td colspan="2">
+            <button type="submit">
+                💾 Save Student
+            </button>
 
-                <fieldset
-                    id="cbc_information"
-                    style="
-                        display:none;
-                        margin-top:10px;
-                        padding:12px;
-                    "
-                >
+            <a href="{% url 'students:student_list' %}">
+                Cancel
+            </a>
 
-                    <legend>
-                        CBC Curriculum
-                    </legend>
+        </td>
 
-                    <table>
+    </tr>
 
-                        <tr>
-
-                            <td>
-                                Curriculum
-                            </td>
-
-                            <td>
-                                <strong id="cbc_curriculum">
-                                    —
-                                </strong>
-                            </td>
-
-                        </tr>
-
-                        <tr>
-
-                            <td>
-                                Grade
-                            </td>
-
-                            <td>
-                                <strong id="cbc_grade">
-                                    —
-                                </strong>
-                            </td>
-
-                        </tr>
-
-                        <tr>
-
-                            <td>
-                                Pathway
-                            </td>
-
-                            <td>
-                                <strong id="cbc_pathway">
-                                    —
-                                </strong>
-                            </td>
-
-                        </tr>
-
-                    </table>
-
-                </fieldset>
-
-            </td>
-
-        </tr>
-
-
-        <!-- ================================================= -->
-        <!-- PARENT -->
-        <!-- ================================================= -->
-
-        <tr>
-
-            <td>Parent Name</td>
-
-            <td>
-
-                <input
-                    type="text"
-                    name="parent_name"
-                    required
-                >
-
-            </td>
-
-        </tr>
-
-
-        <!-- ================================================= -->
-        <!-- PHONE -->
-        <!-- ================================================= -->
-
-        <tr>
-
-            <td>Phone Number</td>
-
-            <td>
-
-                <input
-                    type="text"
-                    name="phone"
-                    required
-                >
-
-            </td>
-
-        </tr>
-
-
-        <!-- ================================================= -->
-        <!-- PHOTO -->
-        <!-- ================================================= -->
-
-        <tr>
-
-            <td>Student Photo</td>
-
-            <td>
-
-                <input
-                    type="file"
-                    name="photo"
-                    accept="image/*"
-                >
-
-            </td>
-
-        </tr>
-
-
-        <!-- ================================================= -->
-        <!-- BUTTONS -->
-        <!-- ================================================= -->
-
-        <tr>
-
-            <td></td>
-
-            <td>
-
-                <button type="submit">
-                    💾 Save Student
-                </button>
-
-                <a href="{% url 'students:student_list' %}">
-                    Cancel
-                </a>
-
-            </td>
-
-        </tr>
-
-    </table>
+</table>
+```
 
 </form>
 
-
 <!-- ========================================================= -->
+
 <!-- CBC DATA FROM DJANGO -->
+
 <!-- ========================================================= -->
 
 {{ class_curriculum_data|json_script:"class-curriculum-data" }}
-
 
 <script>
 
@@ -483,7 +484,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const termSelect =
         document.getElementById("enrollment_term");
 
-
     const cbcInformation =
         document.getElementById("cbc_information");
 
@@ -495,7 +495,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const cbcPathway =
         document.getElementById("cbc_pathway");
-
 
     const curriculumData =
         JSON.parse(
@@ -517,11 +516,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const academicYear =
             academicYearSelect.value;
 
-
         cbcInformation.style.display = "none";
 
         cbcCurriculum.textContent = "—";
+
         cbcGrade.textContent = "—";
+
         cbcPathway.textContent = "—";
 
 
@@ -533,7 +533,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const classData =
             curriculumData[classId];
 
-
         if (!classData) {
             return;
         }
@@ -541,7 +540,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const curriculum =
             classData[academicYear];
-
 
         if (!curriculum) {
             return;
@@ -566,20 +564,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =========================================================
-    // FILTER CLASSES BY SCHOOL AND ACADEMIC YEAR
+    // FILTER CLASSES BY SCHOOL
     // =========================================================
 
-    function filterClasses() {
+    function filterClassesBySchool() {
 
         const selectedSchool =
             schoolSelect
                 ? schoolSelect.value
                 : null;
 
-        let currentValue =
+        const currentValue =
             classSelect.value;
 
-        let currentValueStillValid = false;
+        let currentValueStillValid =
+            false;
+
 
         for (
             let i = 0;
@@ -590,20 +590,25 @@ document.addEventListener("DOMContentLoaded", function () {
             const option =
                 classSelect.options[i];
 
+
             // Placeholder
             if (!option.value) {
+
                 option.style.display = "";
+
                 continue;
             }
+
 
             const classSchool =
                 option.getAttribute(
                     "data-school"
                 );
 
-            // -----------------------------------------------------
+
+            // -------------------------------------------------
             // SCHOOL FILTER
-            // -----------------------------------------------------
+            // -------------------------------------------------
 
             if (
                 selectedSchool &&
@@ -615,11 +620,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 continue;
             }
 
-            // -----------------------------------------------------
-            // SHOW ALL CLASSES BELONGING TO THE SCHOOL
-            // -----------------------------------------------------
 
             option.style.display = "";
+
 
             if (
                 option.value === currentValue
@@ -631,175 +634,167 @@ document.addEventListener("DOMContentLoaded", function () {
 
         }
 
+
         if (!currentValueStillValid) {
 
             classSelect.value = "";
 
         }
 
+
         updateCBCInformation();
+
     }
+
+
     // =========================================================
-    // SUPERUSER SCHOOL CHANGE
+    // FILTER CLASSES BY ACADEMIC YEAR
+    //
+    // A class is available for the selected year only if
+    // SchoolClassCurriculum exists for that class/year.
     // =========================================================
 
-    function updateAcademicPeriodFromSchool() {
+    function filterClassesByAcademicYear() {
 
-        if (!schoolSelect) {
-            return;
-        }
+        const selectedSchool =
+            schoolSelect
+                ? schoolSelect.value
+                : null;
+
+        const selectedYear =
+            academicYearSelect.value;
+
+        const currentValue =
+            classSelect.value;
+
+        let currentValueStillValid =
+            false;
 
 
-        const selectedOption =
-            schoolSelect.options[
-                schoolSelect.selectedIndex
-            ];
-
-
-        if (
-            !schoolSelect.value ||
-            !selectedOption
+        for (
+            let i = 0;
+            i < classSelect.options.length;
+            i++
         ) {
 
-            return;
-
-        }
-
-
-        const academicYear =
-            selectedOption.getAttribute(
-                "data-academic-year"
-            ) || "";
+            const option =
+                classSelect.options[i];
 
 
-        const currentTerm =
-            selectedOption.getAttribute(
-                "data-current-term"
-            ) || "";
+            if (!option.value) {
+
+                option.style.display = "";
+
+                continue;
+
+            }
 
 
-        // ---------------------------------------------
-        // Rebuild academic year choices
-        // ---------------------------------------------
-
-        academicYearSelect.innerHTML =
-            '<option value="">Select Academic Year</option>';
-
-
-        if (academicYear) {
-
-            const currentYear =
-                parseInt(
-                    academicYear,
-                    10
+            const classSchool =
+                option.getAttribute(
+                    "data-school"
                 );
 
 
-            if (!isNaN(currentYear)) {
+            // School filter
+            if (
+                selectedSchool &&
+                classSchool !== selectedSchool
+            ) {
 
-                const years = [
-                    currentYear - 1,
-                    currentYear,
-                    currentYear + 1
-                ];
+                option.style.display = "none";
 
+                continue;
 
-                years.forEach(function (year) {
-
-                    const option =
-                        document.createElement(
-                            "option"
-                        );
+            }
 
 
-                    option.value =
-                        String(year);
+            const classId =
+                option.value;
 
 
-                    option.textContent =
-                        String(year);
+            const classData =
+                curriculumData[classId];
 
 
-                    if (
-                        String(year) ===
-                        String(academicYear)
-                    ) {
+            // -------------------------------------------------
+            // If an academic year is selected, the class must
+            // have a curriculum assignment for that year.
+            // -------------------------------------------------
 
-                        option.selected = true;
+            if (
+                selectedYear &&
+                (
+                    !classData ||
+                    !classData[selectedYear]
+                )
+            ) {
 
-                    }
+                option.style.display = "none";
 
+                continue;
 
-                    academicYearSelect
-                        .appendChild(option);
-
-                });
-
-            } else {
-
-                const option =
-                    document.createElement(
-                        "option"
-                    );
+            }
 
 
-                option.value =
-                    academicYear;
+            option.style.display = "";
 
 
-                option.textContent =
-                    academicYear;
+            if (
+                option.value === currentValue
+            ) {
 
-
-                option.selected = true;
-
-
-                academicYearSelect
-                    .appendChild(option);
+                currentValueStillValid = true;
 
             }
 
         }
 
 
-        // ---------------------------------------------
-        // Set current term
-        // ---------------------------------------------
+        if (!currentValueStillValid) {
 
-        if (
-            currentTerm === "1" ||
-            currentTerm === "2" ||
-            currentTerm === "3"
-        ) {
-
-            termSelect.value =
-                currentTerm;
-
-        } else {
-
-            termSelect.value = "";
+            classSelect.value = "";
 
         }
 
 
-        filterClasses();
+        updateCBCInformation();
 
     }
 
 
     // =========================================================
-    // EVENT HANDLERS
+    // SCHOOL CHANGE
+    //
+    // Academic years are NOT invented here.
+    //
+    // They come from SchoolAcademicYear supplied by Django.
+    // =========================================================
+
+    function handleSchoolChange() {
+
+        classSelect.value = "";
+
+        academicYearSelect.value = "";
+
+        termSelect.value = "";
+
+        filterClassesBySchool();
+
+        updateCBCInformation();
+
+    }
+
+
+    // =========================================================
+    // EVENTS
     // =========================================================
 
     if (schoolSelect) {
 
         schoolSelect.addEventListener(
             "change",
-            function () {
-
-                updateAcademicPeriodFromSchool();
-
-            }
+            handleSchoolChange
         );
 
     }
@@ -809,7 +804,9 @@ document.addEventListener("DOMContentLoaded", function () {
         "change",
         function () {
 
-            filterClasses();
+            classSelect.value = "";
+
+            filterClassesByAcademicYear();
 
         }
     );
@@ -831,11 +828,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (schoolSelect) {
 
-        updateAcademicPeriodFromSchool();
+        if (schoolSelect.value) {
+
+            filterClassesByAcademicYear();
+
+        } else {
+
+            // No school selected yet.
+            for (
+                let i = 0;
+                i < classSelect.options.length;
+                i++
+            ) {
+
+                if (i === 0) {
+
+                    classSelect.options[i].style.display = "";
+
+                } else {
+
+                    classSelect.options[i].style.display = "none";
+
+                }
+
+            }
+
+        }
 
     } else {
 
-        filterClasses();
+        filterClassesByAcademicYear();
 
     }
 
@@ -844,4 +866,3 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 {% endblock %}
-

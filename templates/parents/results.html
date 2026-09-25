@@ -2,100 +2,408 @@
 
 {% block content %}
 
-<h2>📊 Examination Results</h2>
+<div class="container mt-4">
 
-<h3>
-{{ student.first_name }} {{ student.last_name }}
-</h3>
 
-<p>
-Admission No: {{ student.admission_number }}
-</p>
+<!-- ===================================================== -->
+<!-- STUDENT HEADER -->
+<!-- ===================================================== -->
 
-<p>
-Class: {{ student.school_class }}
-</p>
+<div class="card mb-4">
+    <div class="card-body">
 
-<hr>
+        <h2>📊 Examination & CBC Results</h2>
 
-<table class="table">
+        <h3>
+            {{ student.first_name }} {{ student.last_name }}
+        </h3>
 
-<tr>
+        <p class="mb-1">
+            <strong>Admission No:</strong>
+            {{ student.admission_number }}
+        </p>
 
-    <th>Exam</th>
+        <p class="mb-1">
+            <strong>Class:</strong>
+            {{ student.school_class }}
+        </p>
 
-    <th>Subject</th>
+        <p class="mb-0">
+            <strong>Academic Year:</strong>
+            {{ academic_year }}
+            &nbsp;&nbsp;
+            <strong>Term:</strong>
+            {{ selected_term }}
+        </p>
 
-    <th>Marks</th>
+    </div>
+</div>
 
-    <th>Grade</th>
 
-</tr>
+<!-- ===================================================== -->
+<!-- CBC PP1 - GRADE 9 -->
+<!-- ===================================================== -->
 
-{% for mark in marks %}
+{% if cbc_subject_rows %}
 
-<tr>
+<div class="card mb-4">
 
-    <td>{{ mark.exam }}</td>
+    <div class="card-body">
 
-    <td>{{ mark.subject }}</td>
+        <h4 class="mb-3">
+            CBC Results — PP1–Grade 9
+        </h4>
 
-    <td>{{ mark.marks }}</td>
+        <p class="text-muted">
+            Performance is shown using CBC performance-level codes.
+        </p>
 
-    <td>{{ mark.grade }}</td>
+        <div class="table-responsive">
 
-</tr>
+            <table class="table table-bordered table-striped">
 
-{% empty %}
+                <thead>
+                    <tr>
+                        <th>Learning Area</th>
+                        <th>CAT 1</th>
+                        <th>Mid-Term</th>
+                        <th>End-Term</th>
+                    </tr>
+                </thead>
 
-<tr>
+                <tbody>
 
-<td colspan="4">
+                {% for row in cbc_subject_rows %}
 
-No results available.
+                    <tr>
 
-</td>
+                        <td>
+                            {{ row.learning_area.name }}
+                        </td>
 
-</tr>
+                        <td>
+                            {% if row.cat1_level %}
+                                <strong>{{ row.cat1_level }}</strong>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
 
-{% endfor %}
+                        <td>
+                            {% if row.mid_level %}
+                                <strong>{{ row.mid_level }}</strong>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
 
-<tr>
+                        <td>
+                            {% if row.end_level %}
+                                <strong>{{ row.end_level }}</strong>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
 
-<th colspan="2">
+                    </tr>
 
-Total
+                {% endfor %}
 
-</th>
+                </tbody>
 
-<th>
+            </table>
 
-{{ total }}
+        </div>
 
-</th>
+    </div>
 
-<th></th>
+</div>
 
-</tr>
+{% endif %}
 
-<tr>
 
-<th colspan="2">
+<!-- ===================================================== -->
+<!-- CBC GRADE 10 - 12 -->
+<!-- ===================================================== -->
 
-Average
+{% if cbc_upper_rows %}
 
-</th>
+<div class="card mb-4">
 
-<th>
+    <div class="card-body">
 
-{{ average }}
+        <h4 class="mb-3">
+            CBC Results — Grade 10–12
+        </h4>
 
-</th>
+        <p class="text-muted">
+            Scores are displayed together with the CBC performance
+            level and points.
+        </p>
 
-<th></th>
+        <div class="table-responsive">
 
-</tr>
+            <table class="table table-bordered table-striped">
 
-</table>
+                <thead>
+                    <tr>
+
+                        <th>Learning Area</th>
+
+                        <th>CAT 1</th>
+
+                        <th>Mid-Term</th>
+
+                        <th>End-Term</th>
+
+                        <th>Average</th>
+
+                        <th>Performance Level</th>
+
+                        <th>Points</th>
+
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for row in cbc_upper_rows %}
+
+                    <tr>
+
+                        <td>
+                            {{ row.learning_area.name }}
+                        </td>
+
+
+                        <!-- CAT 1 -->
+
+                        <td>
+
+                            {% if row.CAT1 %}
+
+                                {{ row.CAT1.raw_score }}
+                                /
+                                {{ row.CAT1.marks_out_of }}
+
+                            {% else %}
+
+                                —
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- MID TERM -->
+
+                        <td>
+
+                            {% if row.MID %}
+
+                                {{ row.MID.raw_score }}
+                                /
+                                {{ row.MID.marks_out_of }}
+
+                            {% else %}
+
+                                —
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- END TERM -->
+
+                        <td>
+
+                            {% if row.END %}
+
+                                {{ row.END.raw_score }}
+                                /
+                                {{ row.END.marks_out_of }}
+
+                            {% else %}
+
+                                —
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- AVERAGE -->
+
+                        <td>
+
+                            {% if row.average is not None %}
+
+                                {{ row.average }}%
+
+                            {% else %}
+
+                                —
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- PERFORMANCE LEVEL -->
+
+                        <td>
+
+                            {% if row.performance_level %}
+
+                                <strong>
+                                    {{ row.performance_level.code }}
+                                </strong>
+
+                            {% else %}
+
+                                —
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- POINTS -->
+
+                        <td>
+
+                            {% if row.points is not None %}
+
+                                {{ row.points }}
+
+                            {% else %}
+
+                                —
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- LEGACY RESULTS -->
+<!-- ===================================================== -->
+
+{% if marks %}
+
+<div class="card mb-4">
+
+    <div class="card-body">
+
+        <h4 class="mb-3">
+            Legacy Examination Results
+        </h4>
+
+        <div class="table-responsive">
+
+            <table class="table table-bordered table-striped">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Exam</th>
+
+                        <th>Subject</th>
+
+                        <th>Marks</th>
+
+                        <th>Grade</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                {% for mark in marks %}
+
+                    <tr>
+
+                        <td>
+                            {{ mark.exam }}
+                        </td>
+
+                        <td>
+                            {{ mark.subject }}
+                        </td>
+
+                        <td>
+                            {{ mark.marks }}
+                        </td>
+
+                        <td>
+                            {{ mark.grade }}
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+                <tfoot>
+
+                    <tr>
+
+                        <th colspan="2">
+                            Total
+                        </th>
+
+                        <th>
+                            {{ total }}
+                        </th>
+
+                        <th></th>
+
+                    </tr>
+
+                    <tr>
+
+                        <th colspan="2">
+                            Average
+                        </th>
+
+                        <th>
+                            {{ average }}
+                        </th>
+
+                        <th></th>
+
+                    </tr>
+
+                </tfoot>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endif %}
 
 {% endblock %}

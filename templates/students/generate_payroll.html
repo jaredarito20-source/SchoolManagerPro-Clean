@@ -6,48 +6,55 @@
 
 <form method="POST">
 
-    {% csrf_token %}
 
-    <p>
-        <label>Month</label><br>
+{% csrf_token %}
 
-        <select name="month" required>
+<p>
+    <label>Month</label><br>
 
-            <option>January</option>
-            <option>February</option>
-            <option>March</option>
-            <option>April</option>
-            <option>May</option>
-            <option>June</option>
-            <option>July</option>
-            <option>August</option>
-            <option>September</option>
-            <option>October</option>
-            <option>November</option>
-            <option>December</option>
+    <select name="month" required>
 
-        </select>
+        <option>January</option>
+        <option>February</option>
+        <option>March</option>
+        <option>April</option>
+        <option>May</option>
+        <option>June</option>
+        <option>July</option>
+        <option>August</option>
+        <option>September</option>
+        <option>October</option>
+        <option>November</option>
+        <option>December</option>
 
-    </p>
+    </select>
 
-    <p>
+</p>
 
-        <label>Year</label><br>
+<p>
+    <label>Year</label><br>
 
-        <input
-            type="number"
-            name="year"
-            value="2026"
-            required
-        >
+    <select name="year" required>
 
-    </p>
+        {% for year in calendar_years %}
 
-    <button type="submit">
+            <option value="{{ year }}"
+                {% if year == calendar_years.0 %}selected{% endif %}>
+                {{ year }}
+            </option>
 
-        Generate Payroll
+        {% endfor %}
 
-    </button>
+    </select>
+
+</p>
+
+<button type="submit">
+
+    Generate Payroll
+
+</button>
+
 
 </form>
 

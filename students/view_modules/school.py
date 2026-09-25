@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect
 import secrets
 import string
 
-from ..models import SchoolProfile, SchoolUser
+from ..models import SchoolProfile, SchoolUser,SchoolAcademicYear
 @login_required
 def school_list(request):
 
@@ -18,7 +18,7 @@ def school_list(request):
             request,
             "Only the system administrator can view all schools."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     schools = (
         SchoolProfile.objects
@@ -43,7 +43,7 @@ def add_school_profile(request):
             request,
             "Only the system administrator can add a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     if request.method == "POST":
 
@@ -201,6 +201,12 @@ def add_school_profile(request):
             ),
         )
 
+        SchoolAcademicYear.objects.create(
+            school=school,
+            year=academic_year,
+            is_current=True,
+        )
+
         # --------------------------------
         # GENERATE USERNAME
         # --------------------------------
@@ -313,7 +319,7 @@ def school_credentials(request):
             request,
             "You are not authorized to view school credentials."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     credentials = request.session.pop(
         "new_school_credentials",
@@ -325,7 +331,7 @@ def school_credentials(request):
             request,
             "No new school credentials are available."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     return render(
         request,
@@ -344,7 +350,7 @@ def delete_school(request, id):
             request,
             "Only the system administrator can delete a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     try:
         school = SchoolProfile.objects.get(id=id)
@@ -407,7 +413,7 @@ def reset_school_password(request, id):
             request,
             "Only the system administrator can reset school passwords."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     # -----------------------------------
     # GET SCHOOL

@@ -45,7 +45,7 @@ def library_list(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     books = Book.objects.filter(
         school=school
@@ -73,7 +73,7 @@ def add_book(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     if request.method == "POST":
 
@@ -124,7 +124,7 @@ def edit_book(request, id):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     book = get_object_or_404(
         Book,
@@ -180,7 +180,7 @@ def delete_book(request, id):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     book = get_object_or_404(
         Book,
@@ -218,7 +218,7 @@ def borrow_book(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     students = Student.objects.filter(
         school=school
@@ -301,7 +301,7 @@ def borrow_list(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     borrowed_books = (
         BorrowBook.objects
@@ -335,7 +335,7 @@ def return_book(request, id):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     borrow = get_object_or_404(
         BorrowBook,
@@ -394,7 +394,7 @@ def library_dashboard(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     total_books = Book.objects.filter(
         school=school
@@ -458,7 +458,7 @@ def library_reports(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     borrowed_books = BorrowBook.objects.filter(
         school=school,
@@ -513,7 +513,7 @@ def print_library_report(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     response = HttpResponse(
         content_type="application/pdf"

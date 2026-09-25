@@ -1,0 +1,1076 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .assessment-book-page {
+        max-width: 1200px;
+        margin: 25px auto;
+        padding: 0 15px;
+    }
+
+    .assessment-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .assessment-toolbar a,
+    .assessment-toolbar button {
+        display: inline-block;
+        padding: 9px 15px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: #fff;
+        color: #222;
+        text-decoration: none;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .assessment-toolbar button {
+        background: #222;
+        color: #fff;
+        border-color: #222;
+    }
+
+    .assessment-book {
+        background: #fff;
+        padding: 30px;
+        border: 1px solid #ddd;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    .school-header {
+        text-align: center;
+        border-bottom: 2px solid #222;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+
+    .school-logo {
+        max-height: 90px;
+        max-width: 140px;
+        margin-bottom: 8px;
+    }
+
+    .school-name {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+
+    .school-contact {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .book-title {
+        text-align: center;
+        margin: 20px 0;
+    }
+
+    .book-title h1 {
+        font-size: 22px;
+        margin: 0 0 5px;
+    }
+
+    .book-title h2 {
+        font-size: 17px;
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .student-information {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 25px;
+    }
+
+    .info-box {
+        border: 1px solid #ccc;
+        padding: 10px;
+        min-height: 45px;
+    }
+
+    .info-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #666;
+        margin-bottom: 3px;
+    }
+
+    .info-value {
+        font-weight: 600;
+    }
+
+    .learning-area-section {
+        margin-bottom: 30px;
+        page-break-inside: avoid;
+    }
+
+    .learning-area-title {
+        background: #f0f0f0;
+        border: 1px solid #aaa;
+        padding: 10px 12px;
+        font-size: 17px;
+        font-weight: 700;
+        margin-bottom: 0;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th,
+    td {
+        border: 1px solid #aaa;
+        padding: 7px;
+        font-size: 12px;
+        vertical-align: top;
+    }
+
+    th {
+        background: #f5f5f5;
+        text-align: center;
+        font-weight: 700;
+    }
+
+    .strand-row td {
+        background: #fafafa;
+        font-weight: 700;
+    }
+
+    .sub-strand-name {
+        padding-left: 20px;
+    }
+
+    .level {
+        text-align: center;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .comment {
+        min-width: 180px;
+    }
+
+    .summative {
+        text-align: center;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 30px;
+        border: 1px solid #ccc;
+        background: #fafafa;
+        margin-top: 20px;
+    }
+
+    .upper-secondary-table {
+        font-size: 11px;
+    }
+
+    .upper-secondary-table th,
+    .upper-secondary-table td {
+        padding: 6px;
+        text-align: center;
+    }
+
+    .upper-secondary-table td:first-child,
+    .upper-secondary-table td:nth-child(2) {
+        text-align: left;
+    }
+
+    .upper-secondary-table .learning-area-name {
+        font-weight: 600;
+    }
+
+    .component-header {
+        background: #e9e9e9;
+    }
+
+    .final-row {
+        font-weight: 700;
+        background: #f5f5f5;
+    }
+
+    .legend {
+        margin-top: 20px;
+        border: 1px solid #ccc;
+        padding: 12px;
+    }
+
+    .legend-title {
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .legend-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    .legend-item {
+        border: 1px solid #ccc;
+        padding: 7px;
+        text-align: center;
+    }
+
+    .signatures {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 35px;
+        margin-top: 45px;
+        page-break-inside: avoid;
+    }
+
+    .signature-box {
+        border-top: 1px solid #222;
+        padding-top: 8px;
+        text-align: center;
+        font-size: 12px;
+    }
+
+    .footer-note {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 11px;
+        color: #666;
+        border-top: 1px solid #ccc;
+        padding-top: 10px;
+    }
+
+    @media (max-width: 800px) {
+        .student-information {
+            grid-template-columns: 1fr;
+        }
+
+        .legend-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .signatures {
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .assessment-book {
+            padding: 15px;
+            overflow-x: auto;
+        }
+    }
+
+    @media print {
+        body {
+            background: #fff !important;
+        }
+
+        .assessment-toolbar {
+            display: none !important;
+        }
+
+        .assessment-book-page {
+            max-width: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .assessment-book {
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        .learning-area-section {
+            page-break-inside: avoid;
+        }
+
+        .school-header {
+            page-break-inside: avoid;
+        }
+
+        .signatures {
+            page-break-inside: avoid;
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 12mm;
+        }
+
+        .upper-secondary-wrapper {
+            page-break-before: auto;
+        }
+    }
+</style>
+
+
+<div class="assessment-book-page">
+
+    <!-- =====================================================
+         TOOLBAR
+    ====================================================== -->
+
+    <div class="assessment-toolbar">
+
+        <a href="{% url 'students:parent_results' student.id %}">
+            ← Back to Results
+        </a>
+
+        <button type="button" onclick="window.print()">
+            🖨 Print Assessment Book
+        </button>
+
+    </div>
+
+
+    <!-- =====================================================
+         ASSESSMENT BOOK
+    ====================================================== -->
+
+    <div class="assessment-book">
+
+        <!-- =================================================
+             SCHOOL HEADER
+        ================================================== -->
+
+        <div class="school-header">
+
+            {% if school.logo %}
+                <img
+                    src="{{ school.logo.url }}"
+                    alt="{{ school.name }}"
+                    class="school-logo"
+                >
+            {% endif %}
+
+            <div class="school-name">
+                {{ school.name }}
+            </div>
+
+            <div class="school-contact">
+
+                {% if school.address %}
+                    {{ school.address }}<br>
+                {% endif %}
+
+                {% if school.phone %}
+                    Tel: {{ school.phone }}
+                {% endif %}
+
+                {% if school.email %}
+                    {% if school.phone %} | {% endif %}
+                    {{ school.email }}
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             TITLE
+        ================================================== -->
+
+        <div class="book-title">
+
+            <h1>
+                CBC LEARNER ASSESSMENT BOOK
+            </h1>
+
+            <h2>
+                Final Assessment Record
+            </h2>
+
+        </div>
+
+
+        <!-- =================================================
+             STUDENT INFORMATION
+        ================================================== -->
+
+        <div class="student-information">
+
+            <div class="info-box">
+                <div class="info-label">
+                    Learner Name
+                </div>
+
+                <div class="info-value">
+                    {{ student.first_name }}
+                    {{ student.last_name }}
+                </div>
+            </div>
+
+
+            <div class="info-box">
+                <div class="info-label">
+                    Admission Number
+                </div>
+
+                <div class="info-value">
+                    {{ student.admission_number }}
+                </div>
+            </div>
+
+
+            <div class="info-box">
+                <div class="info-label">
+                    Academic Year
+                </div>
+
+                <div class="info-value">
+                    {{ academic_year }}
+                </div>
+            </div>
+
+
+            <div class="info-box">
+                <div class="info-label">
+                    Term
+                </div>
+
+                <div class="info-value">
+                    Term {{ selected_term }}
+                </div>
+            </div>
+
+
+            <div class="info-box">
+                <div class="info-label">
+                    Grade
+                </div>
+
+                <div class="info-value">
+                    {{ curriculum_grade.display_name }}
+                </div>
+            </div>
+
+
+            <div class="info-box">
+                <div class="info-label">
+                    Class
+                </div>
+
+                <div class="info-value">
+                    {{ school_class }}
+                </div>
+            </div>
+
+
+            {% if is_upper_secondary and pathway %}
+
+                <div class="info-box">
+
+                    <div class="info-label">
+                        Pathway
+                    </div>
+
+                    <div class="info-value">
+                        {{ pathway.get_name_display }}
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- =================================================
+             NO CURRICULUM MESSAGE
+        ================================================== -->
+
+        {% if message %}
+
+            <div class="empty-state">
+                {{ message }}
+            </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             PP1 - GRADE 9
+        ================================================== -->
+
+        {% if not is_upper_secondary and learning_area_sections %}
+
+            {% for section in learning_area_sections %}
+
+                <div class="learning-area-section">
+
+                    <div class="learning-area-title">
+                        {{ section.learning_area.name }}
+                    </div>
+
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th style="width: 35%;">
+                                    Strand / Sub-Strand
+                                </th>
+
+                                <th style="width: 15%;">
+                                    Final Performance
+                                </th>
+
+                                <th style="width: 30%;">
+                                    Teacher Comment
+                                </th>
+
+                                <th style="width: 20%;">
+                                    Strand Summative
+                                </th>
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            {% for strand_row in section.strands %}
+
+                                <!-- STRAND -->
+
+                                <tr class="strand-row">
+
+                                    <td colspan="3">
+                                        Strand:
+                                        {{ strand_row.strand.name }}
+                                    </td>
+
+                                    <td class="summative">
+
+                                        {% if strand_row.summative_label %}
+                                            {{ strand_row.summative_label }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+
+                                    </td>
+
+                                </tr>
+
+
+                                <!-- SUB-STRANDS -->
+
+                                {% for sub_row in strand_row.sub_strands %}
+
+                                    <tr>
+
+                                        <td class="sub-strand-name">
+                                            {{ sub_row.sub_strand.name }}
+                                        </td>
+
+                                        <td class="level">
+
+                                            {% if sub_row.qualitative_level %}
+                                                {{ sub_row.qualitative_level }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        </td>
+
+                                        <td class="comment">
+
+                                            {% if sub_row.comment %}
+                                                {{ sub_row.comment }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        </td>
+
+                                        <td class="summative">
+                                            —
+                                        </td>
+
+                                    </tr>
+
+                                {% empty %}
+
+                                    <tr>
+
+                                        <td colspan="4">
+                                            No sub-strands configured.
+                                        </td>
+
+                                    </tr>
+
+                                {% endfor %}
+
+
+                                {% if strand_row.summative_comment %}
+
+                                    <tr>
+
+                                        <td colspan="3">
+                                            <strong>
+                                                Strand Comment:
+                                            </strong>
+
+                                            {{ strand_row.summative_comment }}
+                                        </td>
+
+                                        <td></td>
+
+                                    </tr>
+
+                                {% endif %}
+
+                            {% empty %}
+
+                                <tr>
+
+                                    <td colspan="4">
+                                        No strands configured for this
+                                        learning area.
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% endfor %}
+
+
+            <!-- =================================================
+                 QUALITATIVE LEGEND
+            ================================================== -->
+
+            <div class="legend">
+
+                <div class="legend-title">
+                    CBC Performance Levels
+                </div>
+
+                <div class="legend-grid">
+
+                    <div class="legend-item">
+                        <strong>EE</strong><br>
+                        Exceeding Expectation
+                    </div>
+
+                    <div class="legend-item">
+                        <strong>ME</strong><br>
+                        Meeting Expectation
+                    </div>
+
+                    <div class="legend-item">
+                        <strong>AE</strong><br>
+                        Approaching Expectation
+                    </div>
+
+                    <div class="legend-item">
+                        <strong>BE</strong><br>
+                        Below Expectation
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             GRADE 10 - 12
+        ================================================== -->
+
+        {% if is_upper_secondary and upper_learning_area_rows %}
+
+            <div class="upper-secondary-wrapper">
+
+                <div class="learning-area-title">
+                    Upper Secondary Learning Area Assessments
+                </div>
+
+
+                <table class="upper-secondary-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th rowspan="2">
+                                S/NO
+                            </th>
+
+                            <th rowspan="2">
+                                LEARNING AREA
+                            </th>
+
+                            <th colspan="3" class="component-header">
+                                CAT 1
+                            </th>
+
+                            <th colspan="3" class="component-header">
+                                MID TERM
+                            </th>
+
+                            <th colspan="3" class="component-header">
+                                END TERM
+                            </th>
+
+                            <th rowspan="2">
+                                AVG %
+                            </th>
+
+                            <th rowspan="2">
+                                AVG POINTS
+                            </th>
+
+                            <th rowspan="2">
+                                FINAL PERFORMANCE
+                            </th>
+
+                        </tr>
+
+
+                        <tr>
+
+                            <th>
+                                %
+                            </th>
+
+                            <th>
+                                PERF
+                            </th>
+
+                            <th>
+                                PTS
+                            </th>
+
+
+                            <th>
+                                %
+                            </th>
+
+                            <th>
+                                PERF
+                            </th>
+
+                            <th>
+                                PTS
+                            </th>
+
+
+                            <th>
+                                %
+                            </th>
+
+                            <th>
+                                PERF
+                            </th>
+
+                            <th>
+                                PTS
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for row in upper_learning_area_rows %}
+
+                            <tr>
+
+                                <td>
+                                    {{ forloop.counter }}
+                                </td>
+
+
+                                <td class="learning-area-name">
+                                    {{ row.learning_area.name }}
+                                </td>
+
+
+                                <!-- CAT 1 -->
+
+                                <td>
+                                    {% if row.components.CAT1.percentage is not None %}
+                                        {{ row.components.CAT1.percentage|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if row.components.CAT1.performance %}
+                                        {{ row.components.CAT1.performance.category }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if row.components.CAT1.points is not None %}
+                                        {{ row.components.CAT1.points|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+
+                                <!-- MID -->
+
+                                <td>
+                                    {% if row.components.MID.percentage is not None %}
+                                        {{ row.components.MID.percentage|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if row.components.MID.performance %}
+                                        {{ row.components.MID.performance.category }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if row.components.MID.points is not None %}
+                                        {{ row.components.MID.points|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+
+                                <!-- END -->
+
+                                <td>
+                                    {% if row.components.END.percentage is not None %}
+                                        {{ row.components.END.percentage|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if row.components.END.performance %}
+                                        {{ row.components.END.performance.category }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if row.components.END.points is not None %}
+                                        {{ row.components.END.points|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+
+                                <!-- AVERAGE -->
+
+                                <td>
+                                    {% if row.average_percentage is not None %}
+                                        {{ row.average_percentage|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+
+                                <td>
+                                    {% if row.average_points is not None %}
+                                        {{ row.average_points|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+
+                                <td>
+                                    {% if row.final_performance %}
+                                        {{ row.final_performance.category }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                            </tr>
+
+
+                            {% if row.components.CAT1.teacher_comment or row.components.MID.teacher_comment or row.components.END.teacher_comment %}
+
+                                <tr>
+
+                                    <td></td>
+
+                                    <td colspan="13">
+
+                                        <strong>
+                                            Teacher Comment:
+                                        </strong>
+
+                                        {% if row.components.END.teacher_comment %}
+                                            {{ row.components.END.teacher_comment }}
+                                        {% elif row.components.MID.teacher_comment %}
+                                            {{ row.components.MID.teacher_comment }}
+                                        {% else %}
+                                            {{ row.components.CAT1.teacher_comment }}
+                                        {% endif %}
+
+                                    </td>
+
+                                </tr>
+
+                            {% endif %}
+
+                        {% empty %}
+
+                            <tr>
+
+                                <td colspan="14">
+                                    No approved upper-secondary
+                                    assessments are available.
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+
+                        {% if upper_learning_area_rows %}
+
+                            <tr class="final-row">
+
+                                <td colspan="11">
+                                    OVERALL FINAL AVERAGE
+                                </td>
+
+                                <td>
+                                    {% if total_marks is not None %}
+                                        {{ total_marks|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if total_points is not None %}
+                                        {{ total_points|floatformat:2 }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    —
+                                </td>
+
+                            </tr>
+
+                        {% endif %}
+
+                    </tbody>
+
+                </table>
+
+
+                <!-- UPPER SECONDARY LEGEND -->
+
+                <div class="legend">
+
+                    <div class="legend-title">
+                        Performance Levels
+                    </div>
+
+                    <div class="legend-grid">
+
+                        <div class="legend-item">
+                            <strong>EE</strong><br>
+                            Exceeding Expectation
+                        </div>
+
+                        <div class="legend-item">
+                            <strong>ME</strong><br>
+                            Meeting Expectation
+                        </div>
+
+                        <div class="legend-item">
+                            <strong>AE</strong><br>
+                            Approaching Expectation
+                        </div>
+
+                        <div class="legend-item">
+                            <strong>BE</strong><br>
+                            Below Expectation
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             SIGNATURES
+        ================================================== -->
+
+        <div class="signatures">
+
+            <div class="signature-box">
+                Class Teacher
+            </div>
+
+            <div class="signature-box">
+                Head Teacher
+            </div>
+
+            <div class="signature-box">
+                Parent / Guardian
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             FOOTER
+        ================================================== -->
+
+        <div class="footer-note">
+
+            This assessment book is a read-only parent record
+            generated from the school's approved CBC assessment data.
+
+        </div>
+
+    </div>
+
+</div>
+
+
+{% endblock %}

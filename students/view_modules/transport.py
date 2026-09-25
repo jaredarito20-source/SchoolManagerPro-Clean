@@ -69,7 +69,7 @@ def vehicle_list(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         vehicles = Vehicle.objects.select_related(
             "school",
@@ -126,7 +126,7 @@ def add_vehicle(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -297,7 +297,7 @@ def edit_vehicle(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -424,7 +424,7 @@ def delete_vehicle(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -493,7 +493,7 @@ def print_vehicle(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -824,7 +824,7 @@ def transport_route_list(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -892,7 +892,7 @@ def add_transport_route(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -1076,7 +1076,7 @@ def edit_transport_route(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -1268,7 +1268,7 @@ def delete_transport_route(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -1345,7 +1345,7 @@ def student_transport_list(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -1441,7 +1441,7 @@ def add_student_transport(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -1616,7 +1616,7 @@ def edit_student_transport(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -1775,7 +1775,7 @@ def delete_student_transport(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -1849,7 +1849,7 @@ def print_student_transport(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -2114,7 +2114,7 @@ def print_transport_route(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -2374,7 +2374,7 @@ def driver_list(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -2423,7 +2423,7 @@ def add_driver(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -2542,7 +2542,7 @@ def edit_driver(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 
@@ -2630,7 +2630,7 @@ def delete_driver(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         driver = get_object_or_404(
             Driver,
@@ -2689,7 +2689,7 @@ def print_driver(request, id):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         driver = get_object_or_404(
             Driver,
@@ -2818,7 +2818,7 @@ def transport_dashboard(request):
                 "Your account is not linked to a school."
             )
 
-            return redirect("home")
+            return redirect("students:home")
 
         school = school_user.school
 

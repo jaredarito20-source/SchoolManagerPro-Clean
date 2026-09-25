@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+
+<div class="card shadow-sm">
+
+    <div class="card-header">
+        <h4 class="mb-0">
+            Upper Secondary Strand Assessment
+        </h4>
+    </div>
+
+    <div class="card-body">
+
+        <!-- =====================================================
+             ASSIGNMENT INFORMATION
+             ===================================================== -->
+
+        <div class="row mb-4">
+
+            <div class="col-md-3">
+                <strong>Class</strong><br>
+                {{ school_class.name }}
+            </div>
+
+            <div class="col-md-3">
+                <strong>Grade</strong><br>
+                {{ curriculum_grade.display_name|default:curriculum_grade.grade }}
+            </div>
+
+            <div class="col-md-3">
+                <strong>Pathway</strong><br>
+                {% if pathway %}
+                    {{ pathway.name }}
+                {% else %}
+                    —
+                {% endif %}
+            </div>
+
+            <div class="col-md-3">
+                <strong>Learning Area</strong><br>
+                {{ learning_area.name }}
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             INSTRUCTIONS
+             ===================================================== -->
+
+        <div class="alert alert-info">
+            <strong>Assessment Book</strong><br>
+            Select a strand below to enter qualitative
+            performance levels for its sub-strands.
+            <br><br>
+
+            <strong>Performance Levels:</strong>
+            EE = Exceeding Expectations,
+            ME = Meeting Expectations,
+            AE = Approaching Expectations,
+            BE = Below Expectations.
+        </div>
+
+
+        <!-- =====================================================
+             STRANDS
+             ===================================================== -->
+
+        {% if strands %}
+
+            <div class="table-responsive">
+
+                <table class="table table-bordered table-hover align-middle">
+
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 70px;">#</th>
+                            <th>Strand</th>
+                            <th>Code</th>
+                            <th>Sub-Strands</th>
+                            <th style="width: 160px;">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for strand in strands %}
+
+                            <tr>
+
+                                <td>
+                                    {{ forloop.counter }}
+                                </td>
+
+                                <td>
+                                    <strong>
+                                        {{ strand.name }}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    {% if strand.code %}
+                                        {{ strand.code }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ strand.sub_strands.all|length }}
+                                </td>
+
+                                <td>
+                                    <a
+                                        href="{% url 'students:cbc_upper_secondary_strand_assessment' assignment.id strand.id %}"
+                                        class="btn btn-primary btn-sm"
+                                    >
+                                        Open Assessment
+                                    </a>
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="alert alert-warning">
+                No strands have been configured for this learning
+                area in the selected CBC curriculum.
+            </div>
+
+        {% endif %}
+
+
+        <!-- =====================================================
+             BACK
+             ===================================================== -->
+
+        <div class="mt-3">
+
+            <a
+                href="{% url 'students:cbc_upper_secondary_strand_classes' %}"
+                class="btn btn-secondary"
+            >
+                ← Back to Learning Areas
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+{% endblock %}

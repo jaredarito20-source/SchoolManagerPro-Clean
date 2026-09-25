@@ -9,7 +9,8 @@ from django.contrib.auth.decorators import login_required
 
 from django.contrib import messages
 
-from django.http import HttpResponse
+from django.http import HttpResponse,HttpResponseForbidden
+
 
 from django.db.models import Count, Sum
 
@@ -92,6 +93,7 @@ from students.models import (
     Timetable,
 
     Teacher,
+    SchoolAcademicYear,
 
 )
 
@@ -723,7 +725,7 @@ def home(request):
 
 
 
-        return redirect("parent_dashboard")
+        return redirect("students:parent_dashboard")
 
 
 
@@ -1052,7 +1054,7 @@ def edit_school_profile(request, id):
 
                 return redirect(
 
-                    "edit_school_profile",
+                    "students:edit_school_profile",
 
                     id=id,
 
@@ -1061,37 +1063,46 @@ def edit_school_profile(request, id):
 
 
         # -----------------------------------
-
         # ACADEMIC YEAR FINANCE ROLLOVER
-
         # -----------------------------------
 
-
-
         if (
-
             old_academic_year
-
             and new_academic_year
-
             and old_academic_year != new_academic_year
-
         ):
-
             record_academic_year_opening_balances(
-
                 school=profile,
-
                 new_academic_year=new_academic_year,
-
                 recorded_by=request.user,
-
             )
 
 
+        # -----------------------------------
+        # ACADEMIC YEAR HISTORY
+        # -----------------------------------
+
+        if (
+            old_academic_year
+            and new_academic_year
+            and old_academic_year != new_academic_year
+        ):
+            SchoolAcademicYear.objects.filter(
+                school=profile,
+                year=old_academic_year,
+            ).update(
+                is_current=False,
+            )
+
+            SchoolAcademicYear.objects.update_or_create(
+                school=profile,
+                year=new_academic_year,
+                defaults={
+                    "is_current": True,
+                },
+            )
 
         profile.save()
-
 
 
         messages.success(
@@ -1128,6 +1139,44 @@ def edit_school_profile(request, id):
 
         },
 
+    )
+
+@login_required
+def academic_year_archive(request):
+    """
+    Display all recorded academic years for each school.
+
+    Historical academic years are retained for reference and are
+    not modified from this index page.
+    """
+
+    if not request.user.is_superuser:
+        messages.error(
+            request,
+            "Only the system administrator can access academic year archives.",
+        )
+        return redirect("students:home")
+
+    schools = SchoolProfile.objects.all().order_by("name")
+
+    archive = []
+
+    for school in schools:
+        years = school.academic_years.all().order_by("-year")
+
+        archive.append(
+            {
+                "school": school,
+                "years": years,
+            }
+        )
+
+    return render(
+        request,
+        "students/academic_year_archive.html",
+        {
+            "archive": archive,
+        },
     )
 
 
@@ -2934,262 +2983,164 @@ def system_logs(request):
 
 def register_school(request):
 
-
-
     # Only the system superuser can register a new school
-
     if not request.user.is_superuser:
-
         messages.error(
-
             request,
-
             "Only the system administrator can register a new school."
-
         )
-
         return redirect("students:home")
-
-
 
     if request.method == "POST":
 
-
-
         # -----------------------------
-
-        # -----------------------------
-
         # SCHOOL INFORMATION
-
         # -----------------------------
-
         school_name = request.POST.get("school_name", "").strip()
-
         motto = request.POST.get("motto", "").strip()
-
         address = request.POST.get("address", "").strip()
-
         phone = request.POST.get("phone", "").strip()
-
         email = request.POST.get("email", "").strip()
-
         website = request.POST.get("website", "").strip()
-
         current_term = request.POST.get("current_term", "").strip()
-
         academic_year = request.POST.get("academic_year", "").strip()
 
-        # ADMINISTRATOR INFORMATION
-
         # -----------------------------
-
+        # ADMINISTRATOR INFORMATION
+        # -----------------------------
         first_name = request.POST.get("first_name", "").strip()
-
         last_name = request.POST.get("last_name", "").strip()
-
         username = request.POST.get("username", "").strip()
-
         admin_email = request.POST.get("admin_email", "").strip()
-
         password = request.POST.get("password", "")
-
         confirm_password = request.POST.get("confirm_password", "")
 
-
-
         # -----------------------------
-
         # BASIC VALIDATION
-
         # -----------------------------
-
         if not school_name:
-
             messages.error(request, "School name is required.")
-
             return redirect("register_school")
 
+        if not current_term:
+            messages.error(request, "Current term is required.")
+            return redirect("register_school")
 
+        if current_term not in {"1", "2", "3"}:
+            messages.error(
+                request,
+                "Current term must be 1, 2, or 3."
+            )
+            return redirect("register_school")
+
+        if not academic_year:
+            messages.error(request, "Academic year is required.")
+            return redirect("register_school")
 
         if not first_name or not last_name:
-
             messages.error(
-
                 request,
-
                 "Administrator first and last name are required."
-
             )
-
             return redirect("register_school")
-
-
 
         if not username:
-
             messages.error(
-
                 request,
-
                 "Administrator username is required."
-
             )
-
             return redirect("register_school")
-
-
 
         if User.objects.filter(username=username).exists():
-
             messages.error(
-
                 request,
-
                 "That username already exists."
-
             )
-
             return redirect("register_school")
-
-
 
         if not password:
-
             messages.error(
-
                 request,
-
                 "Administrator password is required."
-
             )
-
             return redirect("register_school")
-
-
 
         if password != confirm_password:
-
             messages.error(
-
                 request,
-
                 "Passwords do not match."
-
             )
-
             return redirect("register_school")
 
-
-
         # -----------------------------
-
-        # CREATE SCHOOL
-
+        # CREATE SCHOOL + INITIAL
+        # ACADEMIC YEAR + ADMIN
+        # ATOMICALLY
         # -----------------------------
+        try:
+            with transaction.atomic():
 
-        school = SchoolProfile.objects.create(
+                # Create school
+                school = SchoolProfile.objects.create(
+                    name=school_name,
+                    motto=motto,
+                    address=address,
+                    phone=phone,
+                    email=email,
+                    website=website,
+                    current_term=current_term,
+                    academic_year=academic_year,
+                )
 
-            name=school_name,
+                # Automatically create the school's
+                # first academic-year record
+                SchoolAcademicYear.objects.create(
+                    school=school,
+                    year=academic_year,
+                    is_current=True,
+                )
 
-            motto=motto,
+                # Create administrator
+                user = User.objects.create_user(
+                    username=username,
+                    email=admin_email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
 
-            address=address,
+                # Add administrator role
+                administrators_group, created = Group.objects.get_or_create(
+                    name="Administrators"
+                )
 
-            phone=phone,
+                user.groups.add(administrators_group)
 
-            email=email,
+                # Connect administrator to school
+                SchoolUser.objects.create(
+                    user=user,
+                    school=school,
+                )
 
-            website=website,
-
-            current_term=current_term,
-
-            academic_year=academic_year,
-
-        )
-
-
-
-        # -----------------------------
-
-        # CREATE ADMIN USER
-
-        # -----------------------------
-
-        user = User.objects.create_user(
-
-            username=username,
-
-            email=admin_email,
-
-            password=password,
-
-            first_name=first_name,
-
-            last_name=last_name,
-
-        )
-
-
-
-        # -----------------------------
-
-        # ADD ADMINISTRATOR ROLE
-
-        # -----------------------------
-
-        administrators_group, created = Group.objects.get_or_create(
-
-            name="Administrators"
-
-        )
-
-
-
-        user.groups.add(administrators_group)
-
-
-
-        # -----------------------------
-
-        # CONNECT USER TO SCHOOL
-
-        # -----------------------------
-
-        SchoolUser.objects.create(
-
-            user=user,
-
-            school=school,
-
-        )
-
-
+        except Exception as e:
+            messages.error(
+                request,
+                f"School registration failed: {e}"
+            )
+            return redirect("register_school")
 
         messages.success(
-
             request,
-
             f"{school.name} has been registered successfully. "
-
             f"Administrator account '{username}' was created."
-
         )
-
-
 
         return redirect("students:home")
 
-
-
     return render(
-
         request,
-
         "students/register_school.html",
-
     )
-
 @login_required
 
 @in_group("Administrators", "Head Teacher")
@@ -3286,7 +3237,6 @@ def reset_user_password(request, id):
 
     )
 
-@login_required
 @admin_or_bursar
 def cbc_teacher_assignment_list(request):
 
@@ -3331,11 +3281,6 @@ def cbc_teacher_assignment_list(request):
         ""
     ).strip()
 
-    term = request.GET.get(
-        "term",
-        ""
-    ).strip()
-
     class_id = request.GET.get(
         "class_id",
         ""
@@ -3344,11 +3289,6 @@ def cbc_teacher_assignment_list(request):
     if academic_year:
         assignments = assignments.filter(
             academic_year=academic_year
-        )
-
-    if term:
-        assignments = assignments.filter(
-            term=term
         )
 
     if class_id:
@@ -3368,7 +3308,6 @@ def cbc_teacher_assignment_list(request):
         "learning_area__pathway",
     ).order_by(
         "-academic_year",
-        "term",
         "school_class_curriculum__school_class__name",
         "learning_area__name",
         "teacher__user__first_name",
@@ -3399,10 +3338,11 @@ def cbc_teacher_assignment_list(request):
             "classes": classes,
             "selected_school": request.GET.get("school", ""),
             "selected_year": academic_year,
-            "selected_term": term,
             "selected_class": class_id,
         },
     )
+
+
 @login_required
 @admin_or_bursar
 def cbc_teacher_assignment_add(request):
@@ -3413,7 +3353,7 @@ def cbc_teacher_assignment_add(request):
 
     if request.user.is_superuser:
 
-        school_id = request.GET.get("school")
+        school_id = request.POST.get("school") or request.GET.get("school")
 
         if school_id:
             school = get_object_or_404(
@@ -3433,8 +3373,49 @@ def cbc_teacher_assignment_add(request):
             )
 
     # -------------------------------------------------
-    # AVAILABLE CLASSES
+    # ACADEMIC YEARS
+    # Same source/behavior as add_fee_structure
     # -------------------------------------------------
+
+    if request.user.is_superuser:
+
+        if school:
+            academic_years = (
+                SchoolAcademicYear.objects
+                .filter(school=school)
+                .order_by("-year")
+            )
+        else:
+            academic_years = (
+                SchoolAcademicYear.objects
+                .all()
+                .order_by("-year")
+            )
+
+    else:
+
+        academic_years = (
+            SchoolAcademicYear.objects
+            .filter(school=school)
+            .order_by("-year")
+        )
+
+    # -------------------------------------------------
+    # SELECTED ACADEMIC YEAR
+    # -------------------------------------------------
+
+    selected_year = (
+        request.POST.get("academic_year")
+        or request.GET.get("academic_year")
+        or ""
+    ).strip()
+
+    # -------------------------------------------------
+    # AVAILABLE CBC CLASS CURRICULA
+    # Filtered by selected academic year
+    # -------------------------------------------------
+
+    class_curricula = SchoolClassCurriculum.objects.none()
 
     if school:
 
@@ -3449,10 +3430,6 @@ def cbc_teacher_assignment_add(request):
             .filter(
                 school_class__school=school,
                 school_class__curriculum="CBC",
-            )
-            .order_by(
-                "school_class__name",
-                "-academic_year",
             )
         )
 
@@ -3469,11 +3446,18 @@ def cbc_teacher_assignment_add(request):
             .filter(
                 school_class__curriculum="CBC"
             )
-            .order_by(
-                "school_class__name",
-                "-academic_year",
-            )
         )
+
+    if selected_year:
+
+        class_curricula = class_curricula.filter(
+            academic_year=selected_year
+        )
+
+    class_curricula = class_curricula.order_by(
+        "school_class__name",
+        "-academic_year",
+    )
 
     # -------------------------------------------------
     # POST
@@ -3493,46 +3477,116 @@ def cbc_teacher_assignment_add(request):
             "learning_area"
         )
 
-        term = request.POST.get(
-            "term"
-        )
+        # ---------------------------------------------
+        # REQUIRED ACADEMIC YEAR
+        # ---------------------------------------------
+
+        if not selected_year:
+
+            messages.error(
+                request,
+                "Please select an academic year.",
+            )
+
+            return redirect(
+                "students:cbc_teacher_assignment_add"
+            )
 
         # ---------------------------------------------
-        # REQUIRED FIELDS
+        # REQUIRED CLASS
         # ---------------------------------------------
 
         if not class_curriculum_id:
+
             messages.error(
                 request,
                 "Please select a CBC class.",
             )
+
             return redirect(
                 "students:cbc_teacher_assignment_add"
             )
 
+        # ---------------------------------------------
+        # REQUIRED TEACHER
+        # ---------------------------------------------
+
         if not teacher_id:
+
             messages.error(
                 request,
                 "Please select a teacher.",
             )
+
             return redirect(
                 "students:cbc_teacher_assignment_add"
             )
 
+        # ---------------------------------------------
+        # REQUIRED LEARNING AREA
+        # ---------------------------------------------
+
         if not learning_area_id:
+
             messages.error(
                 request,
                 "Please select a learning area.",
             )
+
             return redirect(
                 "students:cbc_teacher_assignment_add"
             )
 
-        if term not in {"1", "2", "3"}:
+        # ---------------------------------------------
+        # VALIDATE SELECTED ACADEMIC YEAR
+        # AGAINST SCHOOL CONFIGURATION
+        # ---------------------------------------------
+
+        try:
+
+            selected_academic_year = int(
+                selected_year
+            )
+
+        except (TypeError, ValueError):
+
             messages.error(
                 request,
-                "Please select a valid term.",
+                "Invalid academic year selected.",
             )
+
+            return redirect(
+                "students:cbc_teacher_assignment_add"
+            )
+
+        if school:
+
+            academic_year_exists = (
+                SchoolAcademicYear.objects
+                .filter(
+                    school=school,
+                    year=selected_academic_year,
+                )
+                .exists()
+            )
+
+        else:
+
+            academic_year_exists = (
+                SchoolAcademicYear.objects
+                .filter(
+                    year=selected_academic_year,
+                )
+                .exists()
+            )
+
+        if not academic_year_exists:
+
+            messages.error(
+                request,
+                f"Academic year {selected_academic_year} is not configured for this school.",
+            )
+
             return redirect(
                 "students:cbc_teacher_assignment_add"
             )
@@ -3548,6 +3602,7 @@ def cbc_teacher_assignment_add(request):
                 id=class_curriculum_id,
                 school_class__school=school,
                 school_class__curriculum="CBC",
+                academic_year=selected_academic_year,
             )
 
         else:
@@ -3556,6 +3611,7 @@ def cbc_teacher_assignment_add(request):
                 SchoolClassCurriculum,
                 id=class_curriculum_id,
                 school_class__curriculum="CBC",
+                academic_year=selected_academic_year,
             )
 
         # ---------------------------------------------
@@ -3563,7 +3619,10 @@ def cbc_teacher_assignment_add(request):
         # ---------------------------------------------
 
         teacher = get_object_or_404(
-            Teacher,
+            Teacher.objects.select_related(
+                "school",
+                "user",
+            ),
             id=teacher_id,
         )
 
@@ -3575,13 +3634,38 @@ def cbc_teacher_assignment_add(request):
             teacher.school_id
             != class_curriculum.school_class.school_id
         ):
+
             messages.error(
                 request,
                 "The teacher must belong to the same school as the CBC class.",
             )
+
             return redirect(
                 "students:cbc_teacher_assignment_add"
             )
+
+        # ---------------------------------------------
+        # ADDITIONAL SCHOOL SECURITY
+        # Normal users can never assign outside
+        # their own school.
+        # ---------------------------------------------
+
+        if school:
+
+            if (
+                class_curriculum.school_class.school_id
+                != school.id
+            ):
+
+                return HttpResponseForbidden(
+                    "You are not authorized to assign teachers to this school."
+                )
+
+            if teacher.school_id != school.id:
+
+                return HttpResponseForbidden(
+                    "You are not authorized to assign this teacher."
+                )
 
         # ---------------------------------------------
         # GET LEARNING AREA
@@ -3607,10 +3691,12 @@ def cbc_teacher_assignment_add(request):
             learning_area.curriculum_grade_id
             != curriculum_grade.id
         ):
+
             messages.error(
                 request,
                 "The learning area does not belong to this class grade.",
             )
+
             return redirect(
                 "students:cbc_teacher_assignment_add"
             )
@@ -3628,10 +3714,12 @@ def cbc_teacher_assignment_add(request):
         if curriculum_grade.grade in senior_grades:
 
             if not class_curriculum.pathway:
+
                 messages.error(
                     request,
                     "Grade 10-12 CBC classes must have a pathway configured.",
                 )
+
                 return redirect(
                     "students:cbc_teacher_assignment_add"
                 )
@@ -3640,10 +3728,12 @@ def cbc_teacher_assignment_add(request):
                 learning_area.pathway_id
                 != class_curriculum.pathway_id
             ):
+
                 messages.error(
                     request,
                     "The learning area does not belong to this class pathway.",
                 )
+
                 return redirect(
                     "students:cbc_teacher_assignment_add"
                 )
@@ -3651,16 +3741,19 @@ def cbc_teacher_assignment_add(request):
         else:
 
             if learning_area.pathway_id:
+
                 messages.error(
                     request,
                     "PP1-Grade 9 learning areas cannot have a pathway.",
                 )
+
                 return redirect(
                     "students:cbc_teacher_assignment_add"
                 )
 
         # ---------------------------------------------
         # ACADEMIC YEAR
+        # Comes from the selected class curriculum
         # ---------------------------------------------
 
         academic_year = (
@@ -3668,7 +3761,27 @@ def cbc_teacher_assignment_add(request):
         )
 
         # ---------------------------------------------
+        # SAFETY CHECK
+        # Class curriculum year must match selected year
+        # ---------------------------------------------
+
+        if str(academic_year) != str(selected_year):
+
+            messages.error(
+                request,
+                "The selected class does not belong to the selected academic year.",
+            )
+
+            return redirect(
+                "students:cbc_teacher_assignment_add"
+            )
+
+        # ---------------------------------------------
         # PREVENT DUPLICATE ASSIGNMENT
+        #
+        # IMPORTANT:
+        # No TERM filtering here.
+        # Teacher assignments are year-based.
         # ---------------------------------------------
 
         if TeacherAssessmentAssignment.objects.filter(
@@ -3676,12 +3789,11 @@ def cbc_teacher_assignment_add(request):
             school_class_curriculum=class_curriculum,
             learning_area=learning_area,
             academic_year=academic_year,
-            term=term,
         ).exists():
 
             messages.error(
                 request,
-                "This teacher is already assigned to this learning area, class and term.",
+                "This teacher is already assigned to this learning area and class for this academic year.",
             )
 
             return redirect(
@@ -3697,7 +3809,6 @@ def cbc_teacher_assignment_add(request):
             school_class_curriculum=class_curriculum,
             learning_area=learning_area,
             academic_year=academic_year,
-            term=term,
         )
 
         try:
@@ -3729,9 +3840,11 @@ def cbc_teacher_assignment_add(request):
     # GET FORM DATA
     # -------------------------------------------------
 
-    teachers = Teacher.objects.all()
+    # ---------------------------------------------
+    # TEACHERS
+    # ---------------------------------------------
 
-    learning_areas = CurriculumLearningArea.objects.all()
+    teachers = Teacher.objects.all()
 
     if school:
 
@@ -3739,31 +3852,49 @@ def cbc_teacher_assignment_add(request):
             school=school
         )
 
-        learning_areas = learning_areas.filter(
-            curriculum_grade__curriculum_version__in=CurriculumVersion.objects.all()
+    teachers = (
+        teachers
+        .select_related(
+            "user",
+            "school",
         )
-
-    teachers = teachers.select_related(
-        "user",
-        "school",
-    ).order_by(
-        "user__first_name",
-        "user__last_name",
-        "user__username",
+        .order_by(
+            "user__first_name",
+            "user__last_name",
+            "user__username",
+        )
     )
 
-    learning_areas = learning_areas.select_related(
-        "curriculum_grade",
-        "pathway",
-    ).order_by(
-        "curriculum_grade__grade",
-        "pathway__name",
-        "name",
+    # ---------------------------------------------
+    # LEARNING AREAS
+    # ---------------------------------------------
+
+    learning_areas = (
+        CurriculumLearningArea.objects
+        .select_related(
+            "curriculum_grade",
+            "pathway",
+        )
+        .order_by(
+            "curriculum_grade__grade",
+            "pathway__name",
+            "name",
+        )
     )
 
-    schools = SchoolProfile.objects.all().order_by(
-        "name"
+    # ---------------------------------------------
+    # SCHOOLS
+    # ---------------------------------------------
+
+    schools = (
+        SchoolProfile.objects
+        .all()
+        .order_by("name")
     )
+
+    # ---------------------------------------------
+    # RENDER
+    # ---------------------------------------------
 
     return render(
         request,
@@ -3771,15 +3902,11 @@ def cbc_teacher_assignment_add(request):
         {
             "school": school,
             "schools": schools,
+            "academic_years": academic_years,
+            "selected_year": selected_year,
             "class_curricula": class_curricula,
             "teachers": teachers,
             "learning_areas": learning_areas,
         },
     )
-
-
-
-
-
-
 

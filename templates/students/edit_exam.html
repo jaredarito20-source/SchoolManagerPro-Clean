@@ -5,6 +5,7 @@
 <h1>Edit Exam</h1>
 
 <form method="post">
+
     {% csrf_token %}
 
     <p>
@@ -47,6 +48,19 @@
             type="number"
             name="year"
             value="{{ exam.year }}"
+            required
+        >
+    </p>
+
+    <p>
+        <label>Marks Out Of</label><br>
+
+        <input
+            type="number"
+            name="marks_out_of"
+            value="{{ exam.marks_out_of }}"
+            min="0.01"
+            step="0.01"
             required
         >
     </p>

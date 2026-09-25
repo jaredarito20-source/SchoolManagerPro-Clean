@@ -6,79 +6,155 @@
 
 <p>
     <a href="{% url 'students:generate_payroll' %}">
-        <button>Generate Payroll</button>
+        <button type="button">Generate Payroll</button>
     </a>
 </p>
 
+<!-- =========================================
+     PAYROLL FILTERS
+========================================= -->
+
+<form method="GET">
+
+
+<p>
+
+    <label>Calendar Year</label><br>
+
+    <select name="year">
+
+        <option value="">All Years</option>
+
+        {% for year in calendar_years %}
+
+            <option value="{{ year }}"
+                {% if selected_year == year %}selected{% endif %}>
+                {{ year }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+</p>
+
+<p>
+
+    <label>Calendar Month</label><br>
+
+    <select name="month">
+
+        <option value="">All Months</option>
+
+        {% for month in months %}
+
+            <option value="{{ month }}"
+                {% if selected_month == month %}selected{% endif %}>
+                {{ month }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+</p>
+
+<button type="submit">
+    Filter
+</button>
+
+<a href="{% url 'students:payroll_list' %}">
+    Clear Filters
+</a>
+```
+
+</form>
+
+<br>
+
+<!-- =========================================
+     PAYROLL TABLE
+========================================= -->
+
 <table border="1" cellpadding="8" cellspacing="0">
 
-    <thead>
 
-        <tr>
-            <th>Teacher</th>
-            <th>Month</th>
-            <th>Year</th>
-            <th>Gross Salary</th>
-            <th>Deductions</th>
-            <th>Net Salary</th>
-            <th>Generated On</th>
-            <th>Payslip</th>
-        </tr>
+<thead>
 
-    </thead>
+    <tr>
 
-    <tbody>
+        <th>Teacher</th>
+        <th>Month</th>
+        <th>Year</th>
+        <th>Gross Salary</th>
+        <th>Deductions</th>
+        <th>Net Salary</th>
+        <th>Generated On</th>
+        <th>Payslip</th>
 
-    {% for payroll in payrolls %}
+    </tr>
 
-        <tr>
+</thead>
 
-            <td>
-                {{ payroll.teacher.first_name }}
-                {{ payroll.teacher.last_name }}
-            </td>
+<tbody>
 
-            <td>{{ payroll.month }}</td>
+{% for payroll in payrolls %}
 
-            <td>{{ payroll.year }}</td>
+    <tr>
 
-            <td>KSh {{ payroll.gross_salary }}</td>
+        <td>
+            {{ payroll.teacher.first_name }}
+            {{ payroll.teacher.last_name }}
+        </td>
 
-            <td>KSh {{ payroll.deductions }}</td>
+        <td>
+            {{ payroll.month }}
+        </td>
 
-            <td>
-                <strong>
-                    KSh {{ payroll.net_salary }}
-                </strong>
-            </td>
+        <td>
+            {{ payroll.year }}
+        </td>
 
-            <td>{{ payroll.generated_on }}</td>
+        <td>
+            KSh {{ payroll.gross_salary }}
+        </td>
 
-            <td>
+        <td>
+            KSh {{ payroll.deductions }}
+        </td>
 
-                <a href="{% url 'students:print_payslip' payroll.id %}">
-                    🖨 Print
-                </a>
+        <td>
+            <strong>
+                KSh {{ payroll.net_salary }}
+            </strong>
+        </td>
 
-            </td>
+        <td>
+            {{ payroll.generated_on }}
+        </td>
 
-        </tr>
+        <td>
+            <a href="{% url 'students:print_payslip' payroll.id %}">
+                🖨 Print
+            </a>
+        </td>
 
-    {% empty %}
+    </tr>
 
-        <tr>
+{% empty %}
 
-            <td colspan="8" align="center">
+    <tr>
 
-                No payroll has been generated.
+        <td colspan="8" align="center">
+            No payroll has been generated.
+        </td>
 
-            </td>
+    </tr>
 
-        </tr>
+{% endfor %}
 
-    {% endfor %}
+</tbody>
 
-    </tbody>
 
 </table>
 

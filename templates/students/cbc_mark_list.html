@@ -1,0 +1,921 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <div class="card shadow-sm">
+
+        <div class="card-header">
+            <h4 class="mb-0">
+                CBC Admin Mark List
+            </h4>
+        </div>
+
+        <div class="card-body">
+
+            <!-- =====================================================
+                 FILTERS
+            ====================================================== -->
+
+            <form method="get" class="row g-3 mb-4">
+
+                <!-- Academic Year -->
+                <div class="col-md-2">
+                    <label class="form-label">
+                        Academic Year
+                    </label>
+
+                    <select
+                        name="year"
+                        class="form-select"
+                    >
+                        <option value="">
+                            All Years
+                        </option>
+
+                        {% for academic_year in academic_years %}
+                            <option
+                                value="{{ academic_year }}"
+                                {% if selected_year|stringformat:"s" == academic_year|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ academic_year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+
+                <!-- Term -->
+                <div class="col-md-2">
+                    <label class="form-label">
+                        Term
+                    </label>
+
+                    <select
+                        name="term"
+                        class="form-select"
+                    >
+                        <option value="">
+                            All Terms
+                        </option>
+
+                        {% for term_value in terms %}
+                            <option
+                                value="{{ term_value }}"
+                                {% if selected_term == term_value %}
+                                    selected
+                                {% endif %}
+                            >
+                                Term {{ term_value }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+
+                <!-- Class -->
+                <div class="col-md-2">
+                    <label class="form-label">
+                        Class
+                    </label>
+
+                    <select
+                        name="class_id"
+                        class="form-select"
+                    >
+                        <option value="">
+                            Select Class
+                        </option>
+
+                        {% for school_class in classes %}
+                            <option
+                                value="{{ school_class.id }}"
+                                {% if selected_class_id|stringformat:"s" == school_class.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ school_class.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+
+                <!-- Exam -->
+                <div class="col-md-2">
+                    <label class="form-label">
+                        Exam
+                    </label>
+
+                    <select
+                        name="exam"
+                        class="form-select"
+                    >
+                        <option value="">
+                            All Exams
+                        </option>
+
+                        {% for exam in exams %}
+                            <option
+                                value="{{ exam.id }}"
+                                {% if selected_exam_id|stringformat:"s" == exam.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ exam.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+
+                <!-- Student -->
+                <div class="col-md-2">
+                    <label class="form-label">
+                        Student
+                    </label>
+
+                    <select
+                        name="student"
+                        class="form-select"
+                        {% if not students %}
+                            disabled
+                        {% endif %}
+                    >
+                        <option value="">
+                            Select Student
+                        </option>
+
+                        {% for item in students %}
+                            <option
+                                value="{{ item.id }}"
+                                {% if selected_student_id|stringformat:"s" == item.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ item.first_name }}
+                                {{ item.last_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+
+                <!-- Filter -->
+                <div class="col-md-2 d-flex align-items-end">
+                    <button
+                        type="submit"
+                        class="btn btn-primary w-100"
+                    >
+                        Filter
+                    </button>
+                </div>
+
+            </form>
+
+
+            <!-- =====================================================
+                 SELECTED STUDENT HEADER
+            ====================================================== -->
+
+            {% if student %}
+
+                <div class="card border-primary mb-4">
+
+                    <div class="card-body py-3">
+
+                        <div class="row align-items-center">
+
+                            <div class="col-md-6">
+
+                                <h5 class="mb-1">
+                                    {{ student.first_name }}
+                                    {{ student.last_name }}
+                                </h5>
+
+                                {% if student.admission_number %}
+                                    <small class="text-muted">
+                                        Admission No:
+                                        {{ student.admission_number }}
+                                    </small>
+                                {% endif %}
+
+                            </div>
+
+
+                            <div class="col-md-6 text-md-end">
+
+                                <!-- =================================
+                                     SELECTED CLASS
+                                ================================== -->
+
+                                {% if selected_class_id %}
+
+                                    {% for school_class in classes %}
+
+                                        {% if selected_class_id|stringformat:"s" == school_class.id|stringformat:"s" %}
+
+                                            <div>
+                                                <strong>
+                                                    {{ school_class.name }}
+                                                </strong>
+                                            </div>
+
+                                        {% endif %}
+
+                                    {% endfor %}
+
+                                {% endif %}
+
+
+                                <!-- Term -->
+
+                                {% if selected_term %}
+                                    <span class="text-muted">
+                                        Term {{ selected_term }}
+                                    </span>
+                                {% endif %}
+
+
+                                <!-- Academic Year -->
+
+                                {% if selected_year %}
+                                    <span class="text-muted">
+                                        — {{ selected_year }}
+                                    </span>
+                                {% endif %}
+
+
+                                <!-- =================================
+                                     LOWER CBC ASSESSMENT BOOK
+                                ================================== -->
+
+                                {% if print_assignment and not is_upper_secondary %}
+
+                                    <div class="mt-2">
+
+                                        <a
+                                            href="{% url 'students:cbc_subject_assessment_book' student.id %}?year={{ selected_year }}&term={{ selected_term }}"
+                                            target="_blank"
+                                            class="btn btn-sm btn-outline-primary"
+                                        >
+                                            📘 CBC Subject Assessment Book
+                                        </a>
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                <!-- =================================
+                                     UPPER SECONDARY PRINT
+                                ================================== -->
+
+                                {% if print_assignment and is_upper_secondary %}
+
+                                    <div class="mt-2">
+
+                                        <a
+                                            href="{% url 'students:cbc_upper_secondary_assessment_book_print' assignment_id=print_assignment.id %}?term={{ selected_term }}&student={{ student.id }}"
+                                            target="_blank"
+                                            class="btn btn-sm btn-primary"
+                                        >
+                                            🖨 Print Upper Secondary Assessment Book
+                                        </a>
+
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- =====================================================
+                 UPPER SECONDARY INFORMATION
+            ====================================================== -->
+
+            {% if student and is_upper_secondary %}
+
+                <div class="alert alert-info border mb-4">
+
+                    <strong>
+                        Upper Secondary CBC
+                    </strong>
+
+                    <div class="mt-1">
+                        Marks displayed below are the marks
+                        entered by the teacher.
+                        The system calculates the percentage,
+                        performance level and points.
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- =====================================================
+                 RESULTS
+            ====================================================== -->
+
+            {% if student %}
+
+                <div class="table-responsive">
+
+                    <table class="table table-bordered table-striped align-middle">
+
+                        <thead class="table-light">
+
+                            {% if is_upper_secondary %}
+
+                                <!-- =================================
+                                     UPPER SECONDARY HEADER
+                                ================================== -->
+
+                                <tr>
+
+                                    <th rowspan="2">
+                                        Learning Area
+                                    </th>
+
+                                    <th colspan="3" class="text-center">
+                                        CAT 1
+                                    </th>
+
+                                    <th colspan="3" class="text-center">
+                                        MID TERM
+                                    </th>
+
+                                    <th colspan="3" class="text-center">
+                                        END TERM
+                                    </th>
+
+                                    <th rowspan="2" class="text-center">
+                                        Average
+                                    </th>
+
+                                    <th rowspan="2" class="text-center">
+                                        Performance Level
+                                    </th>
+
+                                    <th rowspan="2" class="text-center">
+                                        Points
+                                    </th>
+                                    <th rowspan="2" class="text-center">
+                                        Action
+                                    </th>
+
+                                </tr>
+
+
+                                <tr>
+
+                                    <th class="text-center">
+                                        Mark
+                                    </th>
+
+                                    <th class="text-center">
+                                        %
+                                    </th>
+
+                                    <th class="text-center">
+                                        Points
+                                    </th>
+
+
+                                    <th class="text-center">
+                                        Mark
+                                    </th>
+
+                                    <th class="text-center">
+                                        %
+                                    </th>
+
+                                    <th class="text-center">
+                                        Points
+                                    </th>
+
+
+                                    <th class="text-center">
+                                        Mark
+                                    </th>
+
+                                    <th class="text-center">
+                                        %
+                                    </th>
+
+                                    <th class="text-center">
+                                        Points
+                                    </th>
+
+                                </tr>
+
+                            {% else %}
+
+                                <!-- =================================
+                                     PP1 - GRADE 9 HEADER
+                                ================================== -->
+
+                                <tr>
+
+                                    <th>
+                                        Learning Area
+                                    </th>
+
+                                    <th class="text-center">
+                                        CAT 1
+                                    </th>
+
+                                    <th class="text-center">
+                                        MID TERM
+                                    </th>
+
+                                    <th class="text-center">
+                                        END TERM
+                                    </th>
+
+                                    <th class="text-center">
+                                        Average
+                                    </th>
+
+                                    <th class="text-center">
+                                        Performance Level
+                                    </th>
+
+                                    <th class="text-center">
+                                        Action
+                                    </th>
+
+                                </tr>
+
+                            {% endif %}
+
+                        </thead>
+
+
+                        <tbody>
+
+                            {% for row in rows %}
+
+                                <tr>
+
+                                    <!-- =================================
+                                         LEARNING AREA
+                                    ================================== -->
+
+                                    <td>
+                                        <strong>
+                                            {{ row.learning_area.name }}
+                                        </strong>
+                                    </td>
+
+
+                                    {% if is_upper_secondary %}
+
+                                        <!-- =================================
+                                             UPPER SECONDARY CAT 1
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.cat1_raw is not None %}
+
+                                                <strong>
+                                                    {{ row.cat1_raw }}
+                                                </strong>
+
+                                                {% if row.cat1_out_of is not None %}
+                                                    <span class="text-muted">
+                                                        / {{ row.cat1_out_of }}
+                                                    </span>
+                                                {% endif %}
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <td class="text-center">
+
+                                            {% if row.cat1_percentage is not None %}
+                                                {{ row.cat1_percentage }}%
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <td class="text-center">
+
+                                            {% if row.cat1_points is not None %}
+                                                {{ row.cat1_points }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             UPPER SECONDARY MID TERM
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.mid_raw is not None %}
+
+                                                <strong>
+                                                    {{ row.mid_raw }}
+                                                </strong>
+
+                                                {% if row.mid_out_of is not None %}
+                                                    <span class="text-muted">
+                                                        / {{ row.mid_out_of }}
+                                                    </span>
+                                                {% endif %}
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <td class="text-center">
+
+                                            {% if row.mid_percentage is not None %}
+                                                {{ row.mid_percentage }}%
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <td class="text-center">
+
+                                            {% if row.mid_points is not None %}
+                                                {{ row.mid_points }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             UPPER SECONDARY END TERM
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.end_raw is not None %}
+
+                                                <strong>
+                                                    {{ row.end_raw }}
+                                                </strong>
+
+                                                {% if row.end_out_of is not None %}
+                                                    <span class="text-muted">
+                                                        / {{ row.end_out_of }}
+                                                    </span>
+                                                {% endif %}
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <td class="text-center">
+
+                                            {% if row.end_percentage is not None %}
+                                                {{ row.end_percentage }}%
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <td class="text-center">
+
+                                            {% if row.end_points is not None %}
+                                                {{ row.end_points }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             AVERAGE
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.average is not None %}
+
+                                                <strong>
+                                                    {{ row.average }}%
+                                                </strong>
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             PERFORMANCE LEVEL
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.performance_level %}
+
+                                                <strong>
+                                                    {{ row.performance_level }}
+                                                </strong>
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             POINTS
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.points is not None %}
+
+                                                {{ row.points }}
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+                                        <td class="text-center">
+                                        {% if row.row_editable and row.edit_assessment %}
+                                            <a
+                                                href="{% url 'students:cbc_upper_secondary_mark_edit' row.edit_assessment.id %}"
+                                                class="btn btn-sm btn-outline-primary"
+                                            >
+                                                Edit
+                                            </a>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+
+
+                                    {% else %}
+
+                                        <!-- =================================
+                                             PP1 - GRADE 9
+                                             CAT 1
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.cat1_percentage is not None %}
+
+                                                {{ row.cat1_percentage }}%
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             MID TERM
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.mid_percentage is not None %}
+
+                                                {{ row.mid_percentage }}%
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             END TERM
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.end_percentage is not None %}
+
+                                                {{ row.end_percentage }}%
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             AVERAGE
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.average is not None %}
+
+                                                <strong>
+                                                    {{ row.average }}%
+                                                </strong>
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             PERFORMANCE LEVEL
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.performance_level %}
+
+                                                <strong>
+                                                    {{ row.performance_level }}
+                                                </strong>
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+
+                                        <!-- =================================
+                                             LOWER CBC ACTION
+
+                                             ONE EDIT BUTTON PER
+                                             LEARNING AREA
+                                        ================================== -->
+
+                                        <td class="text-center">
+
+                                            {% if row.row_editable and row.edit_assessment %}
+
+                                                <a
+                                                    href="{% url 'students:cbc_mark_edit' row.edit_assessment.id %}"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                >
+                                                    Edit
+                                                </a>
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </td>
+
+                                    {% endif %}
+
+                                </tr>
+
+
+                            {% empty %}
+
+                                <tr>
+
+                                    <td
+                                        <td
+                                            colspan="{% if is_upper_secondary %}14{% else %}7{% endif %}"
+                                            class="text-center text-muted py-4"
+>
+                                    >
+                                        No CBC learning areas found
+                                        for this student.
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                {% if is_upper_secondary %}
+
+                    <div class="mt-3">
+
+                        <small class="text-muted">
+
+                            <strong>
+                                Upper Secondary:
+                            </strong>
+
+                            Mark values are displayed as
+                            <strong>
+                                mark / marks out of
+                            </strong>.
+
+                            Percentage, performance level and
+                            points are calculated by the system.
+
+                        </small>
+
+                    </div>
+
+                {% endif %}
+
+
+            {% else %}
+
+                <div class="text-center text-muted py-5">
+
+                    {% if selected_class_id and selected_year and selected_term %}
+
+                        <p class="mb-0">
+                            Select a student to view the
+                            complete CBC results.
+                        </p>
+
+                    {% else %}
+
+                        <p class="mb-0">
+                            Select academic year, term and class,
+                            then select a student to view results.
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+

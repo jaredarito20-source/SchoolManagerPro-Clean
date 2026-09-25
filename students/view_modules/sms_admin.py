@@ -22,7 +22,7 @@ def sms_add_credits(request):
             request,
             "Only the system administrator can add SMS credits."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     schools = SchoolProfile.objects.all().order_by("name")
 
@@ -107,7 +107,7 @@ def sms_packages(request):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     packages = SMSPackage.objects.filter(
         active=True
@@ -134,7 +134,7 @@ def sms_buy_package(request, package_id):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     package = get_object_or_404(
         SMSPackage,
@@ -155,7 +155,7 @@ def sms_buy_package(request, package_id):
     )
 
     return redirect(
-        "sms_checkout",
+        "students:sms_checkout",
         purchase_id=purchase.id,
     )
 
@@ -169,7 +169,7 @@ def sms_checkout(request, purchase_id):
             request,
             "Your account is not associated with a school."
         )
-        return redirect("home")
+        return redirect("students:home")
 
     purchase = get_object_or_404(
         SMSPurchase,

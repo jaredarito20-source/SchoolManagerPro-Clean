@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+
+<div class="card shadow-sm">
+
+    <div class="card-header">
+        <h4 class="mb-0">
+            Edit CBC Assessment Marks
+        </h4>
+    </div>
+
+    <div class="card-body">
+
+        <!-- ========================================= -->
+        <!-- ASSESSMENT INFORMATION -->
+        <!-- ========================================= -->
+
+        <div class="row mb-4">
+
+            <div class="col-md-6">
+                <strong>Student:</strong><br>
+                {{ student.first_name }}
+                {{ student.last_name }}
+            </div>
+
+            <div class="col-md-6">
+                <strong>Learning Area:</strong><br>
+                {{ learning_area.name }}
+            </div>
+
+        </div>
+
+        <div class="row mb-4">
+
+            <div class="col-md-6">
+                <strong>Academic Year:</strong><br>
+                {{ academic_year }}
+            </div>
+
+            <div class="col-md-6">
+                <strong>Term:</strong><br>
+                Term {{ term }}
+            </div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- INFORMATION -->
+        <!-- ========================================= -->
+
+        <div class="alert alert-warning">
+
+            <strong>Administrator Edit</strong>
+
+            <br>
+
+            Only submitted or approved assessment marks can be
+            edited from the CBC Mark List.
+
+            <br>
+
+            CAT 1, Mid-Term and End-Term are shown together for
+            this learning area.
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- EDIT FORM -->
+        <!-- ========================================= -->
+
+        <form method="post">
+
+            {% csrf_token %}
+
+
+            <!-- ===================================== -->
+            <!-- CAT 1 -->
+            <!-- ===================================== -->
+
+            <div class="card mb-3">
+
+                <div class="card-header">
+                    <strong>CAT 1</strong>
+                </div>
+
+                <div class="card-body">
+
+                    {% if cat1 %}
+
+                        <div class="mb-2">
+
+                            <strong>Status:</strong>
+
+                            {% if cat1.submission.status == "SUBMITTED" %}
+                                <span class="badge bg-primary">
+                                    Submitted
+                                </span>
+
+                            {% elif cat1.submission.status == "APPROVED" %}
+                                <span class="badge bg-success">
+                                    Approved
+                                </span>
+
+                            {% elif cat1.submission.status == "DRAFT" %}
+                                <span class="badge bg-secondary">
+                                    Draft
+                                </span>
+
+                            {% elif cat1.submission.status == "REJECTED" %}
+                                <span class="badge bg-danger">
+                                    Rejected
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        {% if cat1.submission.status == "SUBMITTED" or cat1.submission.status == "APPROVED" %}
+
+                            <label
+                                for="cat1_score"
+                                class="form-label"
+                            >
+                                Mark
+                            </label>
+
+                            <input
+                                type="number"
+                                name="cat1_score"
+                                id="cat1_score"
+                                class="form-control"
+                                value="{{ cat1.score }}"
+                                step="0.01"
+                                min="0"
+                                required
+                            >
+
+                        {% else %}
+
+                            <label class="form-label">
+                                Mark
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                value="{{ cat1.score|default:'-' }}"
+                                readonly
+                            >
+
+                        {% endif %}
+
+                    {% else %}
+
+                        <div class="text-muted">
+                            CAT 1 assessment not found.
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- ===================================== -->
+            <!-- MID TERM -->
+            <!-- ===================================== -->
+
+            <div class="card mb-3">
+
+                <div class="card-header">
+                    <strong>Mid-Term</strong>
+                </div>
+
+                <div class="card-body">
+
+                    {% if mid %}
+
+                        <div class="mb-2">
+
+                            <strong>Status:</strong>
+
+                            {% if mid.submission.status == "SUBMITTED" %}
+                                <span class="badge bg-primary">
+                                    Submitted
+                                </span>
+
+                            {% elif mid.submission.status == "APPROVED" %}
+                                <span class="badge bg-success">
+                                    Approved
+                                </span>
+
+                            {% elif mid.submission.status == "DRAFT" %}
+                                <span class="badge bg-secondary">
+                                    Draft
+                                </span>
+
+                            {% elif mid.submission.status == "REJECTED" %}
+                                <span class="badge bg-danger">
+                                    Rejected
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        {% if mid.submission.status == "SUBMITTED" or mid.submission.status == "APPROVED" %}
+
+                            <label
+                                for="mid_score"
+                                class="form-label"
+                            >
+                                Mark
+                            </label>
+
+                            <input
+                                type="number"
+                                name="mid_score"
+                                id="mid_score"
+                                class="form-control"
+                                value="{{ mid.score }}"
+                                step="0.01"
+                                min="0"
+                                required
+                            >
+
+                        {% else %}
+
+                            <label class="form-label">
+                                Mark
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                value="{{ mid.score|default:'-' }}"
+                                readonly
+                            >
+
+                        {% endif %}
+
+                    {% else %}
+
+                        <div class="text-muted">
+                            Mid-Term assessment not found.
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- ===================================== -->
+            <!-- END TERM -->
+            <!-- ===================================== -->
+
+            <div class="card mb-4">
+
+                <div class="card-header">
+                    <strong>End-Term</strong>
+                </div>
+
+                <div class="card-body">
+
+                    {% if end %}
+
+                        <div class="mb-2">
+
+                            <strong>Status:</strong>
+
+                            {% if end.submission.status == "SUBMITTED" %}
+                                <span class="badge bg-primary">
+                                    Submitted
+                                </span>
+
+                            {% elif end.submission.status == "APPROVED" %}
+                                <span class="badge bg-success">
+                                    Approved
+                                </span>
+
+                            {% elif end.submission.status == "DRAFT" %}
+                                <span class="badge bg-secondary">
+                                    Draft
+                                </span>
+
+                            {% elif end.submission.status == "REJECTED" %}
+                                <span class="badge bg-danger">
+                                    Rejected
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        {% if end.submission.status == "SUBMITTED" or end.submission.status == "APPROVED" %}
+
+                            <label
+                                for="end_score"
+                                class="form-label"
+                            >
+                                Mark
+                            </label>
+
+                            <input
+                                type="number"
+                                name="end_score"
+                                id="end_score"
+                                class="form-control"
+                                value="{{ end.score }}"
+                                step="0.01"
+                                min="0"
+                                required
+                            >
+
+                        {% else %}
+
+                            <label class="form-label">
+                                Mark
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                value="{{ end.score|default:'-' }}"
+                                readonly
+                            >
+
+                        {% endif %}
+
+                    {% else %}
+
+                        <div class="text-muted">
+                            End-Term assessment not found.
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- ========================================= -->
+            <!-- ACTIONS -->
+            <!-- ========================================= -->
+
+            <div class="d-flex gap-2">
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Save Changes
+                </button>
+
+                <a
+                    href="{% url 'students:cbc_mark_list' %}?year={{ academic_year }}&term={{ term }}&student={{ student.id }}"
+                    class="btn btn-secondary"
+                >
+                    Cancel
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+</div>
+
+{% endblock %}

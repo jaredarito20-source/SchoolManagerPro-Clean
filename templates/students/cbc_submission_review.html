@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+
+<h2>CBC Assessment Submissions</h2>
+
+<!-- =========================================
+     FILTERS
+========================================== -->
+
+<form method="get" style="margin-bottom: 25px;">
+
+    <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:end;">
+
+        <!-- Academic Year -->
+        <div>
+            <label for="year">
+                <strong>Academic Year</strong>
+            </label>
+
+            <select
+                name="year"
+                id="year"
+                onchange="this.form.submit()"
+            >
+                <option value="">All Years</option>
+
+                {% for academic_year in academic_years %}
+                    <option
+                        value="{{ academic_year.year }}"
+                        {% if selected_year == academic_year.year|stringformat:"s" %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ academic_year.year }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <!-- Term -->
+        <div>
+            <label for="term">
+                <strong>Term</strong>
+            </label>
+
+            <select
+                name="term"
+                id="term"
+                onchange="this.form.submit()"
+            >
+                <option value="">All Terms</option>
+
+                {% for term in terms %}
+                    <option
+                        value="{{ term }}"
+                        {% if selected_term == term %}
+                            selected
+                        {% endif %}
+                    >
+                        Term {{ term }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <!-- Class -->
+        <div>
+            <label for="school_class">
+                <strong>Class</strong>
+            </label>
+
+            <select
+                name="school_class"
+                id="school_class"
+                onchange="this.form.submit()"
+            >
+                <option value="">All Classes</option>
+
+                {% for school_class in classes %}
+                    <option
+                        value="{{ school_class.id }}"
+                        {% if selected_class == school_class.id|stringformat:"s" %}
+                            selected
+                        {% endif %}
+                    >
+                        {% if school_class.school %}
+                            {{ school_class.school.name }} -
+                        {% endif %}
+                        {{ school_class.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+        <!-- Clear -->
+        <div>
+            <a
+                href="{% url 'students:cbc_submission_review' %}"
+                style="display:inline-block; padding:6px 12px;"
+            >
+                Clear Filters
+            </a>
+        </div>
+
+    </div>
+
+</form>
+
+
+<!-- =========================================
+     SUBMISSIONS TABLE
+========================================== -->
+
+{% if submissions %}
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>Year</th>
+                <th>Term</th>
+                <th>Class</th>
+                <th>Learning Area</th>
+                <th>Teacher</th>
+                <th>Status</th>
+                <th>Submitted</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for submission in submissions %}
+
+                <tr>
+
+                    <td>
+                        {{ submission.academic_year }}
+                    </td>
+
+                    <td>
+                        {{ submission.get_term_display }}
+                    </td>
+
+                    <td>
+                        {{ submission.school_class_curriculum.school_class }}
+                    </td>
+
+                    <td>
+                        {{ submission.learning_area }}
+                    </td>
+
+                    <td>
+                        {{ submission.teacher }}
+                    </td>
+
+                    <td>
+                        {{ submission.get_status_display }}
+                    </td>
+
+                    <td>
+                        {% if submission.submitted_at %}
+                            {{ submission.submitted_at }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+
+                        {% if submission.status == "SUBMITTED" %}
+
+                            <form
+                                method="post"
+                                action="{% url 'students:cbc_submission_approve' submission.id %}"
+                                style="display:inline;"
+                            >
+                                {% csrf_token %}
+
+                                <button type="submit">
+                                    Approve
+                                </button>
+                            </form>
+
+
+                            <form
+                                method="post"
+                                action="{% url 'students:cbc_submission_reject' submission.id %}"
+                                style="margin-top:8px;"
+                            >
+                                {% csrf_token %}
+
+                                <input
+                                    type="text"
+                                    name="rejection_reason"
+                                    placeholder="Reason for rejection"
+                                    required
+                                >
+
+                                <button type="submit">
+                                    Reject
+                                </button>
+                            </form>
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+{% else %}
+
+    <p>
+        No CBC assessment submissions found for the selected filters.
+    </p>
+
+{% endif %}
+
+
+</div>
+
+{% endblock %}

@@ -7,61 +7,78 @@
 <form method="post">
     {% csrf_token %}
 
-    <p>
-        Class<br>
-        <select name="school_class" required>
-            {% for class in classes %}
+
+<p>
+    <label for="school_class">Class</label><br>
+    <select name="school_class" id="school_class" required>
+        <option value="">-- Select Class --</option>
+
+        {% for class in classes %}
             <option value="{{ class.id }}">
                 {{ class.name }}
             </option>
-            {% endfor %}
-        </select>
-    </p>
+        {% endfor %}
+    </select>
+</p>
 
-    <p>
-        Subject<br>
-        <select name="subject" required>
-            {% for subject in subjects %}
+<p>
+    <label for="subject">Subject</label><br>
+    <select name="subject" id="subject" required>
+        <option value="">-- Select Subject --</option>
+
+        {% for subject in subjects %}
             <option value="{{ subject.id }}">
                 {{ subject.name }}
             </option>
-            {% endfor %}
-        </select>
-    </p>
+        {% endfor %}
+    </select>
+</p>
 
-    <p>
-        Teacher<br>
-        <select name="teacher" required>
-            {% for teacher in teachers %}
+<p>
+    <label for="teacher">Teacher</label><br>
+    <select name="teacher" id="teacher" required>
+        <option value="">-- Select Teacher --</option>
+
+        {% for teacher in teachers %}
             <option value="{{ teacher.id }}">
                 {{ teacher.first_name }} {{ teacher.last_name }}
             </option>
-            {% endfor %}
-        </select>
-    </p>
+        {% endfor %}
+    </select>
+</p>
 
-    <p>
-        Day<br>
-        <select name="day">
-            <option>Monday</option>
-            <option>Tuesday</option>
-            <option>Wednesday</option>
-            <option>Thursday</option>
-            <option>Friday</option>
-        </select>
-    </p>
+<p>
+    <label for="day">Day</label><br>
+    <select name="day" id="day" required>
+        <option value="">-- Select Day --</option>
 
-    <p>
-        Start Time<br>
-        <input type="time" name="start_time" required>
-    </p>
+        {% for day in days %}
+            <option value="{{ day.id }}">
+                {{ day.name }}
+            </option>
+        {% endfor %}
+    </select>
+</p>
 
-    <p>
-        End Time<br>
-        <input type="time" name="end_time" required>
-    </p>
+<p>
+    <label for="period">Period</label><br>
+    <select name="period" id="period" required>
+        <option value="">-- Select Period --</option>
 
-    <button type="submit">Save Timetable</button>
+        {% for period in periods %}
+            <option value="{{ period.id }}">
+                {{ period.name }}
+                ({{ period.start_time|time:"H:i" }} - {{ period.end_time|time:"H:i" }})
+                {% if period.is_break %}
+                    - Break
+                {% endif %}
+            </option>
+        {% endfor %}
+    </select>
+</p>
+
+<button type="submit">Save Timetable</button>
+
 
 </form>
 

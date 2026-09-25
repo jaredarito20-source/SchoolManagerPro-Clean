@@ -1,5 +1,8 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from students.management.commands.cbc_grade10_helpers import (
+    seed_grade10_performance_levels,
+)
 
 from students.models import (
     CurriculumVersion,
@@ -9,6 +12,7 @@ from students.models import (
     CurriculumStrand,
     CurriculumSubStrand,
     CurriculumAssessmentItem,
+    CBCPerformanceLevel,
 )
 
 
@@ -457,6 +461,7 @@ class Command(BaseCommand):
         version = self.get_or_create_version()
 
         grade = self.create_grade(version)
+        seed_grade10_performance_levels(grade)
 
         pathway = self.create_pathway(grade)
 
