@@ -38,6 +38,21 @@ class SchoolProfile(models.Model):
         ("BOTH", "Both CBC & 8-4-4"),
     ]
 
+    SUBSCRIPTION_TIER_CHOICES = [
+        ("T1", "Tier 1 - Academic + Parents + SMS"),
+        ("T2", "Tier 2 - Finance"),
+        ("T3", "Tier 3 - Transport"),
+        ("T4", "Tier 4 - School Operations"),
+        ("T5", "Tier 5 - Resources"),
+        ("T6", "Tier 6 - Full School Management"),
+    ]
+
+    subscription_tier = models.CharField(
+        max_length=2,
+        choices=SUBSCRIPTION_TIER_CHOICES,
+        default="T1",
+    )
+
     curriculum_system = models.CharField(
         max_length=10,
         choices=CURRICULUM_SYSTEM_CHOICES,
