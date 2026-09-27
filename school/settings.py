@@ -27,18 +27,84 @@ load_dotenv(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-h2%uu(x56cs*pyp3ujmzij&sxp+lr2+yi65p(*j=fq(xkeyvyt'
+# ============================================================
+# SECURITY / ENVIRONMENT
+# ============================================================
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError(
+        "DJANGO_SECRET_KEY is not configured."
+    )
+
+DEBUG = (
+    os.getenv(
+        "DJANGO_DEBUG",
+        "True",
+    ).strip().lower()
+    == "true"
+)
 
 ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-    "stew-bribe-gradation.ngrok-free.dev",
+    host.strip()
+    for host in os.getenv(
+        "DJANGO_ALLOWED_HOSTS",
+        "127.0.0.1,localhost",
+    ).split(",")
+    if host.strip()
 ]
 
+# ============================================================
+# PRODUCTION SECURITY
+# ============================================================
+
+SECURE_SSL_REDIRECT = (
+    os.getenv(
+        "DJANGO_SECURE_SSL_REDIRECT",
+        "False",
+    ).strip().lower()
+    == "true"
+)
+
+SESSION_COOKIE_SECURE = (
+    os.getenv(
+        "DJANGO_SESSION_COOKIE_SECURE",
+        "False",
+    ).strip().lower()
+    == "true"
+)
+
+CSRF_COOKIE_SECURE = (
+    os.getenv(
+        "DJANGO_CSRF_COOKIE_SECURE",
+        "False",
+    ).strip().lower()
+    == "true"
+)
+
+SECURE_HSTS_SECONDS = int(
+    os.getenv(
+        "DJANGO_SECURE_HSTS_SECONDS",
+        "0",
+    )
+)
+
+SECURE_HSTS_INCLUDE_SUBDOMAINS = (
+    os.getenv(
+        "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS",
+        "False",
+    ).strip().lower()
+    == "true"
+)
+
+SECURE_HSTS_PRELOAD = (
+    os.getenv(
+        "DJANGO_SECURE_HSTS_PRELOAD",
+        "False",
+    ).strip().lower()
+    == "true"
+)
 # Application definition
 
 INSTALLED_APPS = [
@@ -128,7 +194,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "/static/"
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
